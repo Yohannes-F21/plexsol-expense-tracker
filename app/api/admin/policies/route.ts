@@ -1,14 +1,18 @@
-import { NextResponse } from "next/server"
-import { requireRole } from "@/lib/auth"
-import { prisma } from "@/lib/prisma"
-import { z } from "zod"
+import { NextResponse } from "next/server";
+import { requireRole } from "@/lib/auth";
+import { prisma } from "@/lib/prisma";
+import { Prisma } from "@prisma/client";
+import { z } from "zod";
 
 export async function GET() {
   try {
-    const session = await requireRole(["ORG_ADMIN"])
+    const session = await requireRole(["ORG_ADMIN"]);
 
     if (!session.organizationId) {
-      return NextResponse.json({ error: "Organization ID missing" }, { status: 400 })
+      return NextResponse.json(
+        { error: "Organization ID missing" },
+        { status: 400 }
+      );
     }
 
     const policies = await prisma.expensePolicy.findMany({
@@ -18,15 +22,17 @@ export async function GET() {
       orderBy: {
         createdAt: "desc",
       },
-    })
+    });
 
-    return NextResponse.json({ policies })
+    return NextResponse.json({ policies });
   } catch (error) {
-    console.error("[v0] Get policies error:", error)
+    console.error("[v0] Get policies error:", error);
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Internal server error" },
-      { status: 500 },
-    )
+      {
+        error: error instanceof Error ? error.message : "Internal server error",
+      },
+      { status: 500 }
+    );
   }
 }
 
@@ -36,35 +42,66 @@ const policySchema = z.object({
   maxAmount: z.number().positive().optional(),
   requiresReceipt: z.boolean().default(false),
   autoApprove: z.boolean().default(false),
-})
+});
 
 export async function POST(request: Request) {
   try {
-    const session = await requireRole(["ORG_ADMIN"])
+    const session = await requireRole(["ORG_ADMIN"]);
 
     if (!session.organizationId) {
-      return NextResponse.json({ error: "Organization ID missing" }, { status: 400 })
+      return NextResponse.json(
+        { error: "Organization ID missing" },
+        { status: 400 }
+      );
     }
 
-    const body = await request.json()
-    const validatedData = policySchema.parse(body)
+    const body = await request.json();
+    const validatedData = policySchema.parse(body);
 
-    const policy = await prisma.expensePolicy.create({
-      data: {
-        ...validatedData,
-        organizationId: session.organizationId,
-      },
-    })
+    const [policy] = await prisma.$transaction([
+      prisma.expensePolicy.create({
+        data: {
+          ...validatedData,
+          organizationId: session.organizationId,
+        },
+      }),
+      prisma.activityLog.create({
+        data: {
+          userId: session.id,
+          organizationId: session.organizationId,
+          actionType: "POLICY_CREATED",
+          entityType: "ExpensePolicy",
+          entityId: "",
+          previousValue: Prisma.JsonNull,
+          newValue: Prisma.JsonNull,
+        },
+      }),
+    ]);
 
-    return NextResponse.json({ success: true, policy })
+    // Best-effort: update activity log entityId to policy id
+    try {
+      await prisma.activityLog.updateMany({
+        where: { actionType: "POLICY_CREATED", userId: session.id },
+        data: { entityId: policy.id },
+      });
+    } catch (e) {
+      console.warn("[v0] Failed to update activity log for policy", e);
+    }
+
+    return NextResponse.json({ success: true, policy });
   } catch (error) {
-    console.error("[v0] Create policy error:", error)
+    console.error("[v0] Create policy error:", error);
     if (error instanceof z.ZodError) {
-      return NextResponse.json({ error: "Invalid input", details: error.errors }, { status: 400 })
+      return NextResponse.json(
+        { error: "Invalid input", details: error.errors },
+        { status: 400 }
+      );
     }
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Internal server error" },
-      { status: 500 },
-    )
+      {
+        error: error instanceof Error ? error.message : "Internal server error",
+      },
+      { status: 500 }
+    );
   }
 }

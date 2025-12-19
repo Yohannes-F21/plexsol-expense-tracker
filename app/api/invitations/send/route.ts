@@ -1,58 +1,77 @@
-import { NextResponse } from "next/server"
-import { requireRole } from "@/lib/auth"
-import { createInvitation } from "@/lib/invitation"
-import { prisma } from "@/lib/prisma"
-import { z } from "zod"
+import { NextResponse } from "next/server";
+import { requireRole } from "@/lib/auth";
+import { createInvitation } from "@/lib/invitation";
+import { prisma } from "@/lib/prisma";
+import { Prisma } from "@prisma/client";
+import { z } from "zod";
 
 const invitationSchema = z.object({
   email: z.string().email(),
   role: z.enum(["ORG_ADMIN", "STAFF"]),
   organizationId: z.string().optional(), // Optional for super admins
-})
+});
 
 export async function POST(request: Request) {
   try {
-    const session = await requireRole(["SUPER_ADMIN", "ORG_ADMIN"])
-    const body = await request.json()
-    const validatedData = invitationSchema.parse(body)
+    const session = await requireRole(["SUPER_ADMIN", "ORG_ADMIN"]);
+    const body = await request.json();
+    const validatedData = invitationSchema.parse(body);
 
-    let organizationId: string
+    let organizationId: string;
 
     if (session.role === "SUPER_ADMIN") {
       // Super Admin must specify org and can only invite ORG_ADMIN
       if (!validatedData.organizationId) {
-        return NextResponse.json({ error: "Organization ID required for Super Admin" }, { status: 400 })
+        return NextResponse.json(
+          { error: "Organization ID required for Super Admin" },
+          { status: 400 }
+        );
       }
       if (validatedData.role !== "ORG_ADMIN") {
-        return NextResponse.json({ error: "Super Admin can only invite Org Admins" }, { status: 400 })
+        return NextResponse.json(
+          { error: "Super Admin can only invite Org Admins" },
+          { status: 400 }
+        );
       }
-      organizationId = validatedData.organizationId
+      organizationId = validatedData.organizationId;
 
       // Verify organization exists
       const org = await prisma.organization.findUnique({
         where: { id: organizationId },
-      })
+      });
       if (!org) {
-        return NextResponse.json({ error: "Organization not found" }, { status: 404 })
+        return NextResponse.json(
+          { error: "Organization not found" },
+          { status: 404 }
+        );
       }
     } else {
       // Org Admin can only invite STAFF to their own organization
       if (!session.organizationId) {
-        return NextResponse.json({ error: "Organization ID missing" }, { status: 400 })
+        return NextResponse.json(
+          { error: "Organization ID missing" },
+          { status: 400 }
+        );
       }
       if (validatedData.role !== "STAFF") {
-        return NextResponse.json({ error: "Org Admin can only invite Staff members" }, { status: 400 })
+        return NextResponse.json(
+          { error: "Org Admin can only invite Staff members" },
+          { status: 400 }
+        );
       }
-      organizationId = session.organizationId
+      organizationId = session.organizationId;
     }
 
     // Check if user already exists
     const existingUser = await prisma.user.findUnique({
       where: { email: validatedData.email },
-    })
+    });
 
     if (existingUser) {
-      return NextResponse.json({ error: "User already exists" }, { status: 400 })
+      return NextResponse.json(
+        { error: "User already exists" },
+        { status: 400 }
+      );
     }
 
     // Check for pending invitation
@@ -62,17 +81,43 @@ export async function POST(request: Request) {
         organizationId,
         status: "PENDING",
       },
-    })
+    });
 
     if (existingInvitation) {
-      return NextResponse.json({ error: "Invitation already sent to this email" }, { status: 400 })
+      return NextResponse.json(
+        { error: "Invitation already sent to this email" },
+        { status: 400 }
+      );
     }
 
-    // Create invitation
-    const invitation = await createInvitation(validatedData.email, organizationId, session.id, validatedData.role)
+    // Create invitation and activity log in a transaction
+    const invitation = await createInvitation(
+      validatedData.email,
+      organizationId,
+      session.id,
+      validatedData.role
+    );
+
+    try {
+      await prisma.activityLog.create({
+        data: {
+          userId: session.id,
+          organizationId,
+          actionType: "INVITATION_SENT",
+          entityType: "Invitation",
+          entityId: invitation.id,
+          previousValue: Prisma.JsonNull,
+          newValue: Prisma.JsonNull,
+        },
+      });
+    } catch (e) {
+      console.warn("[v0] Failed to create activity log for invitation", e);
+    }
 
     // In production, you would send an email here with the invitation link
-    const inviteUrl = `${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/accept-invite?token=${invitation.token}`
+    const inviteUrl = `${
+      process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"
+    }/accept-invite?token=${invitation.token}`;
 
     return NextResponse.json({
       success: true,
@@ -82,15 +127,20 @@ export async function POST(request: Request) {
         role: invitation.role,
         inviteUrl,
       },
-    })
+    });
   } catch (error) {
-    console.error("[v0] Send invitation error:", error)
+    console.error("[v0] Send invitation error:", error);
     if (error instanceof z.ZodError) {
-      return NextResponse.json({ error: "Invalid input", details: error.errors }, { status: 400 })
+      return NextResponse.json(
+        { error: "Invalid input", details: error.errors },
+        { status: 400 }
+      );
     }
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Internal server error" },
-      { status: 500 },
-    )
+      {
+        error: error instanceof Error ? error.message : "Internal server error",
+      },
+      { status: 500 }
+    );
   }
 }

@@ -1,10 +1,11 @@
 import { NextResponse } from "next/server";
 import { requireRole } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { Prisma } from "@prisma/client";
 
 export async function PATCH(request: Request, context: any) {
   try {
-    await requireRole(["SUPER_ADMIN"]);
+    const session = await requireRole(["SUPER_ADMIN"]);
     const body = await request.json();
     const { isActive } = body;
 
@@ -22,18 +23,31 @@ export async function PATCH(request: Request, context: any) {
       );
     }
 
-    const user = await prisma.user.update({
-      where: { id },
-      data: { isActive },
-      include: {
-        organization: {
-          select: {
-            id: true,
-            name: true,
+    const [user] = await prisma.$transaction([
+      prisma.user.update({
+        where: { id },
+        data: { isActive },
+        include: {
+          organization: {
+            select: {
+              id: true,
+              name: true,
+            },
           },
         },
-      },
-    });
+      }),
+      prisma.activityLog.create({
+        data: {
+          userId: session.id,
+          organizationId: null,
+          actionType: isActive ? "USER_ACTIVATED" : "USER_DEACTIVATED",
+          entityType: "User",
+          entityId: id,
+          previousValue: Prisma.JsonNull,
+          newValue: Prisma.JsonNull,
+        },
+      }),
+    ]);
 
     return NextResponse.json(user);
   } catch (error) {

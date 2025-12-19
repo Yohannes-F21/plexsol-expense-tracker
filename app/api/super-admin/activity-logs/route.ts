@@ -10,27 +10,28 @@ export async function GET(request: Request) {
     const search = url.searchParams;
 
     const organizationId = search.get("organizationId") || undefined;
-    const status = search.get("status") || undefined;
+    const userId = search.get("userId") || undefined;
+    const actionType = search.get("actionType") || undefined;
     const start = search.get("start");
     const end = search.get("end");
     const page = Math.max(1, Number(search.get("page") || "1"));
     const pageSize = Math.min(100, Number(search.get("pageSize") || "20"));
 
-    const where: any = { isActive: true };
+    const where: any = {};
     if (organizationId) where.organizationId = organizationId;
-    if (status) where.status = status;
+    if (userId) where.userId = userId;
+    if (actionType) where.actionType = actionType;
     if (start || end) where.createdAt = {};
     if (start) where.createdAt.gte = new Date(start);
     if (end) where.createdAt.lte = new Date(end);
 
-    const [total, expenses] = await Promise.all([
-      prisma.expense.count({ where }),
-      prisma.expense.findMany({
+    const [total, logs] = await Promise.all([
+      prisma.activityLog.count({ where }),
+      prisma.activityLog.findMany({
         where,
         include: {
+          user: { select: { id: true, name: true, role: true } },
           organization: { select: { id: true, name: true } },
-          user: { select: { id: true, name: true, email: true } },
-          category: { select: { id: true, name: true } },
         },
         orderBy: { createdAt: "desc" },
         skip: (page - 1) * pageSize,
@@ -38,9 +39,9 @@ export async function GET(request: Request) {
       }),
     ]);
 
-    return NextResponse.json({ total, expenses, page, pageSize });
+    return NextResponse.json({ total, logs, page, pageSize });
   } catch (error) {
-    console.error("[super-admin] Get expenses error:", error);
+    console.error("[super-admin] Get activity logs error:", error);
     return NextResponse.json(
       {
         error: error instanceof Error ? error.message : "Internal server error",

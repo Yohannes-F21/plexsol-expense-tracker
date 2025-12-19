@@ -29,7 +29,7 @@ const navItems: NavItem[] = [
   },
   {
     title: "Activity Logs",
-    href: "/super-admin/activity",
+    href: "/super-admin/activity-logs",
     icon: "activity",
   },
 ];
