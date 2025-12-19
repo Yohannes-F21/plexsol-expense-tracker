@@ -3,8 +3,8 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
+import type { LucideIcon } from "lucide-react";
 import {
-  type LucideIcon,
   Activity,
   Building2,
   CheckSquare,
@@ -12,9 +12,13 @@ import {
   Receipt,
   Shield,
   Users,
+  Menu,
 } from "lucide-react";
+import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import { Button } from "@/components/ui/button";
+import { useState } from "react";
 
-type NavIconId =
+export type NavIconId =
   | "building-2"
   | "users"
   | "receipt"
@@ -26,7 +30,7 @@ type NavIconId =
 export interface NavItem {
   title: string;
   href: string;
-  icon: NavIconId;
+  icon: NavIconId | LucideIcon;
 }
 
 interface AppSidebarProps {
@@ -44,7 +48,11 @@ const iconMap: Record<NavIconId, LucideIcon> = {
   shield: Shield,
 };
 
-export function AppSidebar({ navItems, role }: AppSidebarProps) {
+function SidebarContent({
+  navItems,
+  role,
+  onNavigate,
+}: AppSidebarProps & { onNavigate?: () => void }) {
   const pathname = usePathname();
 
   const roleLabels = {
@@ -54,7 +62,7 @@ export function AppSidebar({ navItems, role }: AppSidebarProps) {
   };
 
   return (
-    <div className="flex h-full w-64 flex-col border-r border-border bg-sidebar">
+    <>
       <div className="flex h-16 items-center border-b border-sidebar-border px-6">
         <h2 className="text-lg font-semibold text-sidebar-foreground">
           Expense Tracker
@@ -70,12 +78,16 @@ export function AppSidebar({ navItems, role }: AppSidebarProps) {
           {navItems.map((item) => {
             const isActive =
               pathname === item.href || pathname.startsWith(item.href + "/");
-            const Icon = iconMap[item.icon];
+            const Icon =
+              typeof item.icon === "string"
+                ? iconMap[item.icon]
+                : (item.icon as LucideIcon);
 
             return (
               <Link
                 key={item.href}
                 href={item.href}
+                onClick={onNavigate}
                 className={cn(
                   "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
                   isActive
@@ -90,6 +102,39 @@ export function AppSidebar({ navItems, role }: AppSidebarProps) {
           })}
         </nav>
       </div>
-    </div>
+    </>
+  );
+}
+
+export function AppSidebar({ navItems, role }: AppSidebarProps) {
+  const [open, setOpen] = useState(false);
+
+  return (
+    <>
+      <div className="hidden md:flex h-full w-64 flex-col border-r border-border bg-sidebar">
+        <SidebarContent navItems={navItems} role={role} />
+      </div>
+
+      <Sheet open={open} onOpenChange={setOpen}>
+        <SheetTrigger asChild className="md:hidden">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="fixed top-4 left-4 z-40"
+          >
+            <Menu className="h-5 w-5" />
+          </Button>
+        </SheetTrigger>
+        <SheetContent side="left" className="p-0 w-64">
+          <div className="flex h-full flex-col bg-sidebar">
+            <SidebarContent
+              navItems={navItems}
+              role={role}
+              onNavigate={() => setOpen(false)}
+            />
+          </div>
+        </SheetContent>
+      </Sheet>
+    </>
   );
 }

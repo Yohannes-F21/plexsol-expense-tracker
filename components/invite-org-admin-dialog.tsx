@@ -20,13 +20,15 @@ import { apiClient } from "@/lib/api-client";
 type InviteOrgAdminDialogProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  organizationId: string;
+  organizationId?: string;
+  onSuccess?: () => void;
 };
 
 export function InviteOrgAdminDialog({
   open,
   onOpenChange,
   organizationId,
+  onSuccess,
 }: InviteOrgAdminDialogProps) {
   const [email, setEmail] = useState("");
   const [inviteUrl, setInviteUrl] = useState<string | null>(null);
@@ -47,6 +49,7 @@ export function InviteOrgAdminDialog({
     onSuccess: (data) => {
       toast.success("Invitation sent successfully");
       setInviteUrl(data.invitation.inviteUrl);
+      onSuccess?.();
     },
     onError: (error: any) => {
       console.error("[v0] Send invitation error:", error);

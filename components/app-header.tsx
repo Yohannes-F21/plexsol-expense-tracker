@@ -29,24 +29,21 @@ export function AppHeader({ user, organizationName }: AppHeaderProps) {
   };
 
   const displayName = user.name || user.email;
-  const initials =
-    displayName
-      .split(" ")
-      .filter(Boolean)
-      .map((n) => n[0])
-      .join("")
-      .toUpperCase()
-      .slice(0, 2) || "?";
+  const initials = displayName
+    .split(" ")
+    .filter(Boolean)
+    .map((n) => n[0])
+    .join("")
+    .toUpperCase()
+    .slice(0, 2);
 
   return (
-    <header className="flex h-16 items-center justify-between border-b border-border bg-background px-6">
-      <div className="flex items-center gap-2">
+    <header className="flex h-16 items-center justify-between border-b border-border bg-background px-4 md:px-6">
+      <div className="flex items-center gap-2 ml-12 md:ml-0">
         {organizationName && (
-          <>
-            <h1 className="text-lg font-semibold text-foreground">
-              {organizationName}
-            </h1>
-          </>
+          <h1 className="text-base md:text-lg font-semibold text-foreground truncate">
+            {organizationName}
+          </h1>
         )}
       </div>
 
@@ -54,7 +51,7 @@ export function AppHeader({ user, organizationName }: AppHeaderProps) {
         <DropdownMenuTrigger asChild>
           <Button variant="ghost" className="relative h-10 w-10 rounded-full">
             <Avatar>
-              <AvatarFallback className="bg-primary text-primary-foreground">
+              <AvatarFallback className="bg-primary text-primary-foreground text-sm">
                 {initials}
               </AvatarFallback>
             </Avatar>
@@ -64,7 +61,9 @@ export function AppHeader({ user, organizationName }: AppHeaderProps) {
           <DropdownMenuLabel>
             <div className="flex flex-col space-y-1">
               <p className="text-sm font-medium">{displayName}</p>
-              <p className="text-xs text-muted-foreground">{user.email}</p>
+              <p className="text-xs text-muted-foreground truncate">
+                {user.email}
+              </p>
             </div>
           </DropdownMenuLabel>
           <DropdownMenuSeparator />

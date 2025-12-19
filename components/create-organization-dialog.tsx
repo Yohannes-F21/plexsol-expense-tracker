@@ -20,11 +20,13 @@ import { apiClient } from "@/lib/api-client";
 type CreateOrganizationDialogProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  onSuccess?: () => void;
 };
 
 export function CreateOrganizationDialog({
   open,
   onOpenChange,
+  onSuccess,
 }: CreateOrganizationDialogProps) {
   const [formData, setFormData] = useState({
     name: "",
@@ -44,6 +46,7 @@ export function CreateOrganizationDialog({
       queryClient.invalidateQueries({ queryKey: ["organizations"] });
       queryClient.invalidateQueries({ queryKey: ["super-admin-stats"] });
       handleClose();
+      onSuccess?.();
     },
     onError: (error: any) => {
       console.error("[v0] Create organization error:", error);

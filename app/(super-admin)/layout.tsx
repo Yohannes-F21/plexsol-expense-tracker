@@ -1,12 +1,12 @@
-import type React from "react";
+﻿import type React from "react";
 import { redirect } from "next/navigation";
 import { getSession } from "@/lib/auth";
 import { AppSidebar } from "@/components/app-sidebar";
-import type { NavItem } from "@/components/app-sidebar";
 import { AppHeader } from "@/components/app-header";
 import { QueryProvider } from "@/lib/query-provider";
+import type { NavItem } from "@/components/app-sidebar";
 
-const navItems = [
+const navItems: NavItem[] = [
   {
     title: "Dashboard",
     href: "/super-admin",
@@ -32,7 +32,7 @@ const navItems = [
     href: "/super-admin/activity",
     icon: "activity",
   },
-] as unknown as NavItem[];
+];
 
 export default async function SuperAdminLayout({
   children,
