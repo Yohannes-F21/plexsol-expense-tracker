@@ -1,0 +1,70 @@
+import { NextResponse } from "next/server"
+import { requireRole } from "@/lib/auth"
+import { prisma } from "@/lib/prisma"
+import { z } from "zod"
+
+export async function GET() {
+  try {
+    const session = await requireRole(["ORG_ADMIN"])
+
+    if (!session.organizationId) {
+      return NextResponse.json({ error: "Organization ID missing" }, { status: 400 })
+    }
+
+    const policies = await prisma.expensePolicy.findMany({
+      where: {
+        organizationId: session.organizationId,
+      },
+      orderBy: {
+        createdAt: "desc",
+      },
+    })
+
+    return NextResponse.json({ policies })
+  } catch (error) {
+    console.error("[v0] Get policies error:", error)
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : "Internal server error" },
+      { status: 500 },
+    )
+  }
+}
+
+const policySchema = z.object({
+  policyName: z.string().min(1),
+  description: z.string().optional(),
+  maxAmount: z.number().positive().optional(),
+  requiresReceipt: z.boolean().default(false),
+  autoApprove: z.boolean().default(false),
+})
+
+export async function POST(request: Request) {
+  try {
+    const session = await requireRole(["ORG_ADMIN"])
+
+    if (!session.organizationId) {
+      return NextResponse.json({ error: "Organization ID missing" }, { status: 400 })
+    }
+
+    const body = await request.json()
+    const validatedData = policySchema.parse(body)
+
+    const policy = await prisma.expensePolicy.create({
+      data: {
+        ...validatedData,
+        organizationId: session.organizationId,
+      },
+    })
+
+    return NextResponse.json({ success: true, policy })
+  } catch (error) {
+    console.error("[v0] Create policy error:", error)
+    if (error instanceof z.ZodError) {
+      return NextResponse.json({ error: "Invalid input", details: error.errors }, { status: 400 })
+    }
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : "Internal server error" },
+      { status: 500 },
+    )
+  }
+}

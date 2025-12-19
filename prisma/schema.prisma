@@ -1,0 +1,199 @@
+datasource db {
+  provider = "postgresql"
+}
+
+generator client {
+  provider = "prisma-client-js"
+  engineType = "binary"
+}
+
+enum UserRole {
+  SUPER_ADMIN
+  ORG_ADMIN
+  STAFF
+}
+
+enum ExpenseStatus {
+  PENDING
+  WARNING
+  APPROVED
+  REJECTED
+}
+
+enum InvitationStatus {
+  PENDING
+  ACCEPTED
+  EXPIRED
+}
+
+enum ApprovalStatus {
+  APPROVED
+  REJECTED
+}
+
+model User {
+  id                String   @id @default(uuid())
+  name              String
+  email             String   @unique
+  phoneNumber       String?
+  passwordHash      String
+  role              UserRole
+  organizationId    String?
+  isActive          Boolean  @default(true)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  
+  // Relations
+  organization      Organization? @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  
+  expenses          Expense[]
+  invitationsSent   Invitation[] @relation("InvitationSender")
+  approvals         Approval[]
+  activityLogs      ActivityLog[]
+  organizationsCreated Organization[] @relation("OrganizationCreator")
+  
+  @@index([organizationId])
+  @@index([email])
+  @@index([role])
+}
+
+model Organization {
+  id                String   @id @default(uuid())
+  name              String
+  industry          String?
+  isActive          Boolean  @default(true)
+  createdById       String
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  
+  // Relations
+  createdBy         User @relation("OrganizationCreator", fields: [createdById], references: [id])
+  users             User[]
+  expenses          Expense[]
+  invitations       Invitation[]
+  categories        Category[]
+  expensePolicies   ExpensePolicy[]
+  activityLogs      ActivityLog[]
+  
+  @@index([name])
+  @@index([createdById])
+}
+
+model Invitation {
+  id                String   @id @default(uuid())
+  organizationId    String
+  email             String
+  role              UserRole
+  token             String   @unique
+  status            InvitationStatus @default(PENDING)
+  expiresAt         DateTime
+  invitedById       String
+  invitedAt         DateTime @default(now())
+  
+  // Relations
+  organization      Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  invitedBy         User @relation("InvitationSender", fields: [invitedById], references: [id], onDelete: Cascade)
+  
+  @@index([email])
+  @@index([token])
+  @@index([organizationId])
+  @@index([status])
+}
+
+model Category {
+  id                String   @id @default(uuid())
+  organizationId    String
+  name              String
+  description       String?
+  isActive          Boolean  @default(true)
+  
+  // Relations
+  organization      Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  expenses          Expense[]
+  
+  @@index([organizationId])
+  @@index([name])
+}
+
+model ExpensePolicy {
+  id                String   @id @default(uuid())
+  organizationId    String
+  policyName        String
+  description       String?
+  maxAmount         Float?
+  allowedCategories Json?    // Array of category IDs
+  requiresReceipt   Boolean  @default(false)
+  autoApprove       Boolean  @default(false)
+  isActive          Boolean  @default(true)
+  createdAt         DateTime @default(now())
+  
+  // Relations
+  organization      Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  
+  @@index([organizationId])
+}
+
+model Expense {
+  id                String   @id @default(uuid())
+  userId            String
+  organizationId    String
+  categoryId        String?
+  amount            Float
+  currency          String   @default("USD")
+  description       String
+  status            ExpenseStatus @default(PENDING)
+  policyViolation   Json?    // Details of policy violations
+  isActive          Boolean  @default(true)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  
+  // Relations
+  user              User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  organization      Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  category          Category? @relation(fields: [categoryId], references: [id])
+  approval          Approval?
+  
+  @@index([userId])
+  @@index([organizationId])
+  @@index([categoryId])
+  @@index([status])
+  @@index([createdAt])
+}
+
+model Approval {
+  id                String   @id @default(uuid())
+  expenseId         String   @unique
+  approvedById      String
+  status            ApprovalStatus
+  notes             String?
+  approvedAt        DateTime @default(now())
+  
+  // Relations
+  expense           Expense @relation(fields: [expenseId], references: [id], onDelete: Cascade)
+  approvedBy        User @relation(fields: [approvedById], references: [id])
+  
+  @@index([expenseId])
+  @@index([approvedById])
+}
+
+model ActivityLog {
+  id                String   @id @default(uuid())
+  userId            String
+  organizationId    String?
+  actionType        String
+  entityType        String
+  entityId          String
+  previousValue     Json?
+  newValue          Json?
+  ipAddress         String?
+  createdAt         DateTime @default(now())
+  
+  // Relations
+  user              User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  organization      Organization? @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  
+  @@index([userId])
+  @@index([organizationId])
+  @@index([entityType, entityId])
+  @@index([createdAt])
+}
