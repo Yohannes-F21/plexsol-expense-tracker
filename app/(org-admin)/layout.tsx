@@ -1,6 +1,14 @@
-﻿import type React from "react";
+import type React from "react";
 import { redirect } from "next/navigation";
 import { getSession } from "@/lib/auth";
+import {
+  LayoutDashboard,
+  Receipt,
+  CheckSquare,
+  Users,
+  Tag,
+  Shield,
+} from "lucide-react";
 import { AppSidebar } from "@/components/app-sidebar";
 import { AppHeader } from "@/components/app-header";
 import { QueryProvider } from "@/lib/query-provider";
@@ -10,28 +18,33 @@ import type { NavItem } from "@/components/app-sidebar";
 const navItems: NavItem[] = [
   {
     title: "Dashboard",
-    href: "/admin",
+    href: "/org-admin/dashboard",
     icon: "layout-dashboard",
   },
   {
     title: "Expenses",
-    href: "/admin/expenses",
+    href: "/org-admin/expenses",
     icon: "receipt",
   },
   {
     title: "Approvals",
-    href: "/admin/approvals",
+    href: "/org-admin/approvals",
     icon: "check-square",
   },
   {
-    title: "Policies",
-    href: "/admin/policies",
-    icon: "shield",
+    title: "Staff",
+    href: "/admin/team", //for the moment keep it as /admin/team to avoid breaking existing links
+    icon: "users",
   },
   {
-    title: "Users",
-    href: "/admin/users",
-    icon: "users",
+    title: "Categories",
+    href: "/org-admin/categories",
+    icon: "tag",
+  },
+  {
+    title: "Policies",
+    href: "/org-admin/policies",
+    icon: "shield",
   },
 ];
 

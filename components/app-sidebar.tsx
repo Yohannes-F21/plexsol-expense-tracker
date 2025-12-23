@@ -13,6 +13,7 @@ import {
   Shield,
   Users,
   Menu,
+  Tag,
 } from "lucide-react";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
@@ -25,7 +26,8 @@ export type NavIconId =
   | "activity"
   | "layout-dashboard"
   | "check-square"
-  | "shield";
+  | "shield"
+  | "tag";
 
 export interface NavItem {
   title: string;
@@ -46,6 +48,7 @@ const iconMap: Record<NavIconId, LucideIcon> = {
   "layout-dashboard": LayoutDashboard,
   "check-square": CheckSquare,
   shield: Shield,
+  tag: Tag,
 };
 
 function SidebarContent({
