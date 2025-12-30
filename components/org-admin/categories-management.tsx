@@ -1,157 +1,415 @@
 "use client";
 
-import type React from "react";
+import { useMemo, useState } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
 
-import { useState } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { apiClient } from "@/lib/api-client";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { Plus } from "lucide-react";
-import { toast } from "sonner";
-import { Skeleton } from "@/components/ui/skeleton";
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
+  CategoryDialog,
+  type CategoryFormValues,
+} from "@/components/org-admin/category-dialog";
+import { SquarePen, Trash2 } from "lucide-react";
 
-interface Category {
+type CategoryType = "operational" | "administrative";
+
+type Category = {
   id: string;
   name: string;
   description: string | null;
+  type: CategoryType;
   isActive: boolean;
+};
+
+const CATEGORIES_QUERY_KEY = ["org-admin-categories"] as const;
+
+function normalizeName(name: string) {
+  return name.trim().toLowerCase();
 }
 
 export function CategoriesManagement() {
-  const [open, setOpen] = useState(false);
-  const [name, setName] = useState("");
-  const [description, setDescription] = useState("");
-
   const queryClient = useQueryClient();
 
-  const { data: categories = [], isLoading } = useQuery<Category[]>({
-    queryKey: ["categories"],
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [dialogMode, setDialogMode] = useState<"create" | "edit">("create");
+  const [selected, setSelected] = useState<Category | null>(null);
+
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<Category | null>(null);
+
+  const categoriesQuery = useQuery<{ categories: Category[] }>({
+    queryKey: CATEGORIES_QUERY_KEY,
     queryFn: async () => {
-      const res = await apiClient<{ categories: Category[] }>(
-        "/api/org-admin/categories"
-      );
-      return res.categories;
+      const response = await fetch("/api/org-admin/categories", {
+        cache: "no-store",
+      });
+      if (!response.ok) throw new Error("Failed to fetch categories");
+      return response.json() as Promise<{ categories: Category[] }>;
     },
   });
+
+  const categories = categoriesQuery.data?.categories ?? [];
+
+  const { operationalCategories, administrativeCategories } = useMemo(() => {
+    const active = categories.filter((c) => c.isActive !== false);
+    const operational = active
+      .filter((c) => c.type === "operational")
+      .slice()
+      .sort((a, b) => a.name.localeCompare(b.name));
+    const administrative = active
+      .filter((c) => c.type === "administrative")
+      .slice()
+      .sort((a, b) => a.name.localeCompare(b.name));
+
+    return {
+      operationalCategories: operational,
+      administrativeCategories: administrative,
+    };
+  }, [categories]);
 
   const createMutation = useMutation({
-    mutationFn: (data: { name: string; description?: string }) =>
-      apiClient("/api/org-admin/categories", {
+    mutationFn: async (values: CategoryFormValues) => {
+      const response = await fetch("/api/org-admin/categories", {
         method: "POST",
-        body: JSON.stringify(data),
-      }),
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: values.name,
+          type: values.type,
+          description: values.description || null,
+        }),
+      });
+
+      if (response.status === 409) {
+        const data = await response.json().catch(() => ({}));
+        throw new Error(
+          data.error || "A category with that name already exists"
+        );
+      }
+
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({}));
+        throw new Error(data.error || "Failed to create category");
+      }
+
+      return response.json();
+    },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["categories"] });
-      toast.success("Category created successfully");
-      setOpen(false);
-      setName("");
-      setDescription("");
+      queryClient.invalidateQueries({ queryKey: CATEGORIES_QUERY_KEY });
+      toast.success("Category created");
+      setDialogOpen(false);
     },
-    onError: () => {
-      toast.error("Failed to create category");
-    },
+    onError: (error: Error) => toast.error(error.message),
   });
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    createMutation.mutate({ name, description: description || undefined });
-  };
+  const updateMutation = useMutation({
+    mutationFn: async (args: { id: string; values: CategoryFormValues }) => {
+      const response = await fetch(`/api/org-admin/categories/${args.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: args.values.name,
+          type: args.values.type,
+          description: args.values.description || null,
+        }),
+      });
+
+      if (response.status === 409) {
+        const data = await response.json().catch(() => ({}));
+        throw new Error(
+          data.error || "A category with that name already exists"
+        );
+      }
+
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({}));
+        throw new Error(data.error || "Failed to update category");
+      }
+
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: CATEGORIES_QUERY_KEY });
+      toast.success("Category updated");
+      setDialogOpen(false);
+    },
+    onError: (error: Error) => toast.error(error.message),
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const response = await fetch(`/api/org-admin/categories/${id}`, {
+        method: "DELETE",
+      });
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({}));
+        throw new Error(data.error || "Failed to delete category");
+      }
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: CATEGORIES_QUERY_KEY });
+      toast.success("Category deleted");
+      setDeleteOpen(false);
+      setDeleteTarget(null);
+    },
+    onError: (error: Error) => toast.error(error.message),
+  });
+
+  function openCreateDialog() {
+    setSelected(null);
+    setDialogMode("create");
+    setDialogOpen(true);
+  }
+
+  function openEditDialog(category: Category) {
+    console.log(category);
+    setSelected(category);
+    setDialogMode("edit");
+    setDialogOpen(true);
+  }
+
+  function openDeleteDialog(category: Category) {
+    setDeleteTarget(category);
+    setDeleteOpen(true);
+  }
+
+  async function handleSubmit(values: CategoryFormValues) {
+    const existing = categories
+      .filter((c) => c.isActive !== false)
+      .some(
+        (c) =>
+          c.id !== selected?.id &&
+          c.type === values.type &&
+          normalizeName(c.name) === normalizeName(values.name)
+      );
+    if (existing) {
+      throw new Error("A category with that name already exists");
+    }
+
+    if (dialogMode === "create") {
+      await createMutation.mutateAsync(values);
+      return;
+    }
+
+    if (!selected) throw new Error("No category selected");
+    await updateMutation.mutateAsync({ id: selected.id, values });
+  }
+
+  const isSubmitting = createMutation.isPending || updateMutation.isPending;
+
+  const dialogDefaults: Partial<CategoryFormValues> | undefined = selected
+    ? {
+        name: selected.name,
+        description: selected.description ?? "",
+        type: selected.type,
+      }
+    : { type: undefined };
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Categories</h1>
-          <p className="text-muted-foreground mt-1">
-            Manage expense categories for your organization
+          <h2 className="text-2xl font-bold">Categories</h2>
+          <p className="text-sm text-muted-foreground">
+            Manage expense categories. Only organization admins can make
+            changes.
           </p>
         </div>
-        <Dialog open={open} onOpenChange={setOpen}>
-          <DialogTrigger asChild>
-            <Button>
-              <Plus className="mr-2 h-4 w-4" />
-              Add Category
-            </Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Create Category</DialogTitle>
-            </DialogHeader>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="name">Category Name</Label>
-                <Input
-                  id="name"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  placeholder="e.g., Travel, Meals, Equipment"
-                  required
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="description">Description (Optional)</Label>
-                <Textarea
-                  id="description"
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  placeholder="Describe what expenses belong in this category"
-                  rows={3}
-                />
-              </div>
-              <Button
-                type="submit"
-                className="w-full"
-                disabled={createMutation.isPending}
-              >
-                {createMutation.isPending ? "Creating..." : "Create Category"}
-              </Button>
-            </form>
-          </DialogContent>
-        </Dialog>
+
+        <Button onClick={openCreateDialog}>New Category</Button>
       </div>
 
-      {isLoading ? (
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {[...Array(6)].map((_, i) => (
-            <Skeleton key={i} className="h-32" />
-          ))}
+      {categoriesQuery.isLoading ? (
+        <div className="text-sm text-muted-foreground">
+          Loading categories...
         </div>
-      ) : categories.length === 0 ? (
+      ) : categoriesQuery.isError ? (
         <Card>
-          <CardContent className="flex flex-col items-center justify-center py-12">
-            <p className="text-muted-foreground text-center">
-              No categories yet. Create your first category to organize
-              expenses.
+          <CardHeader>
+            <CardTitle>Unable to load categories</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm text-muted-foreground">
+              {(categoriesQuery.error as Error).message}
             </p>
           </CardContent>
         </Card>
       ) : (
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {categories.map((category) => (
-            <Card key={category.id} className="shadow-sm">
-              <CardHeader>
-                <CardTitle className="text-lg">{category.name}</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-sm text-muted-foreground">
-                  {category.description || "No description"}
-                </p>
-              </CardContent>
-            </Card>
-          ))}
+        <div className="grid gap-6 lg:grid-cols-2">
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <h3 className="text-lg font-semibold">Operational</h3>
+              <Badge variant="secondary">{operationalCategories.length}</Badge>
+            </div>
+
+            {operationalCategories.length === 0 ? (
+              <Card>
+                <CardContent className="py-6 text-sm text-muted-foreground">
+                  No operational categories yet.
+                </CardContent>
+              </Card>
+            ) : (
+              <div className="space-y-3">
+                {operationalCategories.map((category) => (
+                  <Card
+                    key={category.id}
+                    className="transition-colors hover:bg-muted/40"
+                  >
+                    <CardHeader className="space-y-1">
+                      <div className="flex items-start justify-between gap-3">
+                        <CardTitle className="text-base">
+                          {category.name}
+                        </CardTitle>
+                        <div className="flex items-center gap-2">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => openEditDialog(category)}
+                          >
+                            <SquarePen className="h-4 w-4 text-blue-500" />
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => openDeleteDialog(category)}
+                          >
+                            <Trash2 className="h-4 w-4 text-red-500 " />
+                          </Button>
+                        </div>
+                      </div>
+                      <div>
+                        <Badge variant="outline">Operational</Badge>
+                      </div>
+                    </CardHeader>
+                    {category.description ? (
+                      <CardContent className="pt-0">
+                        <p className="text-sm text-muted-foreground">
+                          {category.description}
+                        </p>
+                      </CardContent>
+                    ) : null}
+                  </Card>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <h3 className="text-lg font-semibold">Administrative</h3>
+              <Badge variant="secondary">
+                {administrativeCategories.length}
+              </Badge>
+            </div>
+
+            {administrativeCategories.length === 0 ? (
+              <Card>
+                <CardContent className="py-6 text-sm text-muted-foreground">
+                  No administrative categories yet.
+                </CardContent>
+              </Card>
+            ) : (
+              <div className="space-y-3">
+                {administrativeCategories.map((category) => (
+                  <Card
+                    key={category.id}
+                    className="transition-colors hover:bg-muted/40"
+                  >
+                    <CardHeader className="space-y-1">
+                      <div className="flex items-start justify-between gap-3">
+                        <CardTitle className="text-base">
+                          {category.name}
+                        </CardTitle>
+                        <div className="flex items-center gap-2">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => openEditDialog(category)}
+                          >
+                            <SquarePen className="h-4 w-4 text-blue-500" />
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => openDeleteDialog(category)}
+                          >
+                            <Trash2 className="h-4 w-4 text-red-500 " />
+                          </Button>
+                        </div>
+                      </div>
+                      <div>
+                        <Badge variant="outline">Administrative</Badge>
+                      </div>
+                    </CardHeader>
+                    {category.description ? (
+                      <CardContent className="pt-0">
+                        <p className="text-sm text-muted-foreground">
+                          {category.description}
+                        </p>
+                      </CardContent>
+                    ) : null}
+                  </Card>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
       )}
+
+      <CategoryDialog
+        open={dialogOpen}
+        onOpenChange={setDialogOpen}
+        mode={dialogMode}
+        defaultValues={dialogDefaults}
+        isSubmitting={isSubmitting}
+        onSubmit={async (values: CategoryFormValues) => {
+          try {
+            await handleSubmit(values);
+          } catch (e) {
+            toast.error(
+              e instanceof Error ? e.message : "Something went wrong"
+            );
+          }
+        }}
+      />
+
+      <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete category?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will remove the category from active use. Existing expenses
+              will keep their history.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleteMutation.isPending}>
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (!deleteTarget) return;
+                deleteMutation.mutate(deleteTarget.id);
+              }}
+              disabled={deleteMutation.isPending}
+            >
+              {deleteMutation.isPending ? "Deleting..." : "Delete"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

@@ -25,6 +25,11 @@ enum ExpensePriority {
   NORMAL
 }
 
+enum CategoryType {
+  OPERATIONAL
+  ADMINISTRATIVE
+}
+
 enum InvitationStatus {
   PENDING
   ACCEPTED
@@ -109,6 +114,7 @@ model Category {
   id                String   @id @default(uuid())
   organizationId    String
   name              String
+  type              CategoryType @default(OPERATIONAL)
   description       String?
   isActive          Boolean  @default(true)
   
@@ -116,6 +122,7 @@ model Category {
   organization      Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   expenses          Expense[]
   
+  @@unique([organizationId, type, name])
   @@index([organizationId])
   @@index([name])
 }

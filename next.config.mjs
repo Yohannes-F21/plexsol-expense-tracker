@@ -6,6 +6,9 @@ const nextConfig = {
   images: {
     unoptimized: true,
   },
-}
+  // Prisma Client is generated code under node_modules and does not play well
+  // with Turbopack bundling/caching. Keep it external to avoid stale schema.
+  serverExternalPackages: ["@prisma/client", "prisma"],
+};
 
-export default nextConfig
+export default nextConfig;

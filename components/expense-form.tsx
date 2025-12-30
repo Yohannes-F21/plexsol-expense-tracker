@@ -69,7 +69,17 @@ export function ExpenseForm({
     data: categoriesData,
     isLoading: isLoadingCategories,
     error: categoriesError,
-  } = useQuery<{ categories: { id: string; name: string }[] }, Error>({
+  } = useQuery<
+    {
+      categories: {
+        id: string;
+        name: string;
+        type?: string;
+        isActive?: boolean;
+      }[];
+    },
+    Error
+  >({
     queryKey: ["org-admin-categories"],
     enabled: categoriesEnabled,
     retry: 1,
