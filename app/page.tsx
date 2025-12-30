@@ -9,11 +9,11 @@ export default async function HomePage() {
   }
 
   if (session.role === "SUPER_ADMIN") {
-    redirect("/super-admin");
+    redirect("/super-admin/dashboard");
   }
 
   if (session.role === "ORG_ADMIN") {
-    redirect("/admin");
+    redirect("/org-admin/dashboard");
   }
 
   redirect("/dashboard");

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation } from "@tanstack/react-query";
 import {
   Dialog,
   DialogContent,
@@ -35,8 +35,6 @@ export function EditExpenseDialog({
   onOpenChange,
   onSuccess,
 }: EditExpenseDialogProps) {
-  const queryClient = useQueryClient();
-
   const updateMutation = useMutation({
     mutationFn: async (values: ExpenseFormValues) => {
       const res = await fetch(`/api/expenses/${expense.id}`, {
@@ -54,8 +52,6 @@ export function EditExpenseDialog({
     },
     onSuccess: () => {
       toast.success("Expense updated");
-      queryClient.invalidateQueries({ queryKey: ["expenses"] });
-      queryClient.invalidateQueries({ queryKey: ["org-admin-expenses"] });
       onOpenChange(false);
       onSuccess();
     },

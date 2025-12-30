@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation } from "@tanstack/react-query";
 import {
   Dialog,
   DialogContent,
@@ -27,7 +27,6 @@ export function CreateExpenseDialog({
   trigger,
 }: CreateExpenseDialogProps) {
   const [internalOpen, setInternalOpen] = useState(false);
-  const queryClient = useQueryClient();
 
   const isControlled = typeof open === "boolean";
   const actualOpen = isControlled ? (open as boolean) : internalOpen;
@@ -57,8 +56,6 @@ export function CreateExpenseDialog({
     },
     onSuccess: () => {
       toast.success("Expense created successfully");
-      queryClient.invalidateQueries({ queryKey: ["expenses"] });
-      queryClient.invalidateQueries({ queryKey: ["org-admin-expenses"] });
       setOpen(false);
       onSuccess();
     },

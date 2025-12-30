@@ -37,7 +37,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { FileText, Search, Plus } from "lucide-react";
+import { FileText, Search, Plus, SquarePen, Trash2 } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
 import { toast } from "sonner";
 import { CreateExpenseDialog } from "@/components/create-expense-dialog";
@@ -76,6 +76,8 @@ export function ExpensesManagement() {
       return res.json() as Promise<{ expenses: Expense[] }>;
     },
   });
+
+  const expenses = data?.expenses ?? [];
 
   const handleDelete = useCallback(
     async (expenseId: string) => {
@@ -142,7 +144,8 @@ export function ExpensesManagement() {
       {
         accessorKey: "amount",
         header: "Amount",
-        cell: ({ row }) => formatCurrency(row.getValue("amount")),
+        cell: ({ row }) =>
+          formatCurrency(row.original.amount, row.original.currency),
       },
       {
         accessorKey: "createdAt",
@@ -206,15 +209,15 @@ export function ExpensesManagement() {
                 onClick={() => setEditingExpense(expense)}
                 disabled={locked}
               >
-                Edit
+                <SquarePen className="h-4 w-4 text-blue-500" />
               </Button>
               <Button
                 size="sm"
-                variant="destructive"
+                variant="outline"
                 onClick={() => handleDelete(expense.id)}
                 disabled={locked}
               >
-                Delete
+                <Trash2 className="h-4 w-4 text-red-500 " />
               </Button>
             </div>
           );
@@ -224,10 +227,11 @@ export function ExpensesManagement() {
     [handleDelete]
   );
 
-  const filteredData =
-    data?.expenses.filter((expense) =>
+  const filteredData = useMemo(() => {
+    return expenses.filter((expense) =>
       statusFilter === "all" ? true : expense.status === statusFilter
-    ) || [];
+    );
+  }, [expenses, statusFilter]);
 
   const table = useReactTable({
     data: filteredData,
@@ -259,20 +263,6 @@ export function ExpensesManagement() {
           Review and approve expense requests from your team
         </p>
       </div>
-      <div className="flex justify-end">
-        <CreateExpenseDialog
-          trigger={
-            <Button>
-              <Plus className="mr-2 h-4 w-4" />
-              New Expense
-            </Button>
-          }
-          onSuccess={() => {
-            queryClient.invalidateQueries({ queryKey: ["org-admin-expenses"] });
-            queryClient.invalidateQueries({ queryKey: ["org-admin-stats"] });
-          }}
-        />
-      </div>
 
       <Card>
         <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -282,6 +272,24 @@ export function ExpensesManagement() {
               Total: {filteredData.length} expense
               {filteredData.length !== 1 ? "s" : ""}
             </CardDescription>
+          </div>
+          <div className="flex justify-end">
+            <CreateExpenseDialog
+              trigger={
+                <Button>
+                  <Plus className=" h-4 w-4" />
+                  New Expense
+                </Button>
+              }
+              onSuccess={() => {
+                queryClient.invalidateQueries({
+                  queryKey: ["org-admin-expenses"],
+                });
+                queryClient.invalidateQueries({
+                  queryKey: ["org-admin-stats"],
+                });
+              }}
+            />
           </div>
         </CardHeader>
         <CardContent>
