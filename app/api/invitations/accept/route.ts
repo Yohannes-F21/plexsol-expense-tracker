@@ -50,7 +50,7 @@ export async function POST(request: Request) {
       }),
     ]);
 
-    // Create activity log referencing the created user
+    // Create activity log referencing the created user can make it a stand alone component
     try {
       await prisma.activityLog.create({
         data: {
@@ -64,7 +64,7 @@ export async function POST(request: Request) {
         },
       });
     } catch (e) {
-      console.warn("[v0] Failed to create activity log after invite accept", e);
+      console.warn(" Failed to create activity log after invite accept", e);
     }
 
     // Create session for the new user
@@ -86,7 +86,7 @@ export async function POST(request: Request) {
       },
     });
   } catch (error) {
-    console.error("[v0] Accept invitation error:", error);
+    console.error("Accept invitation error:", error);
     if (error instanceof z.ZodError) {
       return NextResponse.json(
         { error: "Invalid input", details: error.errors },

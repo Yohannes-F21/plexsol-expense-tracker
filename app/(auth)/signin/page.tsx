@@ -1,78 +1,90 @@
-"use client"
+"use client";
 
-import type React from "react"
+import type React from "react";
 
-import { useState } from "react"
-import { useRouter } from "next/navigation"
-import Link from "next/link"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
-import { toast } from "sonner"
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import Link from "next/link";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { toast } from "sonner";
 
 export default function SignInPage() {
-  const router = useRouter()
-  const [email, setEmail] = useState("")
-  const [password, setPassword] = useState("")
-  const [isLoading, setIsLoading] = useState(false)
+  const router = useRouter();
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setIsLoading(true)
+    e.preventDefault();
+    setIsLoading(true);
 
     try {
-      console.log("[v0] Attempting sign in for:", email)
+      console.log("Attempting sign in for:", email);
 
       const response = await fetch("/api/auth/signin", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, password }),
-      })
+      });
 
-      console.log("[v0] Response status:", response.status)
-      console.log("[v0] Response content-type:", response.headers.get("content-type"))
+      console.log("Response status:", response.status);
+      console.log(
+        "Response content-type:",
+        response.headers.get("content-type")
+      );
 
-      const contentType = response.headers.get("content-type")
+      const contentType = response.headers.get("content-type");
       if (!contentType || !contentType.includes("application/json")) {
-        const text = await response.text()
-        console.error("[v0] Non-JSON response:", text)
-        toast.error("Server error. Please check if database is connected.")
-        return
+        const text = await response.text();
+        console.error("Non-JSON response:", text);
+        toast.error("Server error. Please check if database is connected.");
+        return;
       }
 
-      const data = await response.json()
-      console.log("[v0] Response data:", data)
+      const data = await response.json();
+      console.log("Response data:", data);
 
       if (!response.ok) {
-        toast.error(data.error || "Sign in failed")
-        return
+        toast.error(data.error || "Sign in failed");
+        return;
       }
 
-      toast.success("Signed in successfully")
+      toast.success("Signed in successfully");
 
       // Redirect based on role
       if (data.user.role === "SUPER_ADMIN") {
-        router.push("/super-admin")
+        router.push("/super-admin");
       } else if (data.user.role === "ORG_ADMIN") {
-        router.push("/admin")
+        router.push("/admin");
       } else {
-        router.push("/dashboard")
+        router.push("/dashboard");
       }
     } catch (error) {
-      console.error("[v0] Sign in error:", error)
-      toast.error("An error occurred. Please try again.")
+      console.error("Sign in error:", error);
+      toast.error("An error occurred. Please try again.");
     } finally {
-      setIsLoading(false)
+      setIsLoading(false);
     }
-  }
+  };
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-muted/30 p-4">
       <Card className="w-full max-w-md">
         <CardHeader>
           <CardTitle className="text-2xl">Sign In</CardTitle>
-          <CardDescription>Enter your credentials to access your account</CardDescription>
+          <CardDescription>
+            Enter your credentials to access your account
+          </CardDescription>
         </CardHeader>
         <form onSubmit={handleSubmit}>
           <CardContent className="space-y-4">
@@ -112,5 +124,5 @@ export default function SignInPage() {
         </form>
       </Card>
     </div>
-  )
+  );
 }

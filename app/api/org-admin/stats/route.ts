@@ -4,32 +4,49 @@ import { prisma } from "@/lib/prisma";
 
 export async function GET() {
   try {
-    const session = await requireRole(["ORG_ADMIN", "SUPER_ADMIN"]);
-    const orgId = session.organizationId;
-    if (!orgId)
-      return NextResponse.json({ error: "No organization" }, { status: 400 });
+    const session = await requireRole(["ORG_ADMIN"]);
 
-    const [totalUsers, totalExpenses, pendingApprovals, totalExpenseAmount] =
+    const [totalUsers, totalExpenses, pendingExpenses, approvedExpenses] =
       await Promise.all([
-        prisma.user.count({ where: { organizationId: orgId } }),
-        prisma.expense.count({ where: { organizationId: orgId } }),
-        prisma.expense.count({
-          where: { organizationId: orgId, status: "PENDING" },
+        prisma.user.count({
+          where: { organizationId: session.organizationId! },
         }),
-        prisma.expense.aggregate({
-          where: { organizationId: orgId },
-          _sum: { amount: true },
+        prisma.expense.count({
+          where: { organizationId: session.organizationId! },
+        }),
+        prisma.expense.count({
+          where: {
+            organizationId: session.organizationId!,
+            status: "PENDING",
+          },
+        }),
+        prisma.expense.count({
+          where: {
+            organizationId: session.organizationId!,
+            status: "APPROVED",
+          },
         }),
       ]);
+
+    const totalExpenseAmount = await prisma.expense.aggregate({
+      where: {
+        organizationId: session.organizationId!,
+        status: "APPROVED",
+      },
+      _sum: {
+        amount: true,
+      },
+    });
 
     return NextResponse.json({
       totalUsers,
       totalExpenses,
-      pendingApprovals,
-      totalExpenseAmount: totalExpenseAmount._sum?.amount ?? 0,
+      pendingExpenses,
+      approvedExpenses,
+      totalExpenseAmount: totalExpenseAmount._sum.amount || 0,
     });
   } catch (error) {
-    console.error("[org-admin] Get stats error:", error);
+    console.error("[v0] Get stats error:", error);
     return NextResponse.json(
       {
         error: error instanceof Error ? error.message : "Internal server error",

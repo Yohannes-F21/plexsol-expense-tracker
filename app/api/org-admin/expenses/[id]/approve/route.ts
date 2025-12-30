@@ -11,12 +11,30 @@ export async function POST(
     const session = await requireRole(["ORG_ADMIN"]);
     const { id } = await params;
 
+    if (!session.organizationId) {
+      return NextResponse.json(
+        { error: "Organization ID missing" },
+        { status: 400 }
+      );
+    }
+
     const expense = await prisma.expense.findUnique({
       where: { id },
     });
 
-    if (!expense || expense.organizationId !== session.organizationId) {
+    if (
+      !expense ||
+      expense.organizationId !== session.organizationId ||
+      !expense.isActive
+    ) {
       return NextResponse.json({ error: "Expense not found" }, { status: 404 });
+    }
+
+    if (expense.status === "APPROVED" || expense.status === "REJECTED") {
+      return NextResponse.json(
+        { error: "Expense already finalized" },
+        { status: 400 }
+      );
     }
 
     const [updatedExpense] = await prisma.$transaction([

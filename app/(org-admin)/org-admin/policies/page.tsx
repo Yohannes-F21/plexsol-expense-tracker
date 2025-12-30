@@ -1,0 +1,546 @@
+"use client";
+
+import { useEffect, useMemo, useState } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { apiClient } from "@/lib/api-client";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Eye, Pencil, Trash2, ShieldAlert } from "lucide-react";
+import { toast } from "sonner";
+
+interface Category {
+  id: string;
+  name: string;
+}
+
+interface ExpensePolicy {
+  id: string;
+  policyName: string;
+  description: string | null;
+  maxAmount: number | null;
+  allowedCategories: string[] | null;
+  requiresReceipt: boolean;
+  autoApprove: boolean;
+  isActive: boolean;
+  createdAt: string;
+}
+
+interface PolicyFormState {
+  policyName: string;
+  description: string;
+  ruleDescription: string;
+  categoryId: string;
+  maxAmount: string;
+  isActive: boolean;
+}
+
+function formatDate(value: string) {
+  const date = new Date(value);
+  return date.toLocaleDateString(undefined, {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+}
+
+function PolicyFormDialog({
+  mode,
+  open,
+  onOpenChange,
+  categories,
+  initial,
+  onSubmit,
+}: {
+  mode: "create" | "edit" | "view";
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  categories: Category[];
+  initial?: ExpensePolicy;
+  onSubmit: (values: PolicyFormState) => Promise<void>;
+}) {
+  const [state, setState] = useState<PolicyFormState>(() => ({
+    policyName: initial?.policyName ?? "",
+    description: initial?.description ?? "",
+    ruleDescription: initial?.description ? "" : "",
+    categoryId: initial?.allowedCategories?.[0] ?? "",
+    maxAmount: initial?.maxAmount?.toString() ?? "",
+    isActive: initial?.isActive ?? true,
+  }));
+  const [submitting, setSubmitting] = useState(false);
+  const readOnly = mode === "view";
+
+  useEffect(() => {
+    if (open) {
+      setState({
+        policyName: initial?.policyName ?? "",
+        description: initial?.description ?? "",
+        ruleDescription: "",
+        categoryId: initial?.allowedCategories?.[0] ?? "",
+        maxAmount: initial?.maxAmount?.toString() ?? "",
+        isActive: initial?.isActive ?? true,
+      });
+    }
+  }, [open, initial]);
+
+  const handleSave = async () => {
+    if (readOnly) return;
+    if (!state.policyName.trim()) {
+      toast.error("Policy name is required");
+      return;
+    }
+    if (!state.categoryId) {
+      toast.error("Category is required");
+      return;
+    }
+    const amountNumber = Number(state.maxAmount);
+    if (!Number.isFinite(amountNumber) || amountNumber <= 0) {
+      toast.error("Max amount must be greater than 0");
+      return;
+    }
+
+    setSubmitting(true);
+    try {
+      await onSubmit({ ...state, maxAmount: amountNumber.toString() });
+      toast.success(mode === "edit" ? "Policy updated" : "Policy created");
+      onOpenChange(false);
+    } catch (error) {
+      console.error(error);
+      toast.error(
+        error instanceof Error ? error.message : "Something went wrong"
+      );
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-2xl">
+        <DialogHeader>
+          <DialogTitle>
+            {mode === "create" && "Create Policy"}
+            {mode === "edit" && "Edit Policy"}
+            {mode === "view" && "View Policy"}
+          </DialogTitle>
+          <DialogDescription>
+            Define spending rules for your organization. Fields marked with *
+            are required.
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="space-y-5">
+          <div className="space-y-2">
+            <Label htmlFor="policyName">Policy Name *</Label>
+            <Input
+              id="policyName"
+              value={state.policyName}
+              onChange={(e) =>
+                setState((s) => ({ ...s, policyName: e.target.value }))
+              }
+              placeholder="e.g. Travel Expenses"
+              disabled={readOnly}
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="category">Category *</Label>
+            <Select
+              disabled={readOnly}
+              value={state.categoryId}
+              onValueChange={(val) =>
+                setState((s) => ({ ...s, categoryId: val }))
+              }
+            >
+              <SelectTrigger id="category">
+                <SelectValue placeholder="Select a category" />
+              </SelectTrigger>
+              <SelectContent>
+                {categories.map((cat) => (
+                  <SelectItem key={cat.id} value={cat.id}>
+                    {cat.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="description">Description</Label>
+            <Textarea
+              id="description"
+              value={state.description}
+              onChange={(e) =>
+                setState((s) => ({ ...s, description: e.target.value }))
+              }
+              placeholder="Briefly describe what this policy covers"
+              disabled={readOnly}
+            />
+          </div>
+
+          <div className="rounded-lg border p-4 space-y-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium">Policy Rules</p>
+                <p className="text-xs text-muted-foreground">
+                  Start with a maximum amount rule; more rules can be added
+                  later.
+                </p>
+              </div>
+              <Badge variant="outline" className="text-[11px]">
+                MAX_AMOUNT
+              </Badge>
+            </div>
+
+            <div className="grid gap-3 md:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor="maxAmount">Maximum Amount *</Label>
+                <Input
+                  id="maxAmount"
+                  type="number"
+                  min={0}
+                  step="0.01"
+                  value={state.maxAmount}
+                  onChange={(e) =>
+                    setState((s) => ({ ...s, maxAmount: e.target.value }))
+                  }
+                  placeholder="Enter limit (e.g. 500)"
+                  disabled={readOnly}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="ruleDescription">Rule Description</Label>
+                <Input
+                  id="ruleDescription"
+                  value={state.ruleDescription}
+                  onChange={(e) =>
+                    setState((s) => ({ ...s, ruleDescription: e.target.value }))
+                  }
+                  placeholder="e.g. Per trip cap"
+                  disabled={readOnly}
+                />
+              </div>
+            </div>
+          </div>
+
+          <div className="flex items-center justify-between rounded-lg border p-3">
+            <div>
+              <p className="text-sm font-medium">Activate policy immediately</p>
+              <p className="text-xs text-muted-foreground">
+                Deactivating keeps it saved but not enforced.
+              </p>
+            </div>
+            <Switch
+              checked={state.isActive}
+              onCheckedChange={(val) =>
+                setState((s) => ({ ...s, isActive: val }))
+              }
+              disabled={readOnly}
+            />
+          </div>
+        </div>
+
+        {mode !== "view" && (
+          <DialogFooter className="sm:justify-between">
+            <Button
+              variant="outline"
+              onClick={() => onOpenChange(false)}
+              disabled={submitting}
+            >
+              Cancel
+            </Button>
+            <Button onClick={handleSave} disabled={submitting}>
+              {submitting
+                ? "Saving..."
+                : mode === "edit"
+                ? "Save changes"
+                : "Create policy"}
+            </Button>
+          </DialogFooter>
+        )}
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function PolicyCard({
+  policy,
+  categoryLabel,
+  onView,
+  onEdit,
+  onDelete,
+}: {
+  policy: ExpensePolicy;
+  categoryLabel: string;
+  onView: () => void;
+  onEdit: () => void;
+  onDelete: () => void;
+}) {
+  const rulesSummary = useMemo(() => {
+    const limit = policy.maxAmount
+      ? `Limit: Maximum amount $${policy.maxAmount}`
+      : "No limit set";
+    return limit;
+  }, [policy.maxAmount]);
+
+  return (
+    <Card className="shadow-sm">
+      <CardHeader className="flex flex-row items-start justify-between space-y-0">
+        <div className="space-y-2">
+          <div className="flex items-center gap-2">
+            <CardTitle className="text-base md:text-lg">
+              {policy.policyName}
+            </CardTitle>
+            <Badge variant={policy.isActive ? "default" : "secondary"}>
+              {policy.isActive ? "Active" : "Inactive"}
+            </Badge>
+            <Badge variant="outline">{categoryLabel}</Badge>
+          </div>
+          <CardDescription>
+            {policy.description || "No description provided"}
+          </CardDescription>
+        </div>
+        <div className="flex items-center gap-2">
+          <Button
+            size="icon"
+            variant="ghost"
+            onClick={onView}
+            aria-label="View"
+          >
+            <Eye className="h-4 w-4" />
+          </Button>
+          <Button
+            size="icon"
+            variant="ghost"
+            onClick={onEdit}
+            aria-label="Edit"
+          >
+            <Pencil className="h-4 w-4" />
+          </Button>
+          <Button
+            size="icon"
+            variant="ghost"
+            onClick={onDelete}
+            aria-label="Delete"
+          >
+            <Trash2 className="h-4 w-4 text-destructive" />
+          </Button>
+        </div>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+          <ShieldAlert className="h-4 w-4" />
+          <span>Compliance: placeholder</span>
+        </div>
+        <div className="text-sm font-medium text-foreground">
+          {rulesSummary}
+        </div>
+        <div className="text-xs text-muted-foreground">
+          Updated {formatDate(policy.createdAt)}
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+export default function PoliciesPage() {
+  const queryClient = useQueryClient();
+  const [dialogMode, setDialogMode] = useState<"create" | "edit" | "view">(
+    "create"
+  );
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [activePolicy, setActivePolicy] = useState<ExpensePolicy | undefined>(
+    undefined
+  );
+
+  const { data: categoriesData, isLoading: categoriesLoading } = useQuery<{
+    categories: Category[];
+  }>({
+    queryKey: ["org-admin-categories"],
+    queryFn: () => apiClient("/api/org-admin/categories"),
+  });
+
+  const { data: policiesData, isLoading: policiesLoading } = useQuery<{
+    policies: ExpensePolicy[];
+  }>({
+    queryKey: ["org-admin-policies"],
+    queryFn: () => apiClient("/api/org-admin/policies"),
+  });
+
+  const categories = categoriesData?.categories ?? [];
+  const policies = policiesData?.policies ?? [];
+
+  const createMutation = useMutation({
+    mutationFn: (payload: PolicyFormState) =>
+      apiClient("/api/org-admin/policies", {
+        method: "POST",
+        body: JSON.stringify({
+          policyName: payload.policyName,
+          description: payload.description || payload.ruleDescription || "",
+          categoryId: payload.categoryId,
+          maxAmount: Number(payload.maxAmount),
+          isActive: payload.isActive,
+        }),
+      }),
+    onSuccess: () =>
+      queryClient.invalidateQueries({ queryKey: ["org-admin-policies"] }),
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: ({ id, data }: { id: string; data: PolicyFormState }) =>
+      apiClient(`/api/org-admin/policies/${id}`, {
+        method: "PATCH",
+        body: JSON.stringify({
+          policyName: data.policyName,
+          description: data.description || data.ruleDescription || "",
+          categoryId: data.categoryId,
+          maxAmount: Number(data.maxAmount),
+          isActive: data.isActive,
+        }),
+      }),
+    onSuccess: () =>
+      queryClient.invalidateQueries({ queryKey: ["org-admin-policies"] }),
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) =>
+      apiClient(`/api/org-admin/policies/${id}`, { method: "DELETE" }),
+    onSuccess: () =>
+      queryClient.invalidateQueries({ queryKey: ["org-admin-policies"] }),
+  });
+
+  const openCreate = () => {
+    setActivePolicy(undefined);
+    setDialogMode("create");
+    setDialogOpen(true);
+  };
+
+  const openEdit = (policy: ExpensePolicy) => {
+    setActivePolicy(policy);
+    setDialogMode("edit");
+    setDialogOpen(true);
+  };
+
+  const openView = (policy: ExpensePolicy) => {
+    setActivePolicy(policy);
+    setDialogMode("view");
+    setDialogOpen(true);
+  };
+
+  const handleSubmit = async (values: PolicyFormState) => {
+    if (dialogMode === "edit" && activePolicy) {
+      await updateMutation.mutateAsync({ id: activePolicy.id, data: values });
+    } else {
+      await createMutation.mutateAsync(values);
+    }
+  };
+
+  const handleDelete = async (policy: ExpensePolicy) => {
+    const confirmed = window.confirm(
+      "Delete this policy? It will be deactivated."
+    );
+    if (!confirmed) return;
+    await deleteMutation.mutateAsync(policy.id);
+    toast.success("Policy deleted");
+  };
+
+  const isBusy =
+    createMutation.isPending ||
+    updateMutation.isPending ||
+    deleteMutation.isPending;
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl md:text-3xl font-bold">Expense Policies</h1>
+          <p className="text-muted-foreground mt-1">
+            Define and manage spending policies for your organization.
+          </p>
+        </div>
+        <Button onClick={openCreate}>Create Policy</Button>
+      </div>
+
+      {policiesLoading || categoriesLoading ? (
+        <div className="grid gap-4 md:grid-cols-2">
+          {[...Array(4)].map((_, idx) => (
+            <Card key={idx} className="shadow-sm">
+              <CardContent className="space-y-3 pt-6">
+                <Skeleton className="h-5 w-40" />
+                <Skeleton className="h-4 w-24" />
+                <Skeleton className="h-10" />
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      ) : policies.length === 0 ? (
+        <Card className="shadow-sm">
+          <CardContent className="py-10 text-center space-y-3">
+            <p className="text-lg font-semibold">No policies created yet</p>
+            <p className="text-sm text-muted-foreground">
+              Create your first policy to start enforcing spend rules for your
+              team.
+            </p>
+            <Button onClick={openCreate}>Create Policy</Button>
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="grid gap-4 md:grid-cols-2">
+          {policies.map((policy) => {
+            const categoryId = policy.allowedCategories?.[0];
+            const categoryLabel =
+              categories.find((c) => c.id === categoryId)?.name ||
+              "Uncategorized";
+            return (
+              <PolicyCard
+                key={policy.id}
+                policy={policy}
+                categoryLabel={categoryLabel}
+                onView={() => openView(policy)}
+                onEdit={() => openEdit(policy)}
+                onDelete={() => handleDelete(policy)}
+              />
+            );
+          })}
+        </div>
+      )}
+
+      <PolicyFormDialog
+        mode={dialogMode}
+        open={dialogOpen}
+        onOpenChange={(open) => {
+          if (!open && !isBusy) setDialogOpen(false);
+        }}
+        categories={categories}
+        initial={activePolicy}
+        onSubmit={handleSubmit}
+      />
+    </div>
+  );
+}

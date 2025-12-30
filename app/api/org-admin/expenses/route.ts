@@ -6,9 +6,17 @@ export async function GET() {
   try {
     const session = await requireRole(["ORG_ADMIN"]);
 
+    if (!session.organizationId) {
+      return NextResponse.json(
+        { error: "Organization ID missing" },
+        { status: 400 }
+      );
+    }
+
     const expenses = await prisma.expense.findMany({
       where: {
-        organizationId: session.organizationId!,
+        organizationId: session.organizationId,
+        isActive: true,
       },
       include: {
         user: {
@@ -18,6 +26,7 @@ export async function GET() {
             email: true,
           },
         },
+        category: { select: { id: true, name: true } },
       },
       orderBy: {
         createdAt: "desc",

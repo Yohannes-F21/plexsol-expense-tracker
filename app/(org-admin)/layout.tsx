@@ -33,7 +33,7 @@ const navItems: NavItem[] = [
   },
   {
     title: "Staff",
-    href: "/admin/team", //for the moment keep it as /admin/team to avoid breaking existing links
+    href: "/org-admin/team", //for the moment keep it as /admin/team to avoid breaking existing links
     icon: "users",
   },
   {

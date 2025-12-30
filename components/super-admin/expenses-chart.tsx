@@ -1,30 +1,41 @@
-"use client"
+"use client";
 
-import { useQuery } from "@tanstack/react-query"
-import { apiClient } from "@/lib/api-client"
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts"
-import { Skeleton } from "@/components/ui/skeleton"
+import { useQuery } from "@tanstack/react-query";
+import { apiClient } from "@/lib/api-client";
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+} from "recharts";
+import { Skeleton } from "@/components/ui/skeleton";
 
 interface ExpenseData {
-  month: string
-  total: number
-  count: number
+  month: string;
+  total: number;
+  count: number;
 }
 
 export function ExpensesChart() {
   const { data, isLoading } = useQuery<ExpenseData[]>({
     queryKey: ["expenses-chart"],
-    queryFn: () => apiClient<ExpenseData[]>("/api/super-admin/charts/expenses-over-time"),
-  })
+    queryFn: () =>
+      apiClient<ExpenseData[]>("/api/super-admin/charts/expenses-over-time"),
+  });
 
   if (isLoading) {
-    return <Skeleton className="h-[300px] w-full" />
+    return <Skeleton className="h-75 w-full" />;
   }
 
   if (!data || data.length === 0) {
     return (
-      <div className="flex h-[300px] items-center justify-center text-muted-foreground">No expense data available</div>
-    )
+      <div className="flex h-75 items-center justify-center text-muted-foreground">
+        No expense data available
+      </div>
+    );
   }
 
   return (
@@ -37,5 +48,5 @@ export function ExpensesChart() {
         <Bar dataKey="total" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
       </BarChart>
     </ResponsiveContainer>
-  )
+  );
 }

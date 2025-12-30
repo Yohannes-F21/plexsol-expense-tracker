@@ -30,7 +30,14 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { MoreHorizontal, Plus, Mail, ArrowUpDown } from "lucide-react";
+import {
+  MoreHorizontal,
+  Plus,
+  Mail,
+  ArrowUpDown,
+  Tag,
+  Trash,
+} from "lucide-react";
 import { CreateOrganizationDialog } from "@/components/create-organization-dialog";
 import { InviteOrgAdminDialog } from "@/components/invite-org-admin-dialog";
 import { toast } from "sonner";
@@ -63,10 +70,11 @@ export function OrganizationsTable() {
       const data = await apiClient<Organization[]>(
         "/api/super-admin/organizations"
       );
-      console.log("[v0] Organizations fetched:", data.length);
+      console.log("Organizations fetched:", data.length);
       return data;
     },
   });
+  console.log("Organizations:", organizations);
 
   const deactivateMutation = useMutation({
     mutationFn: (id: string) =>
@@ -91,7 +99,7 @@ export function OrganizationsTable() {
         <Button
           variant="ghost"
           onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-          className="-ml-4"
+          className="-ml-3"
         >
           Organization Name
           <ArrowUpDown className="ml-2 h-4 w-4" />
@@ -112,7 +120,13 @@ export function OrganizationsTable() {
       cell: ({ row }) => {
         const isActive = row.getValue("isActive") as boolean;
         return (
-          <Badge variant={isActive ? "default" : "secondary"}>
+          <Badge
+            className={`${
+              isActive
+                ? "bg-green-100 text-green-900"
+                : "bg-red-100 text-red-900"
+            }`}
+          >
             {isActive ? "Active" : "Inactive"}
           </Badge>
         );
@@ -160,8 +174,10 @@ export function OrganizationsTable() {
               {org.isActive && (
                 <DropdownMenuItem
                   onClick={() => deactivateMutation.mutate(org.id)}
+                  variant="destructive"
                   className="text-destructive"
                 >
+                  <Trash className="mr-2 h-4 w-4" />
                   Deactivate
                 </DropdownMenuItem>
               )}

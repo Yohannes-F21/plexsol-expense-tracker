@@ -1,39 +1,46 @@
-"use client"
+"use client";
 
-import type React from "react"
+import type React from "react";
 
-import { useState, useEffect, Suspense } from "react"
-import { useRouter, useSearchParams } from "next/navigation"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
-import { toast } from "sonner"
+import { useState, useEffect, Suspense } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { toast } from "sonner";
 
 function AcceptInviteForm() {
-  const router = useRouter()
-  const searchParams = useSearchParams()
-  const token = searchParams.get("token")
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const token = searchParams.get("token");
 
   const [formData, setFormData] = useState({
     name: "",
     password: "",
     phoneNumber: "",
-  })
-  const [isLoading, setIsLoading] = useState(false)
+  });
+  const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
     if (!token) {
-      toast.error("Invalid invitation link")
-      router.push("/signin")
+      toast.error("Invalid invitation link");
+      router.push("/signin");
     }
-  }, [token, router])
+  }, [token, router]);
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!token) return
+    e.preventDefault();
+    if (!token) return;
 
-    setIsLoading(true)
+    setIsLoading(true);
 
     try {
       const response = await fetch("/api/invitations/accept", {
@@ -45,30 +52,30 @@ function AcceptInviteForm() {
           password: formData.password,
           phoneNumber: formData.phoneNumber || undefined,
         }),
-      })
+      });
 
-      const data = await response.json()
+      const data = await response.json();
 
       if (!response.ok) {
-        toast.error(data.error || "Failed to accept invitation")
-        return
+        toast.error(data.error || "Failed to accept invitation");
+        return;
       }
 
-      toast.success("Account created successfully")
+      toast.success("Account created successfully");
 
       // Redirect based on role
       if (data.user.role === "ORG_ADMIN") {
-        router.push("/admin")
+        router.push("/admin");
       } else {
-        router.push("/dashboard")
+        router.push("/dashboard");
       }
     } catch (error) {
-      console.error("[v0] Accept invitation error:", error)
-      toast.error("An error occurred")
+      console.error("Accept invitation error:", error);
+      toast.error("An error occurred");
     } finally {
-      setIsLoading(false)
+      setIsLoading(false);
     }
-  }
+  };
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-muted/30 p-4">
@@ -86,7 +93,9 @@ function AcceptInviteForm() {
                 type="text"
                 placeholder="John Doe"
                 value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                onChange={(e) =>
+                  setFormData({ ...formData, name: e.target.value })
+                }
                 required
               />
             </div>
@@ -97,7 +106,9 @@ function AcceptInviteForm() {
                 type="tel"
                 placeholder="+1 234 567 8900"
                 value={formData.phoneNumber}
-                onChange={(e) => setFormData({ ...formData, phoneNumber: e.target.value })}
+                onChange={(e) =>
+                  setFormData({ ...formData, phoneNumber: e.target.value })
+                }
               />
             </div>
             <div className="space-y-2">
@@ -107,7 +118,9 @@ function AcceptInviteForm() {
                 type="password"
                 placeholder="Minimum 8 characters"
                 value={formData.password}
-                onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                onChange={(e) =>
+                  setFormData({ ...formData, password: e.target.value })
+                }
                 required
                 minLength={8}
               />
@@ -121,7 +134,7 @@ function AcceptInviteForm() {
         </form>
       </Card>
     </div>
-  )
+  );
 }
 
 export default function AcceptInvitePage() {
@@ -129,5 +142,5 @@ export default function AcceptInvitePage() {
     <Suspense fallback={<div>Loading...</div>}>
       <AcceptInviteForm />
     </Suspense>
-  )
+  );
 }

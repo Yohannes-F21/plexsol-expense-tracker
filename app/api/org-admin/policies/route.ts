@@ -18,6 +18,7 @@ export async function GET() {
     const policies = await prisma.expensePolicy.findMany({
       where: {
         organizationId: session.organizationId,
+        isActive: true,
       },
       orderBy: {
         createdAt: "desc",
@@ -39,7 +40,9 @@ export async function GET() {
 const policySchema = z.object({
   policyName: z.string().min(1),
   description: z.string().optional(),
-  maxAmount: z.number().positive().optional(),
+  categoryId: z.string().min(1),
+  maxAmount: z.number().positive(),
+  isActive: z.boolean().default(true),
   requiresReceipt: z.boolean().default(false),
   autoApprove: z.boolean().default(false),
 });
@@ -61,7 +64,13 @@ export async function POST(request: Request) {
     const [policy] = await prisma.$transaction([
       prisma.expensePolicy.create({
         data: {
-          ...validatedData,
+          policyName: validatedData.policyName,
+          description: validatedData.description,
+          maxAmount: validatedData.maxAmount,
+          allowedCategories: [validatedData.categoryId],
+          requiresReceipt: validatedData.requiresReceipt,
+          autoApprove: validatedData.autoApprove,
+          isActive: validatedData.isActive,
           organizationId: session.organizationId,
         },
       }),
@@ -78,7 +87,6 @@ export async function POST(request: Request) {
       }),
     ]);
 
-    // Best-effort: update activity log entityId to policy id
     try {
       await prisma.activityLog.updateMany({
         where: { actionType: "POLICY_CREATED", userId: session.id },

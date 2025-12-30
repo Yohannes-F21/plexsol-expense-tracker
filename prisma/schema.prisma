@@ -20,6 +20,11 @@ enum ExpenseStatus {
   REJECTED
 }
 
+enum ExpensePriority {
+  HIGH
+  NORMAL
+}
+
 enum InvitationStatus {
   PENDING
   ACCEPTED
@@ -142,6 +147,7 @@ model Expense {
   currency          String   @default("USD")
   description       String
   status            ExpenseStatus @default(PENDING)
+  priority          ExpensePriority @default(NORMAL)
   policyViolation   Json?    // Details of policy violations
   isActive          Boolean  @default(true)
   createdAt         DateTime @default(now())

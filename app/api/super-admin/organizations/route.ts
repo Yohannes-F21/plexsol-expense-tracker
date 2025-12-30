@@ -42,11 +42,11 @@ export async function GET() {
       },
     });
 
-    console.log("[v0] Fetched organizations:", organizations.length);
+    console.log("Fetched organizations:", organizations.length);
 
     return NextResponse.json(organizations);
   } catch (error) {
-    console.error("[v0] Get organizations error:", error);
+    console.error("Get organizations error:", error);
     return NextResponse.json(
       {
         error: error instanceof Error ? error.message : "Internal server error",
@@ -57,7 +57,7 @@ export async function GET() {
 }
 
 const createOrgSchema = z.object({
-  name: z.string().min(1),
+  name: z.string().min(2),
   industry: z.string().optional(),
 });
 
@@ -67,7 +67,7 @@ export async function POST(request: Request) {
     const body = await request.json();
     const validatedData = createOrgSchema.parse(body);
 
-    console.log("[v0] Creating organization:", validatedData);
+    console.log("Creating organization:", validatedData);
 
     const [organization] = await prisma.$transaction([
       prisma.organization.create({
@@ -116,12 +116,12 @@ export async function POST(request: Request) {
       });
     } catch (e) {
       // non-fatal
-      console.warn("[v0] Failed to update activity log for organization", e);
+      console.warn("Failed to update activity log for organization", e);
     }
 
     return NextResponse.json(organization);
   } catch (error) {
-    console.error("[v0] Create organization error:", error);
+    console.error("Create organization error:", error);
     if (error instanceof z.ZodError) {
       return NextResponse.json(
         { error: "Invalid input", details: error.errors },
