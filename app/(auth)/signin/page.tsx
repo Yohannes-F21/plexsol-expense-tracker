@@ -63,7 +63,7 @@ export default function SignInPage() {
 
       // Redirect based on role
       if (data.user.role === "SUPER_ADMIN") {
-        router.push("/super-admin/dashboard");
+        router.push("/super-admin");
       } else if (data.user.role === "ORG_ADMIN") {
         router.push("/org-admin/dashboard");
       } else {

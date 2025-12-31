@@ -2,22 +2,22 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { ExpensesTable } from "@/components/expenses/expenses-table";
 
-export default function OrgAdminExpensesPage() {
+export default function StaffExpensesPage() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-semibold">Expenses</h1>
           <p className="text-sm text-muted-foreground">
-            Review receipt submissions across your organization.
+            Create and track your receipt submissions.
           </p>
         </div>
         <Button asChild>
-          <Link href="/org-admin/expenses/new">New Expense</Link>
+          <Link href="/dashboard/expenses/new">New Expense</Link>
         </Button>
       </div>
 
-      <ExpensesTable role="ORG_ADMIN" />
+      <ExpensesTable role="STAFF" />
     </div>
   );
 }

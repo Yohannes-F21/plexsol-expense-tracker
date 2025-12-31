@@ -20,9 +20,12 @@ enum ExpenseStatus {
   REJECTED
 }
 
-enum ExpensePriority {
-  HIGH
-  NORMAL
+enum PaymentMethod {
+  CASH
+  CHECK
+  CREDIT_CARD
+  BANK_TRANSFER
+  OTHER
 }
 
 enum CategoryType {
@@ -56,7 +59,7 @@ model User {
   // Relations
   organization      Organization? @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   
-  expenses          Expense[]
+  expenses          Expense[] @relation("UserCreatedExpenses")
   invitationsSent   Invitation[] @relation("InvitationSender")
   approvals         Approval[]
   activityLogs      ActivityLog[]
@@ -120,7 +123,7 @@ model Category {
   
   // Relations
   organization      Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  expenses          Expense[]
+  expenseItems      ExpenseItem[]
   
   @@unique([organizationId, type, name])
   @@index([organizationId])
@@ -147,30 +150,51 @@ model ExpensePolicy {
 
 model Expense {
   id                String   @id @default(uuid())
-  userId            String
-  organizationId    String
-  categoryId        String?
-  amount            Float
-  currency          String   @default("USD")
-  description       String
+  purchasedDate     DateTime @default(now())
+  companyName       String   @default("")
+  tinNumber         String   @default("")
+  fsNumber          String   @default("")
+  invoiceNumber     String?
+  paymentMethod     PaymentMethod @default(OTHER)
+  subtotal          Decimal  @default(0) @db.Decimal(12, 2)
+  vat               Decimal  @default(0) @db.Decimal(12, 2)
+  total             Decimal  @default(0) @db.Decimal(12, 2)
   status            ExpenseStatus @default(PENDING)
-  priority          ExpensePriority @default(NORMAL)
-  policyViolation   Json?    // Details of policy violations
+  createdByUserId   String
+  organizationId    String
   isActive          Boolean  @default(true)
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
   
   // Relations
-  user              User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdByUser     User @relation("UserCreatedExpenses", fields: [createdByUserId], references: [id], onDelete: Cascade)
   organization      Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  category          Category? @relation(fields: [categoryId], references: [id])
+  items             ExpenseItem[]
   approval          Approval?
   
-  @@index([userId])
+  @@index([createdByUserId])
   @@index([organizationId])
-  @@index([categoryId])
   @@index([status])
+  @@index([purchasedDate])
   @@index([createdAt])
+}
+
+model ExpenseItem {
+  id                String   @id @default(uuid())
+  expenseId         String
+  itemName          String
+  subcategoryId     String
+  quantity          Decimal  @db.Decimal(12, 2)
+  unitPrice         Decimal  @db.Decimal(12, 2)
+  lineTotal         Decimal  @db.Decimal(12, 2)
+  hasPolicyViolation Boolean @default(false)
+
+  // Relations
+  expense           Expense  @relation(fields: [expenseId], references: [id], onDelete: Cascade)
+  subcategory       Category @relation(fields: [subcategoryId], references: [id])
+
+  @@index([expenseId])
+  @@index([subcategoryId])
 }
 
 model Approval {

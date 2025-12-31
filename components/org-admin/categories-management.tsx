@@ -4,9 +4,9 @@ import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -21,7 +21,7 @@ import {
   CategoryDialog,
   type CategoryFormValues,
 } from "@/components/org-admin/category-dialog";
-import { SquarePen, Trash2 } from "lucide-react";
+import { Layers, Pencil, Trash2 } from "lucide-react";
 
 type CategoryType = "operational" | "administrative";
 
@@ -174,7 +174,6 @@ export function CategoriesManagement() {
   }
 
   function openEditDialog(category: Category) {
-    console.log(category);
     setSelected(category);
     setDialogMode("edit");
     setDialogOpen(true);
@@ -221,8 +220,8 @@ export function CategoriesManagement() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold">Categories</h2>
-          <p className="text-sm text-muted-foreground">
+          <h1 className="text-3xl font-bold">Categories</h1>
+          <p className="text-muted-foreground mt-1">
             Manage expense categories. Only organization admins can make
             changes.
           </p>
@@ -231,12 +230,8 @@ export function CategoriesManagement() {
         <Button onClick={openCreateDialog}>New Category</Button>
       </div>
 
-      {categoriesQuery.isLoading ? (
-        <div className="text-sm text-muted-foreground">
-          Loading categories...
-        </div>
-      ) : categoriesQuery.isError ? (
-        <Card>
+      {categoriesQuery.isError ? (
+        <Card className="shadow-sm">
           <CardHeader>
             <CardTitle>Unable to load categories</CardTitle>
           </CardHeader>
@@ -247,124 +242,122 @@ export function CategoriesManagement() {
           </CardContent>
         </Card>
       ) : (
-        <div className="grid gap-6 lg:grid-cols-2">
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <h3 className="text-lg font-semibold">Operational</h3>
-              <Badge variant="secondary">{operationalCategories.length}</Badge>
-            </div>
+        <div className="grid gap-6 md:grid-cols-2">
+          <Card className="shadow-sm">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Layers className="h-5 w-5" />
+                Operational Categories
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {categoriesQuery.isLoading ? (
+                <div className="space-y-4">
+                  {[...Array(3)].map((_, i) => (
+                    <Skeleton key={i} className="h-16" />
+                  ))}
+                </div>
+              ) : operationalCategories.length === 0 ? (
+                <p className="text-sm text-muted-foreground text-center py-8">
+                  No operational categories yet
+                </p>
+              ) : (
+                <div className="space-y-4">
+                  {operationalCategories.map((category) => (
+                    <div
+                      key={category.id}
+                      className="flex items-center justify-between p-3 rounded-lg border"
+                    >
+                      <div className="min-w-0">
+                        <p className="font-medium truncate">{category.name}</p>
+                        {category.description ? (
+                          <p className="text-sm text-muted-foreground line-clamp-2">
+                            {category.description}
+                          </p>
+                        ) : null}
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          onClick={() => openEditDialog(category)}
+                          aria-label="Edit"
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          onClick={() => openDeleteDialog(category)}
+                          aria-label="Delete"
+                        >
+                          <Trash2 className="h-4 w-4 text-destructive" />
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
 
-            {operationalCategories.length === 0 ? (
-              <Card>
-                <CardContent className="py-6 text-sm text-muted-foreground">
-                  No operational categories yet.
-                </CardContent>
-              </Card>
-            ) : (
-              <div className="space-y-3">
-                {operationalCategories.map((category) => (
-                  <Card
-                    key={category.id}
-                    className="transition-colors hover:bg-muted/40"
-                  >
-                    <CardHeader className="space-y-1">
-                      <div className="flex items-start justify-between gap-3">
-                        <CardTitle className="text-base">
-                          {category.name}
-                        </CardTitle>
-                        <div className="flex items-center gap-2">
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => openEditDialog(category)}
-                          >
-                            <SquarePen className="h-4 w-4 text-blue-500" />
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => openDeleteDialog(category)}
-                          >
-                            <Trash2 className="h-4 w-4 text-red-500 " />
-                          </Button>
-                        </div>
+          <Card className="shadow-sm">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Layers className="h-5 w-5" />
+                Administrative Categories
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {categoriesQuery.isLoading ? (
+                <div className="space-y-4">
+                  {[...Array(3)].map((_, i) => (
+                    <Skeleton key={i} className="h-16" />
+                  ))}
+                </div>
+              ) : administrativeCategories.length === 0 ? (
+                <p className="text-sm text-muted-foreground text-center py-8">
+                  No administrative categories yet
+                </p>
+              ) : (
+                <div className="space-y-4">
+                  {administrativeCategories.map((category) => (
+                    <div
+                      key={category.id}
+                      className="flex items-center justify-between p-3 rounded-lg border"
+                    >
+                      <div className="min-w-0">
+                        <p className="font-medium truncate">{category.name}</p>
+                        {category.description ? (
+                          <p className="text-sm text-muted-foreground line-clamp-2">
+                            {category.description}
+                          </p>
+                        ) : null}
                       </div>
-                      <div>
-                        <Badge variant="outline">Operational</Badge>
+                      <div className="flex items-center gap-2">
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          onClick={() => openEditDialog(category)}
+                          aria-label="Edit"
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          onClick={() => openDeleteDialog(category)}
+                          aria-label="Delete"
+                        >
+                          <Trash2 className="h-4 w-4 text-destructive" />
+                        </Button>
                       </div>
-                    </CardHeader>
-                    {category.description ? (
-                      <CardContent className="pt-0">
-                        <p className="text-sm text-muted-foreground">
-                          {category.description}
-                        </p>
-                      </CardContent>
-                    ) : null}
-                  </Card>
-                ))}
-              </div>
-            )}
-          </div>
-
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <h3 className="text-lg font-semibold">Administrative</h3>
-              <Badge variant="secondary">
-                {administrativeCategories.length}
-              </Badge>
-            </div>
-
-            {administrativeCategories.length === 0 ? (
-              <Card>
-                <CardContent className="py-6 text-sm text-muted-foreground">
-                  No administrative categories yet.
-                </CardContent>
-              </Card>
-            ) : (
-              <div className="space-y-3">
-                {administrativeCategories.map((category) => (
-                  <Card
-                    key={category.id}
-                    className="transition-colors hover:bg-muted/40"
-                  >
-                    <CardHeader className="space-y-1">
-                      <div className="flex items-start justify-between gap-3">
-                        <CardTitle className="text-base">
-                          {category.name}
-                        </CardTitle>
-                        <div className="flex items-center gap-2">
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => openEditDialog(category)}
-                          >
-                            <SquarePen className="h-4 w-4 text-blue-500" />
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => openDeleteDialog(category)}
-                          >
-                            <Trash2 className="h-4 w-4 text-red-500 " />
-                          </Button>
-                        </div>
-                      </div>
-                      <div>
-                        <Badge variant="outline">Administrative</Badge>
-                      </div>
-                    </CardHeader>
-                    {category.description ? (
-                      <CardContent className="pt-0">
-                        <p className="text-sm text-muted-foreground">
-                          {category.description}
-                        </p>
-                      </CardContent>
-                    ) : null}
-                  </Card>
-                ))}
-              </div>
-            )}
-          </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
         </div>
       )}
 

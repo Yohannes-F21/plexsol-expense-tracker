@@ -38,6 +38,7 @@ import { toast } from "sonner";
 interface Category {
   id: string;
   name: string;
+  type: "operational" | "administrative";
 }
 
 interface ExpensePolicy {
@@ -56,6 +57,7 @@ interface PolicyFormState {
   policyName: string;
   description: string;
   ruleDescription: string;
+  categoryType: "operational" | "administrative" | "";
   categoryId: string;
   maxAmount: string;
   isActive: boolean;
@@ -85,10 +87,18 @@ function PolicyFormDialog({
   initial?: ExpensePolicy;
   onSubmit: (values: PolicyFormState) => Promise<void>;
 }) {
+  const deriveTypeFromCategoryId = (categoryId: string) => {
+    if (!categoryId) return "" as const;
+    return categories.find((c) => c.id === categoryId)?.type ?? ("" as const);
+  };
+
   const [state, setState] = useState<PolicyFormState>(() => ({
     policyName: initial?.policyName ?? "",
     description: initial?.description ?? "",
     ruleDescription: initial?.description ? "" : "",
+    categoryType: deriveTypeFromCategoryId(
+      initial?.allowedCategories?.[0] ?? ""
+    ),
     categoryId: initial?.allowedCategories?.[0] ?? "",
     maxAmount: initial?.maxAmount?.toString() ?? "",
     isActive: initial?.isActive ?? true,
@@ -98,21 +108,35 @@ function PolicyFormDialog({
 
   useEffect(() => {
     if (open) {
+      const initialCategoryId = initial?.allowedCategories?.[0] ?? "";
       setState({
         policyName: initial?.policyName ?? "",
         description: initial?.description ?? "",
         ruleDescription: "",
-        categoryId: initial?.allowedCategories?.[0] ?? "",
+        categoryType: deriveTypeFromCategoryId(initialCategoryId),
+        categoryId: initialCategoryId,
         maxAmount: initial?.maxAmount?.toString() ?? "",
         isActive: initial?.isActive ?? true,
       });
     }
-  }, [open, initial]);
+  }, [open, initial, categories]);
+
+  const filteredCategories = useMemo(() => {
+    if (!state.categoryType) return [];
+    return categories
+      .filter((c) => c.type === state.categoryType)
+      .slice()
+      .sort((a, b) => a.name.localeCompare(b.name));
+  }, [categories, state.categoryType]);
 
   const handleSave = async () => {
     if (readOnly) return;
     if (!state.policyName.trim()) {
       toast.error("Policy name is required");
+      return;
+    }
+    if (!state.categoryType) {
+      toast.error("Category type is required");
       return;
     }
     if (!state.categoryId) {
@@ -170,6 +194,29 @@ function PolicyFormDialog({
           </div>
 
           <div className="space-y-2">
+            <Label htmlFor="categoryType">Category Type *</Label>
+            <Select
+              disabled={readOnly}
+              value={state.categoryType}
+              onValueChange={(val) =>
+                setState((s) => ({
+                  ...s,
+                  categoryType: val as PolicyFormState["categoryType"],
+                  categoryId: "",
+                }))
+              }
+            >
+              <SelectTrigger id="categoryType">
+                <SelectValue placeholder="Select a type" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="operational">Operational</SelectItem>
+                <SelectItem value="administrative">Administrative</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-2">
             <Label htmlFor="category">Category *</Label>
             <Select
               disabled={readOnly}
@@ -179,10 +226,16 @@ function PolicyFormDialog({
               }
             >
               <SelectTrigger id="category">
-                <SelectValue placeholder="Select a category" />
+                <SelectValue
+                  placeholder={
+                    state.categoryType
+                      ? "Select a category"
+                      : "Select a category type first"
+                  }
+                />
               </SelectTrigger>
               <SelectContent>
-                {categories.map((cat) => (
+                {filteredCategories.map((cat) => (
                   <SelectItem key={cat.id} value={cat.id}>
                     {cat.name}
                   </SelectItem>
