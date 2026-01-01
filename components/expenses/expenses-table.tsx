@@ -18,6 +18,16 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
   Select,
   SelectContent,
   SelectItem,
@@ -69,6 +79,9 @@ export function ExpensesTable(props: { role: "ORG_ADMIN" | "STAFF" }) {
   const [sorting, setSorting] = useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
   const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<ExpenseRow | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const { data, isLoading } = useQuery({
     queryKey: ["expenses"],
@@ -83,9 +96,8 @@ export function ExpensesTable(props: { role: "ORG_ADMIN" | "STAFF" }) {
   const expenses = data?.expenses ?? [];
 
   const handleDelete = async (expenseId: string) => {
-    if (!confirm("Delete this expense?")) return;
-
     try {
+      setIsDeleting(true);
       const res = await fetch(`/api/expenses/${expenseId}`, {
         method: "DELETE",
       });
@@ -100,6 +112,8 @@ export function ExpensesTable(props: { role: "ORG_ADMIN" | "STAFF" }) {
     } catch (e) {
       console.error("[v0] Delete expense error:", e);
       toast.error("An error occurred while deleting");
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -212,7 +226,14 @@ export function ExpensesTable(props: { role: "ORG_ADMIN" | "STAFF" }) {
               <Button
                 size="sm"
                 variant="outline"
-                onClick={() => handleDelete(expense.id)}
+                onClick={() => {
+                  if (expense.status === "APPROVED") {
+                    toast.error("Approved expenses cannot be deleted");
+                    return;
+                  }
+                  setDeleteTarget(expense);
+                  setDeleteOpen(true);
+                }}
                 disabled={locked}
               >
                 <Trash2 className="h-4 w-4" />
@@ -252,81 +273,122 @@ export function ExpensesTable(props: { role: "ORG_ADMIN" | "STAFF" }) {
   }
 
   return (
-    <Card>
-      <CardHeader className="flex flex-row items-center justify-between">
-        <CardTitle>Expenses</CardTitle>
-        <div className="flex items-center gap-2">
-          <div className="relative">
-            <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Search company..."
-              className="pl-8 w-56"
-              onChange={(e) =>
-                table.getColumn("companyName")?.setFilterValue(e.target.value)
-              }
-            />
+    <>
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between">
+          <CardTitle>Expenses</CardTitle>
+          <div className="flex items-center gap-2">
+            <div className="relative">
+              <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search company..."
+                className="pl-8 w-56"
+                onChange={(e) =>
+                  table.getColumn("companyName")?.setFilterValue(e.target.value)
+                }
+              />
+            </div>
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <SelectTrigger className="w-40">
+                <SelectValue placeholder="Status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All</SelectItem>
+                <SelectItem value="PENDING">PENDING</SelectItem>
+                <SelectItem value="WARNING">WARNING</SelectItem>
+                <SelectItem value="APPROVED">APPROVED</SelectItem>
+                <SelectItem value="REJECTED">REJECTED</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
-          <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="w-40">
-              <SelectValue placeholder="Status" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All</SelectItem>
-              <SelectItem value="PENDING">PENDING</SelectItem>
-              <SelectItem value="WARNING">WARNING</SelectItem>
-              <SelectItem value="APPROVED">APPROVED</SelectItem>
-              <SelectItem value="REJECTED">REJECTED</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-      </CardHeader>
-      <CardContent>
-        <div className="rounded-md border">
-          <Table>
-            <TableHeader>
-              {table.getHeaderGroups().map((headerGroup) => (
-                <TableRow key={headerGroup.id}>
-                  {headerGroup.headers.map((header) => (
-                    <TableHead key={header.id}>
-                      {header.isPlaceholder
-                        ? null
-                        : flexRender(
-                            header.column.columnDef.header,
-                            header.getContext()
-                          )}
-                    </TableHead>
-                  ))}
-                </TableRow>
-              ))}
-            </TableHeader>
-            <TableBody>
-              {table.getRowModel().rows?.length ? (
-                table.getRowModel().rows.map((row) => (
-                  <TableRow key={row.id}>
-                    {row.getVisibleCells().map((cell) => (
-                      <TableCell key={cell.id}>
-                        {flexRender(
-                          cell.column.columnDef.cell,
-                          cell.getContext()
-                        )}
-                      </TableCell>
+        </CardHeader>
+        <CardContent>
+          <div className="rounded-md border">
+            <Table>
+              <TableHeader>
+                {table.getHeaderGroups().map((headerGroup) => (
+                  <TableRow key={headerGroup.id}>
+                    {headerGroup.headers.map((header) => (
+                      <TableHead key={header.id}>
+                        {header.isPlaceholder
+                          ? null
+                          : flexRender(
+                              header.column.columnDef.header,
+                              header.getContext()
+                            )}
+                      </TableHead>
                     ))}
                   </TableRow>
-                ))
-              ) : (
-                <TableRow>
-                  <TableCell
-                    colSpan={columns.length}
-                    className="h-24 text-center"
-                  >
-                    No expenses.
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
-        </div>
-      </CardContent>
-    </Card>
+                ))}
+              </TableHeader>
+              <TableBody>
+                {table.getRowModel().rows?.length ? (
+                  table.getRowModel().rows.map((row) => (
+                    <TableRow key={row.id}>
+                      {row.getVisibleCells().map((cell) => (
+                        <TableCell key={cell.id}>
+                          {flexRender(
+                            cell.column.columnDef.cell,
+                            cell.getContext()
+                          )}
+                        </TableCell>
+                      ))}
+                    </TableRow>
+                  ))
+                ) : (
+                  <TableRow>
+                    <TableCell
+                      colSpan={columns.length}
+                      className="h-24 text-center"
+                    >
+                      No expenses.
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </div>
+        </CardContent>
+      </Card>
+
+      <AlertDialog
+        open={deleteOpen}
+        onOpenChange={(open) => {
+          if (isDeleting) return;
+          setDeleteOpen(open);
+          if (!open) setDeleteTarget(null);
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete expense?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will remove the expense from active use. Existing records
+              will keep their history.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={isDeleting || !deleteTarget}
+              onClick={async () => {
+                if (!deleteTarget) return;
+                if (deleteTarget.status === "APPROVED") {
+                  toast.error("Approved expenses cannot be deleted");
+                  setDeleteOpen(false);
+                  setDeleteTarget(null);
+                  return;
+                }
+                await handleDelete(deleteTarget.id);
+                setDeleteOpen(false);
+                setDeleteTarget(null);
+              }}
+            >
+              {isDeleting ? "Deleting..." : "Delete"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
 }

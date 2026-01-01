@@ -370,246 +370,259 @@ export function ReceiptExpenseForm(props: {
           </Card>
         </div>
 
-        <div className="lg:col-span-8 space-y-6">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle>Items</CardTitle>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() =>
-                  setItems((prev) => [
-                    ...prev,
-                    {
-                      itemName: "",
-                      categoryType: "operational",
-                      subcategoryId: "",
-                      quantity: 1,
-                      unitPrice: 0,
-                    },
-                  ])
-                }
-              >
-                <Plus className="h-4 w-4 mr-2" />
-                Add Item
-              </Button>
-            </CardHeader>
-            <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="w-[32%]">Item</TableHead>
-                    <TableHead className="w-[18%]">Category Type</TableHead>
-                    <TableHead className="w-[28%]">Subcategory</TableHead>
-                    <TableHead className="w-[10%]">Qty</TableHead>
-                    <TableHead className="w-[16%]">Unit</TableHead>
-                    <TableHead className="w-[14%] text-right">Total</TableHead>
-                    <TableHead className="w-12"></TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {items.map((it, idx) => {
-                    const lineTotal = computed.lines[idx] ?? 0;
-                    const filteredCategories = categories.filter(
-                      (c) => normalizeCategoryType(c.type) === it.categoryType
-                    );
-                    return (
-                      <TableRow key={idx}>
-                        <TableCell>
-                          <Input
-                            value={it.itemName}
-                            onChange={(e) =>
-                              setItems((prev) =>
-                                prev.map((p, i) =>
-                                  i === idx
-                                    ? { ...p, itemName: e.target.value }
-                                    : p
-                                )
-                              )
-                            }
-                            placeholder="Item name"
-                          />
-                        </TableCell>
-                        <TableCell>
-                          <Select
-                            value={it.categoryType}
-                            onValueChange={(v) =>
-                              setItems((prev) =>
-                                prev.map((p, i) =>
-                                  i === idx
-                                    ? {
-                                        ...p,
-                                        categoryType: v as CategoryTypeUi,
-                                        subcategoryId: "",
-                                      }
-                                    : p
-                                )
-                              )
-                            }
-                          >
-                            <SelectTrigger>
-                              <SelectValue placeholder="Type" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="operational">
-                                Operational
-                              </SelectItem>
-                              <SelectItem value="administrative">
-                                Administrative
-                              </SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </TableCell>
-                        <TableCell>
-                          <Select
-                            value={it.subcategoryId}
-                            onValueChange={(v) =>
-                              setItems((prev) =>
-                                prev.map((p, i) =>
-                                  i === idx ? { ...p, subcategoryId: v } : p
-                                )
-                              )
-                            }
-                            disabled={isLoadingCategories}
-                          >
-                            <SelectTrigger>
-                              <SelectValue
-                                placeholder={
-                                  isLoadingCategories ? "Loading..." : "Select"
+        <div className="lg:col-span-8">
+          <div className="space-y-6 ">
+            <div className=" space-y-6">
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between">
+                  <CardTitle>Items</CardTitle>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() =>
+                      setItems((prev) => [
+                        ...prev,
+                        {
+                          itemName: "",
+                          categoryType: "operational",
+                          subcategoryId: "",
+                          quantity: 1,
+                          unitPrice: 0,
+                        },
+                      ])
+                    }
+                  >
+                    <Plus className="h-4 w-4 mr-2" />
+                    Add Item
+                  </Button>
+                </CardHeader>
+                <CardContent>
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="w-[32%]">Item</TableHead>
+                        <TableHead className="w-[18%]">Category Type</TableHead>
+                        <TableHead className="w-[28%]">Subcategory</TableHead>
+                        <TableHead className="w-[10%]">Qty</TableHead>
+                        <TableHead className="w-[16%]">Unit</TableHead>
+                        <TableHead className="w-[14%] text-right">
+                          Total
+                        </TableHead>
+                        <TableHead className="w-12"></TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {items.map((it, idx) => {
+                        const lineTotal = computed.lines[idx] ?? 0;
+                        const filteredCategories = categories.filter(
+                          (c) =>
+                            normalizeCategoryType(c.type) === it.categoryType
+                        );
+                        return (
+                          <TableRow key={idx}>
+                            <TableCell>
+                              <Input
+                                value={it.itemName}
+                                onChange={(e) =>
+                                  setItems((prev) =>
+                                    prev.map((p, i) =>
+                                      i === idx
+                                        ? { ...p, itemName: e.target.value }
+                                        : p
+                                    )
+                                  )
+                                }
+                                placeholder="Item name"
+                              />
+                            </TableCell>
+                            <TableCell>
+                              <Select
+                                value={it.categoryType}
+                                onValueChange={(v) =>
+                                  setItems((prev) =>
+                                    prev.map((p, i) =>
+                                      i === idx
+                                        ? {
+                                            ...p,
+                                            categoryType: v as CategoryTypeUi,
+                                            subcategoryId: "",
+                                          }
+                                        : p
+                                    )
+                                  )
+                                }
+                              >
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Type" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="operational">
+                                    Operational
+                                  </SelectItem>
+                                  <SelectItem value="administrative">
+                                    Administrative
+                                  </SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </TableCell>
+                            <TableCell>
+                              <Select
+                                value={it.subcategoryId}
+                                onValueChange={(v) =>
+                                  setItems((prev) =>
+                                    prev.map((p, i) =>
+                                      i === idx ? { ...p, subcategoryId: v } : p
+                                    )
+                                  )
+                                }
+                                disabled={isLoadingCategories}
+                              >
+                                <SelectTrigger>
+                                  <SelectValue
+                                    placeholder={
+                                      isLoadingCategories
+                                        ? "Loading..."
+                                        : "Select"
+                                    }
+                                  />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {filteredCategories.map((c) => (
+                                    <SelectItem key={c.id} value={c.id}>
+                                      {c.name}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            </TableCell>
+                            <TableCell>
+                              <Input
+                                className="w-24"
+                                type="number"
+                                min="0"
+                                step="1"
+                                value={String(it.quantity ?? "")}
+                                onChange={(e) =>
+                                  setItems((prev) =>
+                                    prev.map((p, i) =>
+                                      i === idx
+                                        ? {
+                                            ...p,
+                                            quantity: e.target.value
+                                              ? Number(e.target.value)
+                                              : ("" as any),
+                                          }
+                                        : p
+                                    )
+                                  )
                                 }
                               />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {filteredCategories.map((c) => (
-                                <SelectItem key={c.id} value={c.id}>
-                                  {c.name}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </TableCell>
-                        <TableCell>
-                          <Input
-                            className="w-24"
-                            type="number"
-                            min="0"
-                            step="1"
-                            value={String(it.quantity ?? "")}
-                            onChange={(e) =>
-                              setItems((prev) =>
-                                prev.map((p, i) =>
-                                  i === idx
-                                    ? {
-                                        ...p,
-                                        quantity: e.target.value
-                                          ? Number(e.target.value)
-                                          : ("" as any),
-                                      }
-                                    : p
-                                )
-                              )
-                            }
-                          />
-                        </TableCell>
-                        <TableCell>
-                          <Input
-                            className="w-26"
-                            type="number"
-                            min="0"
-                            step="0.01"
-                            value={String(it.unitPrice ?? "")}
-                            onChange={(e) =>
-                              setItems((prev) =>
-                                prev.map((p, i) =>
-                                  i === idx
-                                    ? {
-                                        ...p,
-                                        unitPrice: e.target.value
-                                          ? Number(e.target.value)
-                                          : ("" as any),
-                                      }
-                                    : p
-                                )
-                              )
-                            }
-                          />
-                        </TableCell>
-                        <TableCell className="text-right tabular-nums">
-                          {lineTotal.toFixed(2)}
-                        </TableCell>
-                        <TableCell>
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="icon"
-                            onClick={() =>
-                              setItems((prev) =>
-                                prev.filter((_, i) => i !== idx)
-                              )
-                            }
-                            disabled={items.length <= 1}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })}
-                </TableBody>
-              </Table>
-              <div className="mt-3 text-xs text-muted-foreground">
-                Policy checks run on the server after submit.
-              </div>
-            </CardContent>
-          </Card>
+                            </TableCell>
+                            <TableCell>
+                              <Input
+                                className="w-32"
+                                type="number"
+                                min="0"
+                                step="0.01"
+                                value={String(it.unitPrice ?? "")}
+                                onChange={(e) =>
+                                  setItems((prev) =>
+                                    prev.map((p, i) =>
+                                      i === idx
+                                        ? {
+                                            ...p,
+                                            unitPrice: e.target.value
+                                              ? Number(e.target.value)
+                                              : ("" as any),
+                                          }
+                                        : p
+                                    )
+                                  )
+                                }
+                              />
+                            </TableCell>
+                            <TableCell className="text-right tabular-nums">
+                              {lineTotal.toFixed(2)}
+                            </TableCell>
+                            <TableCell>
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon"
+                                onClick={() =>
+                                  setItems((prev) =>
+                                    prev.filter((_, i) => i !== idx)
+                                  )
+                                }
+                                disabled={items.length <= 1}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
+                    </TableBody>
+                  </Table>
+                  <div className="mt-3 text-xs text-muted-foreground">
+                    Policy checks run on the server after submit.
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+
+            <div className="flex justify-end  ">
+              <Card className="md:max-w-sm w-full">
+                <CardHeader>
+                  <CardTitle>Summary</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  {props.initial?.status === "WARNING" ? (
+                    <div className="flex items-center justify-between">
+                      <Badge variant="outline">WARNING</Badge>
+                      <span className="text-xs text-muted-foreground">
+                        Some items violate policy
+                      </span>
+                    </div>
+                  ) : null}
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-muted-foreground">Subtotal</span>
+                    <span className="tabular-nums">
+                      {computed.subtotal.toFixed(2)}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-muted-foreground">VAT (15%)</span>
+                    <span className="tabular-nums">
+                      {computed.vat.toFixed(2)}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between text-sm font-medium">
+                    <span>Total</span>
+                    <span className="tabular-nums">
+                      {computed.total.toFixed(2)}
+                    </span>
+                  </div>
+
+                  <div className="pt-2">
+                    <Button
+                      type="submit"
+                      className="w-full"
+                      disabled={mutation.isPending}
+                    >
+                      {mutation.isPending
+                        ? "Saving..."
+                        : props.mode === "edit"
+                        ? "Save Changes"
+                        : "Submit Receipt"}
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          </div>
         </div>
-      </div>
-
-      <div className=" flex justify-end ">
-        <Card className="w-full max-w-sm">
-          <CardHeader>
-            <CardTitle>Summary</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            {props.initial?.status === "WARNING" ? (
-              <div className="flex items-center justify-between">
-                <Badge variant="outline">WARNING</Badge>
-                <span className="text-xs text-muted-foreground">
-                  Some items violate policy
-                </span>
-              </div>
-            ) : null}
-            <div className="flex items-center justify-between text-sm">
-              <span className="text-muted-foreground">Subtotal</span>
-              <span className="tabular-nums">
-                {computed.subtotal.toFixed(2)}
-              </span>
-            </div>
-            <div className="flex items-center justify-between text-sm">
-              <span className="text-muted-foreground">VAT (15%)</span>
-              <span className="tabular-nums">{computed.vat.toFixed(2)}</span>
-            </div>
-            <div className="flex items-center justify-between text-sm font-medium">
-              <span>Total</span>
-              <span className="tabular-nums">{computed.total.toFixed(2)}</span>
-            </div>
-
-            <div className="pt-2">
-              <Button
-                type="submit"
-                className="w-full"
-                disabled={mutation.isPending}
-              >
-                {mutation.isPending
-                  ? "Saving..."
-                  : props.mode === "edit"
-                  ? "Save Changes"
-                  : "Submit Receipt"}
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
       </div>
     </form>
   );

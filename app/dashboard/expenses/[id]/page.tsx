@@ -153,20 +153,22 @@ export default function StaffExpenseDetailPage({
           </div>
 
           <div className="rounded-lg border">
-            <Table>
+            <Table className="table-fixed">
               <TableHeader>
-                <TableRow>
+                <TableRow className="bg-muted/30">
                   <TableHead className="w-14">No</TableHead>
-                  <TableHead>Description</TableHead>
-                  <TableHead className="text-right">Quantity</TableHead>
-                  <TableHead className="text-right">Unit Price</TableHead>
-                  <TableHead className="text-right">Total Price</TableHead>
-                  <TableHead className="w-28">Policy</TableHead>
+                  <TableHead className="w-1/5">Description</TableHead>
+                  <TableHead className="w-1/5 text-right">Quantity</TableHead>
+                  <TableHead className="w-1/5 text-right">Unit Price</TableHead>
+                  <TableHead className="w-1/5 text-right">
+                    Total Price
+                  </TableHead>
+                  <TableHead className="w-1/5">Policy</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {expense.items.map((it: any, index: number) => (
-                  <TableRow key={it.id}>
+                  <TableRow key={it.id} className="bg-muted/10">
                     <TableCell className="text-muted-foreground">
                       {index + 1}
                     </TableCell>
@@ -218,7 +220,7 @@ export default function StaffExpenseDetailPage({
                       {formatMoney(expense.vat)}
                     </TableCell>
                   </TableRow>
-                  <TableRow>
+                  <TableRow className="bg-muted/20">
                     <TableCell className="text-sm font-medium">
                       Grand Total
                     </TableCell>
