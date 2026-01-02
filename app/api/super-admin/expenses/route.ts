@@ -29,8 +29,7 @@ export async function GET(request: Request) {
         where,
         include: {
           organization: { select: { id: true, name: true } },
-          user: { select: { id: true, name: true, email: true } },
-          category: { select: { id: true, name: true } },
+          createdByUser: { select: { id: true, name: true, email: true } },
         },
         orderBy: { createdAt: "desc" },
         skip: (page - 1) * pageSize,

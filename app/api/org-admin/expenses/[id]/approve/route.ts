@@ -40,20 +40,25 @@ export async function POST(
     const [updatedExpense] = await prisma.$transaction([
       prisma.expense.update({
         where: { id },
-        data: { status: "APPROVED" },
-        include: {
-          user: {
-            select: {
-              name: true,
-              email: true,
-            },
-          },
+        data: { status: "APPROVED", approvedAt: new Date() },
+        select: {
+          id: true,
+          status: true,
+          approvedAt: true,
+        },
+      }),
+      prisma.approvalHistory.create({
+        data: {
+          expenseId: id,
+          action: "APPROVED",
+          comment: null,
+          performedById: session.id,
         },
       }),
       prisma.activityLog.create({
         data: {
           userId: session.id,
-          organizationId: session.organizationId ?? null,
+          organizationId: session.organizationId,
           actionType: "EXPENSE_APPROVED",
           entityType: "Expense",
           entityId: id,

@@ -218,11 +218,17 @@ export function ExpensesTable(props: { role: "ORG_ADMIN" | "STAFF" }) {
                   <Eye className="h-4 w-4" />
                 </Link>
               </Button>
-              <Button asChild size="sm" variant="outline" disabled={locked}>
-                <Link href={`${base}/${expense.id}/edit`}>
+              {locked ? (
+                <Button size="sm" variant="outline" disabled>
                   <SquarePen className="h-4 w-4" />
-                </Link>
-              </Button>
+                </Button>
+              ) : (
+                <Button asChild size="sm" variant="outline">
+                  <Link href={`${base}/${expense.id}/edit`}>
+                    <SquarePen className="h-4 w-4" />
+                  </Link>
+                </Button>
+              )}
               <Button
                 size="sm"
                 variant="outline"

@@ -2,6 +2,13 @@ import { NextResponse } from "next/server";
 import { requireRole } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { Prisma } from "@prisma/client";
+import { z } from "zod";
+
+const rejectSchema = z
+  .object({
+    comment: z.string().optional(),
+  })
+  .optional();
 
 export async function POST(
   request: Request,
@@ -10,6 +17,15 @@ export async function POST(
   try {
     const session = await requireRole(["ORG_ADMIN"]);
     const { id } = await params;
+
+    const parsed = rejectSchema
+      ? rejectSchema.safeParse(await request.json().catch(() => undefined))
+      : ({ success: true, data: undefined } as const);
+    if (!parsed.success) {
+      return NextResponse.json({ error: "Invalid input" }, { status: 400 });
+    }
+    const commentRaw = parsed.data?.comment;
+    const comment = commentRaw?.trim() ? commentRaw.trim() : null;
 
     if (!session.organizationId) {
       return NextResponse.json(
@@ -41,19 +57,20 @@ export async function POST(
       prisma.expense.update({
         where: { id },
         data: { status: "REJECTED" },
-        include: {
-          user: {
-            select: {
-              name: true,
-              email: true,
-            },
-          },
+        select: { id: true, status: true },
+      }),
+      prisma.approvalHistory.create({
+        data: {
+          expenseId: id,
+          action: "REJECTED",
+          comment,
+          performedById: session.id,
         },
       }),
       prisma.activityLog.create({
         data: {
           userId: session.id,
-          organizationId: session.organizationId ?? null,
+          organizationId: session.organizationId,
           actionType: "EXPENSE_REJECTED",
           entityType: "Expense",
           entityId: id,

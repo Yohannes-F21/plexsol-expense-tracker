@@ -65,9 +65,11 @@ export default function OrgAdminExpenseDetailPage({
           <Button asChild variant="outline">
             <Link href="/org-admin/expenses">Back</Link>
           </Button>
-          <Button asChild disabled={expense.status === "APPROVED"}>
-            <Link href={`/org-admin/expenses/${expense.id}/edit`}>Edit</Link>
-          </Button>
+          {expense.status !== "APPROVED" ? (
+            <Button asChild>
+              <Link href={`/org-admin/expenses/${expense.id}/edit`}>Edit</Link>
+            </Button>
+          ) : null}
         </div>
       </div>
 

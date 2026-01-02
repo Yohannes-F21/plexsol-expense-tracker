@@ -9,7 +9,7 @@ import type { NavItem } from "@/components/app-sidebar";
 const navItems: NavItem[] = [
   {
     title: "Dashboard",
-    href: "/super-admin",
+    href: "/super-admin/dashboard",
     icon: "layout-dashboard",
   },
   {

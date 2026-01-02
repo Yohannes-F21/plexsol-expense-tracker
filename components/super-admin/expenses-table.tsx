@@ -24,15 +24,27 @@ import {
 
 type Expense = {
   id: string;
-  description: string;
-  amount: number;
-  currency: string;
   status: string;
   createdAt: string;
   organization: { id: string; name: string } | null;
-  user: { id: string; name: string | null; email: string };
-  category: { id: string; name: string } | null;
+  createdByUser: { id: string; name: string | null; email: string };
+  companyName: string;
+  total: any;
 };
+
+function asNumber(x: any): number {
+  if (typeof x === "number") return x;
+  if (typeof x === "string") return Number(x);
+  if (x && typeof x === "object" && typeof x.toNumber === "function")
+    return x.toNumber();
+  return Number(x);
+}
+
+function formatMoney(x: any) {
+  const n = asNumber(x);
+  if (!Number.isFinite(n)) return "-";
+  return n.toFixed(2);
+}
 
 export function ExpensesTable() {
   const [organizationId, setOrganizationId] = useState<string | undefined>(
@@ -129,10 +141,9 @@ export function ExpensesTable() {
               <tr>
                 <TableHead>Expense ID</TableHead>
                 <TableHead>Organization</TableHead>
-                <TableHead>User</TableHead>
-                <TableHead>Category</TableHead>
-                <TableHead>Amount</TableHead>
-                <TableHead>Currency</TableHead>
+                <TableHead>Created By</TableHead>
+                <TableHead>Company</TableHead>
+                <TableHead className="text-right">Total</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Created At</TableHead>
               </tr>
@@ -142,10 +153,13 @@ export function ExpensesTable() {
                 <TableRow key={e.id}>
                   <TableCell>{e.id}</TableCell>
                   <TableCell>{e.organization?.name || "-"}</TableCell>
-                  <TableCell>{e.user.name || e.user.email}</TableCell>
-                  <TableCell>{e.category?.name || "-"}</TableCell>
-                  <TableCell>{e.amount}</TableCell>
-                  <TableCell>{e.currency}</TableCell>
+                  <TableCell>
+                    {e.createdByUser?.name || e.createdByUser?.email || "-"}
+                  </TableCell>
+                  <TableCell>{e.companyName}</TableCell>
+                  <TableCell className="text-right tabular-nums">
+                    {formatMoney(e.total)}
+                  </TableCell>
                   <TableCell>{e.status}</TableCell>
                   <TableCell>
                     {new Date(e.createdAt).toLocaleString()}

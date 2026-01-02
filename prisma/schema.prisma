@@ -39,7 +39,7 @@ enum InvitationStatus {
   EXPIRED
 }
 
-enum ApprovalStatus {
+enum ApprovalAction {
   APPROVED
   REJECTED
 }
@@ -61,7 +61,7 @@ model User {
   
   expenses          Expense[] @relation("UserCreatedExpenses")
   invitationsSent   Invitation[] @relation("InvitationSender")
-  approvals         Approval[]
+  approvalHistory   ApprovalHistory[]
   activityLogs      ActivityLog[]
   organizationsCreated Organization[] @relation("OrganizationCreator")
   
@@ -160,6 +160,7 @@ model Expense {
   vat               Decimal  @default(0) @db.Decimal(12, 2)
   total             Decimal  @default(0) @db.Decimal(12, 2)
   status            ExpenseStatus @default(PENDING)
+  approvedAt        DateTime?
   createdByUserId   String
   organizationId    String
   isActive          Boolean  @default(true)
@@ -170,7 +171,7 @@ model Expense {
   createdByUser     User @relation("UserCreatedExpenses", fields: [createdByUserId], references: [id], onDelete: Cascade)
   organization      Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   items             ExpenseItem[]
-  approval          Approval?
+  approvalHistory   ApprovalHistory[]
   
   @@index([createdByUserId])
   @@index([organizationId])
@@ -197,20 +198,21 @@ model ExpenseItem {
   @@index([subcategoryId])
 }
 
-model Approval {
-  id                String   @id @default(uuid())
-  expenseId         String   @unique
-  approvedById      String
-  status            ApprovalStatus
-  notes             String?
-  approvedAt        DateTime @default(now())
-  
+model ApprovalHistory {
+  id            String         @id @default(uuid())
+  expenseId     String
+  action        ApprovalAction
+  comment       String?
+  performedById String
+  createdAt     DateTime       @default(now())
+
   // Relations
-  expense           Expense @relation(fields: [expenseId], references: [id], onDelete: Cascade)
-  approvedBy        User @relation(fields: [approvedById], references: [id])
-  
+  expense       Expense @relation(fields: [expenseId], references: [id], onDelete: Cascade)
+  performedBy   User    @relation(fields: [performedById], references: [id], onDelete: Cascade)
+
   @@index([expenseId])
-  @@index([approvedById])
+  @@index([performedById])
+  @@index([createdAt])
 }
 
 model ActivityLog {

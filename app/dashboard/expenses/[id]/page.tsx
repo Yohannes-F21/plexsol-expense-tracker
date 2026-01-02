@@ -65,9 +65,11 @@ export default function StaffExpenseDetailPage({
           <Button asChild variant="outline">
             <Link href="/dashboard/expenses">Back</Link>
           </Button>
-          <Button asChild disabled={expense.status === "APPROVED"}>
-            <Link href={`/dashboard/expenses/${expense.id}/edit`}>Edit</Link>
-          </Button>
+          {expense.status !== "APPROVED" ? (
+            <Button asChild>
+              <Link href={`/dashboard/expenses/${expense.id}/edit`}>Edit</Link>
+            </Button>
+          ) : null}
         </div>
       </div>
 

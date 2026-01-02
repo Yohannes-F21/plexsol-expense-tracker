@@ -2,6 +2,15 @@ import { NextResponse } from "next/server";
 import { requireRole } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 
+function asNumber(x: any): number {
+  if (typeof x === "number") return x;
+  if (typeof x === "string") return Number(x);
+  if (x && typeof x === "object" && typeof x.toNumber === "function") {
+    return x.toNumber();
+  }
+  return Number(x);
+}
+
 export async function GET() {
   try {
     await requireRole(["SUPER_ADMIN"]);
@@ -11,40 +20,50 @@ export async function GET() {
 
     const expenses = await prisma.expense.findMany({
       where: {
+        isActive: true,
         createdAt: {
           gte: sixMonthsAgo,
         },
       },
       select: {
-        amount: true,
+        total: true,
         createdAt: true,
       },
     });
 
-    const monthlyData = new Map<string, { total: number; count: number }>();
+    const monthlyData = new Map<
+      string,
+      { key: string; label: string; total: number; count: number }
+    >();
 
-    expenses.forEach((expense) => {
-      const monthKey = expense.createdAt.toLocaleString("default", {
+    for (const expense of expenses) {
+      const d = new Date(expense.createdAt);
+      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(
+        2,
+        "0"
+      )}`;
+      const label = d.toLocaleString("default", {
         month: "short",
         year: "numeric",
       });
 
-      const existing = monthlyData.get(monthKey) || { total: 0, count: 0 };
-      monthlyData.set(monthKey, {
-        total: existing.total + expense.amount,
+      const existing = monthlyData.get(key) || {
+        key,
+        label,
+        total: 0,
+        count: 0,
+      };
+      monthlyData.set(key, {
+        key,
+        label,
+        total: existing.total + asNumber((expense as any).total),
         count: existing.count + 1,
       });
-    });
+    }
 
-    const chartData = Array.from(monthlyData.entries())
-      .map(([month, data]) => ({
-        month,
-        total: data.total,
-        count: data.count,
-      }))
-      .sort(
-        (a, b) => new Date(a.month).getTime() - new Date(b.month).getTime()
-      );
+    const chartData = Array.from(monthlyData.values())
+      .sort((a, b) => (a.key < b.key ? -1 : a.key > b.key ? 1 : 0))
+      .map((x) => ({ month: x.label, total: x.total, count: x.count }));
 
     return NextResponse.json(chartData);
   } catch (error) {
