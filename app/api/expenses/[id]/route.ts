@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { requireRole } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { Prisma } from "@prisma/client";
+import { ExpenseStatus, Prisma } from "@prisma/client";
 
 const VAT_RATE = 0.15;
 
@@ -17,8 +17,11 @@ const paymentMethodSchema = z.enum([
 const expenseItemSchema = z.object({
   itemName: z.string().min(1),
   subcategoryId: z.string().min(1),
+  vatCategory: z.enum(["G", "S"]).optional(),
   quantity: z.coerce.number().positive(),
   unitPrice: z.coerce.number().nonnegative(),
+  unitOfMeasureId: z.string().optional(),
+  purchaseTypeId: z.string().optional(),
 });
 
 const updateExpenseSchema = z.object({
@@ -26,6 +29,7 @@ const updateExpenseSchema = z.object({
   companyName: z.string().min(1).optional(),
   tinNumber: z.string().min(1).optional(),
   fsNumber: z.string().min(1).optional(),
+  mrcNumber: z.string().trim().optional(),
   invoiceNumber: z.string().optional(),
   paymentMethod: paymentMethodSchema.optional(),
   items: z.array(expenseItemSchema).min(1).optional(),
@@ -110,6 +114,7 @@ export async function PUT(request: Request, context: any) {
         companyName: true,
         tinNumber: true,
         fsNumber: true,
+        mrcNumber: true,
         invoiceNumber: true,
         paymentMethod: true,
         items: {
@@ -117,9 +122,12 @@ export async function PUT(request: Request, context: any) {
             id: true,
             itemName: true,
             subcategoryId: true,
+            vatCategory: true,
             quantity: true,
             unitPrice: true,
             lineTotal: true,
+            unitOfMeasureId: true,
+            purchaseTypeId: true,
             hasPolicyViolation: true,
           },
         },
@@ -152,6 +160,10 @@ export async function PUT(request: Request, context: any) {
     const nextCompanyName = data.companyName ?? expense.companyName;
     const nextTinNumber = data.tinNumber ?? expense.tinNumber;
     const nextFsNumber = data.fsNumber ?? expense.fsNumber;
+    const nextMrcNumber =
+      data.mrcNumber !== undefined
+        ? data.mrcNumber?.trim() || null
+        : expense.mrcNumber;
     const nextInvoiceNumber =
       data.invoiceNumber !== undefined
         ? data.invoiceNumber || null
@@ -159,16 +171,75 @@ export async function PUT(request: Request, context: any) {
     const nextPaymentMethod = data.paymentMethod ?? expense.paymentMethod;
 
     const itemsInput = data.items;
-    const computedItems = (itemsInput ?? expense.items).map((it: any) => {
+    const normalizedItems = (itemsInput ?? expense.items).map((it: any) => ({
+      ...it,
+      vatCategory: (it.vatCategory ?? "G") as "G" | "S",
+      unitOfMeasureId: it.unitOfMeasureId?.trim
+        ? it.unitOfMeasureId.trim() || undefined
+        : it.unitOfMeasureId || undefined,
+      purchaseTypeId: it.purchaseTypeId?.trim
+        ? it.purchaseTypeId.trim() || undefined
+        : it.purchaseTypeId || undefined,
+    }));
+
+    const unitIds = Array.from(
+      new Set(
+        normalizedItems.map((it: any) => it.unitOfMeasureId).filter(Boolean)
+      )
+    ) as string[];
+    const purchaseTypeIds = Array.from(
+      new Set(
+        normalizedItems.map((it: any) => it.purchaseTypeId).filter(Boolean)
+      )
+    ) as string[];
+
+    if (unitIds.length) {
+      const found = await prisma.unitOfMeasure.findMany({
+        where: {
+          id: { in: unitIds },
+          organizationId: session.organizationId,
+          isActive: true,
+        },
+        select: { id: true },
+      });
+      if (found.length !== unitIds.length) {
+        return NextResponse.json(
+          { error: "Invalid unit of measure selection" },
+          { status: 400 }
+        );
+      }
+    }
+
+    if (purchaseTypeIds.length) {
+      const found = await prisma.purchaseType.findMany({
+        where: {
+          id: { in: purchaseTypeIds },
+          organizationId: session.organizationId,
+          isActive: true,
+        },
+        select: { id: true },
+      });
+      if (found.length !== purchaseTypeIds.length) {
+        return NextResponse.json(
+          { error: "Invalid purchase type selection" },
+          { status: 400 }
+        );
+      }
+    }
+
+    const computedItems = normalizedItems.map((it: any) => {
       const qty = Number(it.quantity);
       const unitPrice = Number(it.unitPrice);
       const lineTotal = round2(qty * unitPrice);
       return {
         itemName: it.itemName,
         subcategoryId: it.subcategoryId,
+        vatCategory: it.vatCategory,
         quantity: qty,
         unitPrice,
         lineTotal,
+        unitOfMeasureId: it.unitOfMeasureId,
+        purchaseTypeId: it.purchaseTypeId,
       };
     });
 
@@ -186,7 +257,7 @@ export async function PUT(request: Request, context: any) {
       })),
     });
 
-    const status: Prisma.ExpenseStatus = anyViolated ? "WARNING" : "PENDING";
+    const status: ExpenseStatus = anyViolated ? "WARNING" : "PENDING";
 
     const updated = await prisma.$transaction(async (tx) => {
       if (itemsInput) {
@@ -200,6 +271,7 @@ export async function PUT(request: Request, context: any) {
           companyName: nextCompanyName,
           tinNumber: nextTinNumber,
           fsNumber: nextFsNumber,
+          mrcNumber: nextMrcNumber,
           invoiceNumber: nextInvoiceNumber,
           paymentMethod: nextPaymentMethod,
           subtotal: new Prisma.Decimal(subtotal),
@@ -212,9 +284,12 @@ export async function PUT(request: Request, context: any) {
                   create: computedItems.map((it) => ({
                     itemName: it.itemName,
                     subcategoryId: it.subcategoryId,
+                    vatCategory: it.vatCategory,
                     quantity: new Prisma.Decimal(it.quantity),
                     unitPrice: new Prisma.Decimal(it.unitPrice),
                     lineTotal: new Prisma.Decimal(it.lineTotal),
+                    unitOfMeasureId: it.unitOfMeasureId ?? null,
+                    purchaseTypeId: it.purchaseTypeId ?? null,
                     hasPolicyViolation:
                       perItem.find((p) => p.subcategoryId === it.subcategoryId)
                         ?.violated ?? false,
@@ -229,6 +304,7 @@ export async function PUT(request: Request, context: any) {
           companyName: true,
           tinNumber: true,
           fsNumber: true,
+          mrcNumber: true,
           invoiceNumber: true,
           paymentMethod: true,
           subtotal: true,
@@ -293,6 +369,7 @@ export async function GET(request: Request, context: any) {
         companyName: true,
         tinNumber: true,
         fsNumber: true,
+        mrcNumber: true,
         invoiceNumber: true,
         paymentMethod: true,
         subtotal: true,
@@ -308,11 +385,16 @@ export async function GET(request: Request, context: any) {
             id: true,
             itemName: true,
             subcategoryId: true,
+            vatCategory: true,
             quantity: true,
             unitPrice: true,
             lineTotal: true,
+            unitOfMeasureId: true,
+            purchaseTypeId: true,
             hasPolicyViolation: true,
             subcategory: { select: { id: true, name: true, type: true } },
+            unitOfMeasure: { select: { id: true, label: true, code: true } },
+            purchaseType: { select: { id: true, label: true, code: true } },
           },
           orderBy: { id: "asc" },
         },

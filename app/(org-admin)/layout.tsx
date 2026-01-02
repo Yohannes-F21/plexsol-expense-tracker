@@ -46,6 +46,11 @@ const navItems: NavItem[] = [
     href: "/org-admin/policies",
     icon: "shield",
   },
+  {
+    title: "Settings",
+    href: "/org-admin/settings",
+    icon: "settings",
+  },
 ];
 
 export default async function OrgAdminLayout({

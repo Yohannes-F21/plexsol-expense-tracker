@@ -51,6 +51,7 @@ type ExpenseRow = {
   companyName: string;
   tinNumber: string;
   fsNumber: string;
+  mrcNumber?: string | null;
   paymentMethod: "CASH" | "CHECK" | "CREDIT_CARD" | "BANK_TRANSFER" | "OTHER";
   subtotal: any;
   vat: any;
@@ -162,6 +163,15 @@ export function ExpensesTable(props: { role: "ORG_ADMIN" | "STAFF" }) {
         header: "TIN",
         cell: ({ row }) => (
           <span className="font-mono text-xs">{row.original.tinNumber}</span>
+        ),
+      },
+      {
+        accessorKey: "mrcNumber",
+        header: "MRC",
+        cell: ({ row }) => (
+          <span className="font-mono text-xs">
+            {row.original.mrcNumber || "-"}
+          </span>
         ),
       },
       {

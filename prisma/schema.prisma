@@ -28,6 +28,11 @@ enum PaymentMethod {
   OTHER
 }
 
+enum VatCategory {
+  G
+  S
+}
+
 enum CategoryType {
   OPERATIONAL
   ADMINISTRATIVE
@@ -85,6 +90,8 @@ model Organization {
   expenses          Expense[]
   invitations       Invitation[]
   categories        Category[]
+  unitsOfMeasure    UnitOfMeasure[]
+  purchaseTypes     PurchaseType[]
   expensePolicies   ExpensePolicy[]
   activityLogs      ActivityLog[]
   
@@ -154,6 +161,7 @@ model Expense {
   companyName       String   @default("")
   tinNumber         String   @default("")
   fsNumber          String   @default("")
+  mrcNumber         String?
   invoiceNumber     String?
   paymentMethod     PaymentMethod @default(OTHER)
   subtotal          Decimal  @default(0) @db.Decimal(12, 2)
@@ -185,17 +193,58 @@ model ExpenseItem {
   expenseId         String
   itemName          String
   subcategoryId     String
+  vatCategory       VatCategory @default(G)
   quantity          Decimal  @db.Decimal(12, 2)
   unitPrice         Decimal  @db.Decimal(12, 2)
   lineTotal         Decimal  @db.Decimal(12, 2)
+  unitOfMeasureId   String?
+  purchaseTypeId    String?
   hasPolicyViolation Boolean @default(false)
 
   // Relations
   expense           Expense  @relation(fields: [expenseId], references: [id], onDelete: Cascade)
   subcategory       Category @relation(fields: [subcategoryId], references: [id])
+  unitOfMeasure     UnitOfMeasure? @relation(fields: [unitOfMeasureId], references: [id])
+  purchaseType      PurchaseType? @relation(fields: [purchaseTypeId], references: [id])
 
   @@index([expenseId])
   @@index([subcategoryId])
+}
+
+model UnitOfMeasure {
+  id             String   @id @default(uuid())
+  organizationId String
+  label          Int
+  code           String
+  isActive       Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  // Relations
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  expenseItems   ExpenseItem[]
+
+  @@unique([organizationId, code])
+  @@index([organizationId])
+  @@index([organizationId, isActive])
+}
+
+model PurchaseType {
+  id             String   @id @default(uuid())
+  organizationId String
+  label          Int
+  code           String
+  isActive       Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  // Relations
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  expenseItems   ExpenseItem[]
+
+  @@unique([organizationId, code])
+  @@index([organizationId])
+  @@index([organizationId, isActive])
 }
 
 model ApprovalHistory {

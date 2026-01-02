@@ -6,35 +6,50 @@ export async function GET() {
   try {
     const session = await requireRole(["ORG_ADMIN"]);
 
-    const [totalUsers, totalExpenses, pendingExpenses, approvedExpenses] =
-      await Promise.all([
-        prisma.user.count({
-          where: { organizationId: session.organizationId! },
-        }),
-        prisma.expense.count({
-          where: { organizationId: session.organizationId! },
-        }),
-        prisma.expense.count({
-          where: {
-            organizationId: session.organizationId!,
-            status: "PENDING",
-          },
-        }),
-        prisma.expense.count({
-          where: {
-            organizationId: session.organizationId!,
-            status: "APPROVED",
-          },
-        }),
-      ]);
+    const orgId = session.organizationId;
+    if (!orgId) {
+      return NextResponse.json(
+        { error: "Organization ID missing" },
+        { status: 400 }
+      );
+    }
+
+    const [
+      totalUsers,
+      totalExpenses,
+      pendingExpenses,
+      approvedExpenses,
+      rejectedExpenses,
+      warningExpenses,
+    ] = await Promise.all([
+      prisma.user.count({ where: { organizationId: orgId } }),
+      prisma.expense.count({
+        where: { organizationId: orgId, isActive: true },
+      }),
+      prisma.expense.count({
+        where: { organizationId: orgId, isActive: true, status: "PENDING" },
+      }),
+      prisma.expense.count({
+        where: { organizationId: orgId, isActive: true, status: "APPROVED" },
+      }),
+      prisma.expense.count({
+        where: { organizationId: orgId, isActive: true, status: "REJECTED" },
+      }),
+      prisma.expense.count({
+        where: { organizationId: orgId, isActive: true, status: "WARNING" },
+      }),
+    ]);
+
+    const pendingApprovals = pendingExpenses + warningExpenses;
 
     const totalExpenseAmount = await prisma.expense.aggregate({
       where: {
-        organizationId: session.organizationId!,
+        organizationId: orgId,
+        isActive: true,
         status: "APPROVED",
       },
       _sum: {
-        amount: true,
+        total: true,
       },
     });
 
@@ -43,7 +58,10 @@ export async function GET() {
       totalExpenses,
       pendingExpenses,
       approvedExpenses,
-      totalExpenseAmount: totalExpenseAmount._sum.amount || 0,
+      rejectedExpenses,
+      warningExpenses,
+      pendingApprovals,
+      totalExpenseAmount: totalExpenseAmount._sum.total || 0,
     });
   } catch (error) {
     console.error("[v0] Get stats error:", error);

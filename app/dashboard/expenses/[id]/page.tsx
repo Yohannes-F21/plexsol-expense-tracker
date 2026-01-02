@@ -136,6 +136,14 @@ export default function StaffExpenseDetailPage({
                     {expense.fsNumber}
                   </span>
                 </div>
+                {expense.mrcNumber ? (
+                  <div className="flex items-start justify-between gap-4">
+                    <span className="text-muted-foreground">MRC No.</span>
+                    <span className="text-right font-mono text-xs">
+                      {expense.mrcNumber}
+                    </span>
+                  </div>
+                ) : null}
                 {expense.invoiceNumber ? (
                   <div className="flex items-start justify-between gap-4">
                     <span className="text-muted-foreground">Invoice No.</span>
@@ -154,18 +162,19 @@ export default function StaffExpenseDetailPage({
             </div>
           </div>
 
-          <div className="rounded-lg border">
-            <Table className="table-fixed">
+          <div className="rounded-lg border overflow-x-auto">
+            <Table className="min-w-[1100px]">
               <TableHeader>
                 <TableRow className="bg-muted/30">
                   <TableHead className="w-14">No</TableHead>
-                  <TableHead className="w-1/5">Description</TableHead>
-                  <TableHead className="w-1/5 text-right">Quantity</TableHead>
-                  <TableHead className="w-1/5 text-right">Unit Price</TableHead>
-                  <TableHead className="w-1/5 text-right">
-                    Total Price
-                  </TableHead>
-                  <TableHead className="w-1/5">Policy</TableHead>
+                  <TableHead>Description</TableHead>
+                  <TableHead>VAT</TableHead>
+                  <TableHead>UOM</TableHead>
+                  <TableHead>Purchase Type</TableHead>
+                  <TableHead className="text-right">Quantity</TableHead>
+                  <TableHead className="text-right">Unit Price</TableHead>
+                  <TableHead className="text-right">Total Price</TableHead>
+                  <TableHead>Policy</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -180,6 +189,11 @@ export default function StaffExpenseDetailPage({
                         {it.subcategory?.name ?? "-"}
                       </div>
                     </TableCell>
+                    <TableCell className="font-mono text-xs">
+                      {it.vatCategory ?? "-"}
+                    </TableCell>
+                    <TableCell>{it.unitOfMeasure?.label ?? "-"}</TableCell>
+                    <TableCell>{it.purchaseType?.label ?? "-"}</TableCell>
                     <TableCell className="text-right tabular-nums">
                       {formatMoney(it.quantity)}
                     </TableCell>

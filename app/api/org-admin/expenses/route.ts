@@ -18,15 +18,19 @@ export async function GET() {
         organizationId: session.organizationId,
         isActive: true,
       },
-      include: {
-        user: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-          },
+      select: {
+        id: true,
+        purchasedDate: true,
+        companyName: true,
+        total: true,
+        status: true,
+        createdAt: true,
+        createdByUser: { select: { id: true, name: true, email: true } },
+        items: {
+          take: 1,
+          orderBy: { id: "asc" },
+          select: { subcategory: { select: { id: true, name: true } } },
         },
-        category: { select: { id: true, name: true } },
       },
       orderBy: {
         createdAt: "desc",

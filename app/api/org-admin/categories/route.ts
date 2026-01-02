@@ -23,9 +23,11 @@ export async function GET() {
       );
     }
 
+    const organizationId = session.organizationId;
+
     const categories = await prisma.category.findMany({
       where: {
-        organizationId: session.organizationId,
+        organizationId,
         isActive: true,
       },
       select: {
@@ -74,6 +76,8 @@ export async function POST(request: Request) {
       );
     }
 
+    const organizationId = session.organizationId;
+
     const body = await request.json();
     const validatedData = categorySchema.parse(body);
 
@@ -81,7 +85,7 @@ export async function POST(request: Request) {
 
     const duplicate = await prisma.category.findFirst({
       where: {
-        organizationId: session.organizationId,
+        organizationId,
         type: prismaType,
         name: { equals: validatedData.name, mode: "insensitive" },
       },
@@ -104,7 +108,7 @@ export async function POST(request: Request) {
           name: validatedData.name,
           type: prismaType,
           description: validatedData.description,
-          organizationId: session.organizationId,
+          organizationId,
         },
         select: {
           id: true,
@@ -118,7 +122,7 @@ export async function POST(request: Request) {
       await tx.activityLog.create({
         data: {
           userId: session.id,
-          organizationId: session.organizationId,
+          organizationId,
           actionType: "CATEGORY_CREATED",
           entityType: "Category",
           entityId: created.id,

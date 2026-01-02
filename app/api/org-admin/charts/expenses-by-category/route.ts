@@ -2,6 +2,15 @@ import { NextResponse } from "next/server";
 import { requireRole } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 
+function asNumber(x: any): number {
+  if (typeof x === "number") return x;
+  if (typeof x === "string") return Number(x);
+  if (x && typeof x === "object" && typeof x.toNumber === "function") {
+    return x.toNumber();
+  }
+  return Number(x);
+}
+
 export async function GET() {
   try {
     const session = await requireRole(["ORG_ADMIN", "SUPER_ADMIN"]);
@@ -9,32 +18,29 @@ export async function GET() {
     if (!orgId)
       return NextResponse.json({ error: "No organization" }, { status: 400 });
 
-    const expenses = await prisma.expense.findMany({
-      where: { organizationId: orgId },
-      select: { amount: true, category: { select: { id: true, name: true } } },
+    const lines = await prisma.expenseItem.findMany({
+      where: {
+        expense: {
+          organizationId: orgId,
+          isActive: true,
+        },
+      },
+      select: {
+        lineTotal: true,
+        subcategory: { select: { name: true } },
+      },
     });
 
-    const byCategory = new Map<
-      string,
-      { id: string | null; name: string; total: number; count: number }
-    >();
-
-    expenses.forEach((e) => {
-      const catId = e.category?.id ?? "uncategorized";
-      const catName = e.category?.name ?? "Uncategorized";
-      const existing = byCategory.get(catId) || {
-        id: e.category?.id ?? null,
-        name: catName,
-        total: 0,
-        count: 0,
-      };
-      existing.total += e.amount;
-      existing.count += 1;
-      byCategory.set(catId, existing);
-    });
+    const byCategory = new Map<string, { category: string; amount: number }>();
+    for (const line of lines) {
+      const category = line.subcategory?.name ?? "Uncategorized";
+      const existing = byCategory.get(category) ?? { category, amount: 0 };
+      existing.amount += asNumber(line.lineTotal);
+      byCategory.set(category, existing);
+    }
 
     const result = Array.from(byCategory.values()).sort(
-      (a, b) => b.total - a.total
+      (a, b) => b.amount - a.amount
     );
 
     return NextResponse.json(result);

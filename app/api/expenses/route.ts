@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { requireRole } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { Prisma } from "@prisma/client";
+import { ExpenseStatus, Prisma } from "@prisma/client";
 
 const VAT_RATE = 0.15;
 
@@ -17,8 +17,11 @@ const paymentMethodSchema = z.enum([
 const expenseItemSchema = z.object({
   itemName: z.string().min(1),
   subcategoryId: z.string().min(1),
+  vatCategory: z.enum(["G", "S"]).optional(),
   quantity: z.coerce.number().positive(),
   unitPrice: z.coerce.number().nonnegative(),
+  unitOfMeasureId: z.string().optional(),
+  purchaseTypeId: z.string().optional(),
 });
 
 const createExpenseSchema = z.object({
@@ -26,6 +29,7 @@ const createExpenseSchema = z.object({
   companyName: z.string().min(1),
   tinNumber: z.string().min(1),
   fsNumber: z.string().min(1),
+  mrcNumber: z.string().trim().optional(),
   invoiceNumber: z.string().optional(),
   paymentMethod: paymentMethodSchema,
   items: z.array(expenseItemSchema).min(1),
@@ -90,8 +94,10 @@ export async function GET() {
       );
     }
 
+    const organizationId = session.organizationId;
+
     const where: Prisma.ExpenseWhereInput = {
-      organizationId: session.organizationId,
+      organizationId,
       isActive: true,
       ...(session.role === "STAFF" ? { createdByUserId: session.id } : {}),
     };
@@ -104,6 +110,7 @@ export async function GET() {
         companyName: true,
         fsNumber: true,
         tinNumber: true,
+        mrcNumber: true,
         paymentMethod: true,
         subtotal: true,
         vat: true,
@@ -138,17 +145,70 @@ export async function POST(request: Request) {
       );
     }
 
+    const organizationId = session.organizationId;
+
     const body = await request.json();
     const data = createExpenseSchema.parse(body);
 
-    const computedItems = data.items.map((it) => {
+    const normalizedItems = data.items.map((it) => ({
+      ...it,
+      vatCategory: (it.vatCategory ?? "G") as "G" | "S",
+      unitOfMeasureId: it.unitOfMeasureId?.trim() || undefined,
+      purchaseTypeId: it.purchaseTypeId?.trim() || undefined,
+    }));
+
+    const unitIds = Array.from(
+      new Set(normalizedItems.map((it) => it.unitOfMeasureId).filter(Boolean))
+    ) as string[];
+    const purchaseTypeIds = Array.from(
+      new Set(normalizedItems.map((it) => it.purchaseTypeId).filter(Boolean))
+    ) as string[];
+
+    if (unitIds.length) {
+      const found = await prisma.unitOfMeasure.findMany({
+        where: {
+          id: { in: unitIds },
+          organizationId: session.organizationId,
+          isActive: true,
+        },
+        select: { id: true },
+      });
+      if (found.length !== unitIds.length) {
+        return NextResponse.json(
+          { error: "Invalid unit of measure selection" },
+          { status: 400 }
+        );
+      }
+    }
+
+    if (purchaseTypeIds.length) {
+      const found = await prisma.purchaseType.findMany({
+        where: {
+          id: { in: purchaseTypeIds },
+          organizationId: session.organizationId,
+          isActive: true,
+        },
+        select: { id: true },
+      });
+      if (found.length !== purchaseTypeIds.length) {
+        return NextResponse.json(
+          { error: "Invalid purchase type selection" },
+          { status: 400 }
+        );
+      }
+    }
+
+    const computedItems = normalizedItems.map((it) => {
       const lineTotal = round2(it.quantity * it.unitPrice);
       return {
         itemName: it.itemName,
         subcategoryId: it.subcategoryId,
+        vatCategory: it.vatCategory,
         quantity: it.quantity,
         unitPrice: it.unitPrice,
         lineTotal,
+        unitOfMeasureId: it.unitOfMeasureId,
+        purchaseTypeId: it.purchaseTypeId,
       };
     });
 
@@ -159,14 +219,14 @@ export async function POST(request: Request) {
     const total = round2(subtotal + vat);
 
     const { perItem, anyViolated } = await evaluatePolicyViolations({
-      organizationId: session.organizationId,
+      organizationId,
       items: computedItems.map((it) => ({
         subcategoryId: it.subcategoryId,
         lineTotal: it.lineTotal,
       })),
     });
 
-    const status: Prisma.ExpenseStatus = anyViolated ? "WARNING" : "PENDING";
+    const status: ExpenseStatus = anyViolated ? "WARNING" : "PENDING";
 
     const created = await prisma.$transaction(async (tx) => {
       const expense = await tx.expense.create({
@@ -175,6 +235,7 @@ export async function POST(request: Request) {
           companyName: data.companyName,
           tinNumber: data.tinNumber,
           fsNumber: data.fsNumber,
+          mrcNumber: data.mrcNumber?.trim() || null,
           invoiceNumber: data.invoiceNumber || null,
           paymentMethod: data.paymentMethod,
           subtotal: new Prisma.Decimal(subtotal),
@@ -182,14 +243,17 @@ export async function POST(request: Request) {
           total: new Prisma.Decimal(total),
           status,
           createdByUserId: session.id,
-          organizationId: session.organizationId,
+          organizationId,
           items: {
             create: computedItems.map((it) => ({
               itemName: it.itemName,
               subcategoryId: it.subcategoryId,
+              vatCategory: it.vatCategory,
               quantity: new Prisma.Decimal(it.quantity),
               unitPrice: new Prisma.Decimal(it.unitPrice),
               lineTotal: new Prisma.Decimal(it.lineTotal),
+              unitOfMeasureId: it.unitOfMeasureId ?? null,
+              purchaseTypeId: it.purchaseTypeId ?? null,
               hasPolicyViolation:
                 perItem.find((p) => p.subcategoryId === it.subcategoryId)
                   ?.violated ?? false,
@@ -202,6 +266,7 @@ export async function POST(request: Request) {
           companyName: true,
           tinNumber: true,
           fsNumber: true,
+          mrcNumber: true,
           invoiceNumber: true,
           paymentMethod: true,
           subtotal: true,
@@ -214,7 +279,7 @@ export async function POST(request: Request) {
       await tx.activityLog.create({
         data: {
           userId: session.id,
-          organizationId: session.organizationId,
+          organizationId,
           actionType: "EXPENSE_CREATED",
           entityType: "Expense",
           entityId: expense.id,

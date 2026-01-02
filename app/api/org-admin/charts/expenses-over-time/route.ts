@@ -2,6 +2,15 @@ import { NextResponse } from "next/server";
 import { requireRole } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 
+function asNumber(x: any): number {
+  if (typeof x === "number") return x;
+  if (typeof x === "string") return Number(x);
+  if (x && typeof x === "object" && typeof x.toNumber === "function") {
+    return x.toNumber();
+  }
+  return Number(x);
+}
+
 export async function GET() {
   try {
     const session = await requireRole(["ORG_ADMIN", "SUPER_ADMIN"]);
@@ -17,9 +26,10 @@ export async function GET() {
       where: {
         organizationId: orgId,
         createdAt: { gte: sixMonthsAgo },
+        isActive: true,
       },
       select: {
-        amount: true,
+        total: true,
         createdAt: true,
       },
     });
@@ -34,13 +44,17 @@ export async function GET() {
 
       const existing = monthlyData.get(monthKey) || { total: 0, count: 0 };
       monthlyData.set(monthKey, {
-        total: existing.total + expense.amount,
+        total: existing.total + asNumber(expense.total),
         count: existing.count + 1,
       });
     });
 
     const chartData = Array.from(monthlyData.entries())
-      .map(([month, data]) => ({ month, total: data.total, count: data.count }))
+      .map(([month, data]) => ({
+        month,
+        amount: data.total,
+        count: data.count,
+      }))
       .sort(
         (a, b) => new Date(a.month).getTime() - new Date(b.month).getTime()
       );
