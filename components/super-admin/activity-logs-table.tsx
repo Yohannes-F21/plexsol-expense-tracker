@@ -19,7 +19,9 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { Card, CardContent } from "@/components/ui/card";
 import { Files } from "lucide-react";
+import { ServerDataTablePagination } from "@/components/data-table-pagination";
 
 type Log = {
   id: string;
@@ -148,8 +150,8 @@ export function ActivityLogsTable() {
   const [actionType, setActionType] = useState<string | undefined>(undefined);
   const [start, setStart] = useState<string | undefined>(undefined);
   const [end, setEnd] = useState<string | undefined>(undefined);
-  const [page, setPage] = useState(1);
-  const pageSize = 20;
+  const [pageIndex, setPageIndex] = useState(0);
+  const [pageSize, setPageSize] = useState(20);
 
   const { data, isLoading } = useQuery<
     { total: number; logs: Log[] },
@@ -163,7 +165,8 @@ export function ActivityLogsTable() {
       actionType,
       start,
       end,
-      page,
+      pageIndex,
+      pageSize,
     ],
     queryFn: async () => {
       const params = new URLSearchParams();
@@ -172,7 +175,7 @@ export function ActivityLogsTable() {
       if (actionType) params.set("actionType", actionType);
       if (start) params.set("start", start);
       if (end) params.set("end", end);
-      params.set("page", String(page));
+      params.set("page", String(pageIndex + 1));
       params.set("pageSize", String(pageSize));
 
       const res = await apiClient<{ total: number; logs: Log[] }>(
@@ -187,97 +190,92 @@ export function ActivityLogsTable() {
   const total = data?.total || 0;
 
   return (
-    <div>
-      <div className="flex gap-2 mb-4">
-        <Input
-          placeholder="Organization ID"
-          value={organizationId || ""}
-          onChange={(e) => setOrganizationId(e.target.value || undefined)}
-        />
-        <Input
-          placeholder="User ID"
-          value={userId || ""}
-          onChange={(e) => setUserId(e.target.value || undefined)}
-        />
-        <Input
-          placeholder="Action Type"
-          value={actionType || ""}
-          onChange={(e) => setActionType(e.target.value || undefined)}
-        />
-        <Input
-          type="date"
-          value={start || ""}
-          onChange={(e) => setStart(e.target.value || undefined)}
-        />
-        <Input
-          type="date"
-          value={end || ""}
-          onChange={(e) => setEnd(e.target.value || undefined)}
-        />
-        <Button onClick={() => setPage(1)}>Apply</Button>
-      </div>
-
-      {isLoading ? (
-        <div>Loading...</div>
-      ) : logs.length === 0 ? (
-        <div className="text-center text-muted-foreground">
-          No activity logs found
+    <Card>
+      <CardContent className="space-y-4">
+        <div className="flex flex-col lg:flex-row gap-2">
+          <Input
+            placeholder="Organization ID"
+            value={organizationId || ""}
+            onChange={(e) => setOrganizationId(e.target.value || undefined)}
+          />
+          <Input
+            placeholder="User ID"
+            value={userId || ""}
+            onChange={(e) => setUserId(e.target.value || undefined)}
+          />
+          <Input
+            placeholder="Action Type"
+            value={actionType || ""}
+            onChange={(e) => setActionType(e.target.value || undefined)}
+          />
+          <Input
+            type="date"
+            value={start || ""}
+            onChange={(e) => setStart(e.target.value || undefined)}
+          />
+          <Input
+            type="date"
+            value={end || ""}
+            onChange={(e) => setEnd(e.target.value || undefined)}
+          />
+          <Button onClick={() => setPageIndex(0)}>Apply</Button>
         </div>
-      ) : (
-        <>
-          <Table>
-            <TableHeader>
-              <tr>
-                <TableHead>Timestamp</TableHead>
-                <TableHead>Actor</TableHead>
-                <TableHead>Role</TableHead>
-                <TableHead>Organization</TableHead>
-                <TableHead>Action</TableHead>
-                <TableHead>Entity</TableHead>
-                <TableHead>Details</TableHead>
-              </tr>
-            </TableHeader>
-            <TableBody>
-              {logs.map((l) => (
-                <TableRow key={l.id}>
-                  <TableCell>
-                    {new Date(l.createdAt).toLocaleString()}
-                  </TableCell>
-                  <TableCell>{l.user?.name || "-"}</TableCell>
-                  <TableCell>{l.user?.role}</TableCell>
-                  <TableCell>{l.organization?.name || "-"}</TableCell>
-                  <TableCell>{l.actionType}</TableCell>
-                  <TableCell>{l.entityType}</TableCell>
-                  <TableCell>
-                    <DetailsDialog log={l} />
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
 
-          <div className="flex items-center justify-between mt-4">
-            <div>
-              Showing {(page - 1) * pageSize + 1} -{" "}
-              {Math.min(page * pageSize, total)} of {total}
-            </div>
-            <div className="flex gap-2">
-              <Button
-                onClick={() => setPage((p) => Math.max(1, p - 1))}
-                disabled={page === 1}
-              >
-                Prev
-              </Button>
-              <Button
-                onClick={() => setPage((p) => p + 1)}
-                disabled={page * pageSize >= total}
-              >
-                Next
-              </Button>
-            </div>
+        {isLoading ? (
+          <div>Loading...</div>
+        ) : logs.length === 0 ? (
+          <div className="text-center text-muted-foreground">
+            No activity logs found
           </div>
-        </>
-      )}
-    </div>
+        ) : (
+          <>
+            <div className="rounded-md border overflow-hidden">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Timestamp</TableHead>
+                    <TableHead>Actor</TableHead>
+                    <TableHead>Role</TableHead>
+                    <TableHead>Organization</TableHead>
+                    <TableHead>Action</TableHead>
+                    <TableHead>Entity</TableHead>
+                    <TableHead>Details</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {logs.map((l) => (
+                    <TableRow key={l.id}>
+                      <TableCell>
+                        {new Date(l.createdAt).toLocaleString()}
+                      </TableCell>
+                      <TableCell>{l.user?.name || "-"}</TableCell>
+                      <TableCell>{l.user?.role}</TableCell>
+                      <TableCell>{l.organization?.name || "-"}</TableCell>
+                      <TableCell>{l.actionType}</TableCell>
+                      <TableCell>{l.entityType}</TableCell>
+                      <TableCell>
+                        <DetailsDialog log={l} />
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+
+            <ServerDataTablePagination
+              totalCount={total}
+              pageIndex={pageIndex}
+              pageSize={pageSize}
+              onPageIndexChange={setPageIndex}
+              onPageSizeChange={(size) => {
+                setPageSize(size);
+                setPageIndex(0);
+              }}
+              storageKey="super-admin-activity-logs-page-size"
+            />
+          </>
+        )}
+      </CardContent>
+    </Card>
   );
 }

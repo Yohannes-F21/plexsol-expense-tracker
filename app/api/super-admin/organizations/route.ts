@@ -9,9 +9,6 @@ export async function GET() {
     await requireRole(["SUPER_ADMIN"]);
 
     const organizations = await prisma.organization.findMany({
-      where: {
-        isActive: true,
-      },
       include: {
         createdBy: {
           select: {
