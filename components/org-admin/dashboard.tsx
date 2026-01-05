@@ -32,7 +32,7 @@ export function OrgAdminDashboard() {
   const kpis = [
     {
       title: "Total Expenses",
-      value: `$${(stats?.totalExpenseAmount ?? 0).toLocaleString()}`,
+      value: `${(stats?.totalExpenseAmount ?? 0).toLocaleString()} ETB`,
       icon: DollarSign,
       color: "text-green-600",
       bgColor: "bg-green-50",
