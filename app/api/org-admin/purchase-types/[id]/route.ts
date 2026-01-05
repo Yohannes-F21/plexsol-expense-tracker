@@ -50,7 +50,23 @@ export async function PUT(request: Request, context: any) {
       );
     }
 
-    const duplicate = await prisma.purchaseType.findFirst({
+    const labelDuplicate = await prisma.purchaseType.findFirst({
+      where: {
+        organizationId: orgId,
+        label: data.label,
+        NOT: { id },
+      },
+      select: { id: true },
+    });
+
+    if (labelDuplicate) {
+      return NextResponse.json(
+        { error: "A purchase type with this label already exists." },
+        { status: 409 }
+      );
+    }
+
+    const codeDuplicate = await prisma.purchaseType.findFirst({
       where: {
         organizationId: orgId,
         code: { equals: data.code, mode: "insensitive" },
@@ -59,9 +75,9 @@ export async function PUT(request: Request, context: any) {
       select: { id: true },
     });
 
-    if (duplicate) {
+    if (codeDuplicate) {
       return NextResponse.json(
-        { error: "A purchase type with this name already exists." },
+        { error: "A purchase type with this code already exists." },
         { status: 409 }
       );
     }

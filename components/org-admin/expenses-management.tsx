@@ -44,6 +44,7 @@ import { toast } from "sonner";
 import { CreateExpenseDialog } from "@/components/create-expense-dialog";
 import { EditExpenseDialog } from "@/components/edit-expense-dialog";
 import { DataTablePagination } from "@/components/data-table-pagination";
+import { DeleteConfirmationDialog } from "@/components/delete-confirmation-dialog";
 
 type Expense = {
   id: string;
@@ -69,6 +70,8 @@ export function ExpensesManagement() {
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [deleteExpenseId, setDeleteExpenseId] = useState<string | null>(null);
   const [{ pageIndex, pageSize }, setPagination] = useState({
     pageIndex: 0,
     pageSize: 20,
@@ -85,31 +88,35 @@ export function ExpensesManagement() {
 
   const expenses = data?.expenses ?? [];
 
-  const handleDelete = useCallback(
-    async (expenseId: string) => {
-      if (!confirm("Delete this expense?")) return;
+  const requestDelete = useCallback((expenseId: string) => {
+    setDeleteExpenseId(expenseId);
+    setDeleteOpen(true);
+  }, []);
 
-      try {
-        const res = await fetch(`/api/expenses/${expenseId}`, {
-          method: "DELETE",
-        });
+  const handleDelete = useCallback(async () => {
+    if (!deleteExpenseId) return;
 
-        const payload = await res.json();
-        if (!res.ok) {
-          toast.error(payload.error || "Failed to delete expense");
-          return;
-        }
+    try {
+      const res = await fetch(`/api/expenses/${deleteExpenseId}`, {
+        method: "DELETE",
+      });
 
-        toast.success("Expense deleted");
-        queryClient.invalidateQueries({ queryKey: ["org-admin-expenses"] });
-        queryClient.invalidateQueries({ queryKey: ["org-admin-stats"] });
-      } catch (error) {
-        console.error("[v0] Delete expense error:", error);
-        toast.error("An error occurred while deleting");
+      const payload = await res.json();
+      if (!res.ok) {
+        toast.error(payload.error || "Failed to delete expense");
+        return;
       }
-    },
-    [queryClient]
-  );
+
+      toast.success("Expense deleted");
+      setDeleteOpen(false);
+      setDeleteExpenseId(null);
+      queryClient.invalidateQueries({ queryKey: ["org-admin-expenses"] });
+      queryClient.invalidateQueries({ queryKey: ["org-admin-stats"] });
+    } catch (error) {
+      console.error("[v0] Delete expense error:", error);
+      toast.error("An error occurred while deleting");
+    }
+  }, [deleteExpenseId, queryClient]);
 
   const columns = useMemo<ColumnDef<Expense>[]>(
     () => [
@@ -220,7 +227,7 @@ export function ExpensesManagement() {
               <Button
                 size="sm"
                 variant="outline"
-                onClick={() => handleDelete(expense.id)}
+                onClick={() => requestDelete(expense.id)}
                 disabled={locked}
               >
                 <Trash2 className="h-4 w-4 text-red-500 " />
@@ -230,7 +237,7 @@ export function ExpensesManagement() {
         },
       },
     ],
-    [handleDelete]
+    [requestDelete]
   );
 
   const filteredData = useMemo(() => {
@@ -391,6 +398,18 @@ export function ExpensesManagement() {
           </div>
         </CardContent>
       </Card>
+
+      <DeleteConfirmationDialog
+        open={deleteOpen}
+        onOpenChange={(open) => {
+          setDeleteOpen(open);
+          if (!open) setDeleteExpenseId(null);
+        }}
+        title="Delete expense?"
+        description="This action cannot be undone."
+        confirmLabel="Delete"
+        onConfirm={handleDelete}
+      />
 
       {editingExpense ? (
         <EditExpenseDialog

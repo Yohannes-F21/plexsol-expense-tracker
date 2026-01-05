@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiClient } from "@/lib/api-client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -10,6 +10,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { InviteUserDialog } from "@/components/invite-user-dialog";
 import { Plus, Mail, Users } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
+import { toast } from "sonner";
 
 interface User {
   id: string;
@@ -29,12 +30,32 @@ interface Invitation {
 
 export function TeamManagement() {
   const [showInviteDialog, setShowInviteDialog] = useState(false);
+  const queryClient = useQueryClient();
 
   const { data: users = [], isLoading: usersLoading } = useQuery<User[]>({
     queryKey: ["team-users"],
     queryFn: async () => {
       const res = await apiClient<{ users: User[] }>("/api/org-admin/users");
       return res.users;
+    },
+  });
+
+  const toggleStaffActiveMutation = useMutation({
+    mutationFn: async (args: { id: string; isActive: boolean }) => {
+      return apiClient<{ success: boolean; user: User }>(
+        `/api/org-admin/users/${args.id}`,
+        {
+          method: "PATCH",
+          body: JSON.stringify({ isActive: args.isActive }),
+        }
+      );
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["team-users"] });
+      toast.success("Staff status updated");
+    },
+    onError: (error: unknown) => {
+      toast.error(error instanceof Error ? error.message : "Update failed");
     },
   });
 
@@ -59,11 +80,50 @@ export function TeamManagement() {
       .slice(0, 2);
   };
 
+  const StaffActiveSwitch = ({
+    checked,
+    onCheckedChange,
+    disabled,
+  }: {
+    checked: boolean;
+    onCheckedChange: (next: boolean) => void;
+    disabled?: boolean;
+  }) => {
+    return (
+      <button
+        type="button"
+        role="switch"
+        aria-checked={checked}
+        disabled={disabled}
+        onClick={() => onCheckedChange(!checked)}
+        className={
+          "relative inline-flex h-8 w-26 items-center rounded-full border px-1 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 " +
+          (checked ? "bg-primary" : "bg-input")
+        }
+      >
+        <span
+          className={
+            "absolute inset-4 pl-1.5 flex items-center justify-center text-xs font-medium " +
+            (checked ? "text-primary-foreground" : "text-muted-foreground")
+          }
+        >
+          {checked ? "Active" : "Blocked"}
+        </span>
+        <span
+          className={
+            "inline-block h-6 w-6 transform rounded-full bg-background shadow-xs transition-transform " +
+            (checked ? "translate-x-18" : "translate-x-0")
+          }
+        />
+      </button>
+    );
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Team Management</h1>
+          <h1 className="text-2xl font-bold">Team Management</h1>
           <p className="text-muted-foreground mt-1">
             Manage your team members and invitations
           </p>
@@ -113,13 +173,28 @@ export function TeamManagement() {
                         </p>
                       </div>
                     </div>
-                    <Badge
-                      variant={
-                        user.role === "ORG_ADMIN" ? "default" : "secondary"
-                      }
-                    >
-                      {user.role}
-                    </Badge>
+                    <div className="flex items-center gap-3">
+                      <Badge
+                        variant={
+                          user.role === "ORG_ADMIN" ? "default" : "secondary"
+                        }
+                      >
+                        {user.role}
+                      </Badge>
+
+                      {user.role === "STAFF" ? (
+                        <StaffActiveSwitch
+                          checked={user.isActive}
+                          disabled={toggleStaffActiveMutation.isPending}
+                          onCheckedChange={(next) =>
+                            toggleStaffActiveMutation.mutate({
+                              id: user.id,
+                              isActive: next,
+                            })
+                          }
+                        />
+                      ) : null}
+                    </div>
                   </div>
                 ))}
               </div>

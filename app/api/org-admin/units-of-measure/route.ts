@@ -61,7 +61,29 @@ export async function POST(request: Request) {
     const body = await request.json();
     const data = createUnitSchema.parse(body);
 
-    const duplicate = await prisma.unitOfMeasure.findFirst({
+    const labelDuplicate = await prisma.unitOfMeasure.findFirst({
+      where: {
+        organizationId: orgId,
+        label: data.label,
+      },
+      select: { id: true, isActive: true },
+    });
+
+    if (labelDuplicate) {
+      if (!labelDuplicate.isActive) {
+        return NextResponse.json(
+          { error: "A unit with this label already exists but is inactive." },
+          { status: 409 }
+        );
+      }
+
+      return NextResponse.json(
+        { error: "A unit with this label already exists." },
+        { status: 409 }
+      );
+    }
+
+    const codeDuplicate = await prisma.unitOfMeasure.findFirst({
       where: {
         organizationId: orgId,
         code: { equals: data.code, mode: "insensitive" },
@@ -69,16 +91,16 @@ export async function POST(request: Request) {
       select: { id: true, isActive: true },
     });
 
-    if (duplicate) {
-      if (!duplicate.isActive) {
+    if (codeDuplicate) {
+      if (!codeDuplicate.isActive) {
         return NextResponse.json(
-          { error: "A unit with this name already exists but is inactive." },
+          { error: "A unit with this code already exists but is inactive." },
           { status: 409 }
         );
       }
 
       return NextResponse.json(
-        { error: "A unit with this name already exists." },
+        { error: "A unit with this code already exists." },
         { status: 409 }
       );
     }

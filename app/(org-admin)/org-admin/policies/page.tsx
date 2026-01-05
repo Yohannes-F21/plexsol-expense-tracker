@@ -34,6 +34,7 @@ import { Switch } from "@/components/ui/switch";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Eye, Pencil, Trash2, ShieldAlert } from "lucide-react";
 import { toast } from "sonner";
+import { DeleteConfirmationDialog } from "@/components/delete-confirmation-dialog";
 
 interface Category {
   id: string;
@@ -193,55 +194,57 @@ function PolicyFormDialog({
             />
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="categoryType">Category Type *</Label>
-            <Select
-              disabled={readOnly}
-              value={state.categoryType}
-              onValueChange={(val) =>
-                setState((s) => ({
-                  ...s,
-                  categoryType: val as PolicyFormState["categoryType"],
-                  categoryId: "",
-                }))
-              }
-            >
-              <SelectTrigger id="categoryType">
-                <SelectValue placeholder="Select a type" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="operational">Operational</SelectItem>
-                <SelectItem value="administrative">Administrative</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="space-y-2">
+              <Label htmlFor="categoryType">Category Type *</Label>
+              <Select
+                disabled={readOnly}
+                value={state.categoryType}
+                onValueChange={(val) =>
+                  setState((s) => ({
+                    ...s,
+                    categoryType: val as PolicyFormState["categoryType"],
+                    categoryId: "",
+                  }))
+                }
+              >
+                <SelectTrigger id="categoryType">
+                  <SelectValue placeholder="Select a type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="operational">Operational</SelectItem>
+                  <SelectItem value="administrative">Administrative</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="category">Category *</Label>
-            <Select
-              disabled={readOnly}
-              value={state.categoryId}
-              onValueChange={(val) =>
-                setState((s) => ({ ...s, categoryId: val }))
-              }
-            >
-              <SelectTrigger id="category">
-                <SelectValue
-                  placeholder={
-                    state.categoryType
-                      ? "Select a category"
-                      : "Select a category type first"
-                  }
-                />
-              </SelectTrigger>
-              <SelectContent>
-                {filteredCategories.map((cat) => (
-                  <SelectItem key={cat.id} value={cat.id}>
-                    {cat.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <div className="space-y-2">
+              <Label htmlFor="category">Category *</Label>
+              <Select
+                disabled={readOnly}
+                value={state.categoryId}
+                onValueChange={(val) =>
+                  setState((s) => ({ ...s, categoryId: val }))
+                }
+              >
+                <SelectTrigger id="category">
+                  <SelectValue
+                    placeholder={
+                      state.categoryType
+                        ? "Select a category"
+                        : "Select a category type first"
+                    }
+                  />
+                </SelectTrigger>
+                <SelectContent>
+                  {filteredCategories.map((cat) => (
+                    <SelectItem key={cat.id} value={cat.id}>
+                      {cat.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
 
           <div className="space-y-2">
@@ -431,6 +434,8 @@ export default function PoliciesPage() {
   const [activePolicy, setActivePolicy] = useState<ExpensePolicy | undefined>(
     undefined
   );
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<ExpensePolicy | null>(null);
 
   const { data: categoriesData, isLoading: categoriesLoading } = useQuery<{
     categories: Category[];
@@ -514,13 +519,9 @@ export default function PoliciesPage() {
     }
   };
 
-  const handleDelete = async (policy: ExpensePolicy) => {
-    const confirmed = window.confirm(
-      "Delete this policy? It will be deactivated."
-    );
-    if (!confirmed) return;
-    await deleteMutation.mutateAsync(policy.id);
-    toast.success("Policy deleted");
+  const handleDeleteClick = (policy: ExpensePolicy) => {
+    setDeleteTarget(policy);
+    setDeleteOpen(true);
   };
 
   const isBusy =
@@ -577,12 +578,32 @@ export default function PoliciesPage() {
                 categoryLabel={categoryLabel}
                 onView={() => openView(policy)}
                 onEdit={() => openEdit(policy)}
-                onDelete={() => handleDelete(policy)}
+                onDelete={() => handleDeleteClick(policy)}
               />
             );
           })}
         </div>
       )}
+
+      <DeleteConfirmationDialog
+        open={deleteOpen}
+        onOpenChange={(open) => {
+          if (!open && !isBusy) {
+            setDeleteOpen(false);
+            setDeleteTarget(null);
+          }
+          if (open) setDeleteOpen(true);
+        }}
+        title="Delete policy?"
+        description="This will deactivate the policy and remove it from active use."
+        onConfirm={async () => {
+          if (!deleteTarget) return;
+          await deleteMutation.mutateAsync(deleteTarget.id);
+          toast.success("Policy deleted");
+          setDeleteOpen(false);
+          setDeleteTarget(null);
+        }}
+      />
 
       <PolicyFormDialog
         mode={dialogMode}

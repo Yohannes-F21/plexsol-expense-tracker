@@ -24,6 +24,7 @@ import { toast } from "sonner";
 import { CreateExpenseDialog } from "@/components/create-expense-dialog";
 import { EditExpenseDialog } from "@/components/edit-expense-dialog";
 import { formatCurrency } from "@/lib/utils";
+import { DeleteConfirmationDialog } from "@/components/delete-confirmation-dialog";
 
 type Expense = {
   id: string;
@@ -40,6 +41,8 @@ type Expense = {
 
 export function StaffDashboard() {
   const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [deleteExpenseId, setDeleteExpenseId] = useState<string | null>(null);
 
   const { data, isLoading, refetch } = useQuery({
     queryKey: ["expenses"],
@@ -69,11 +72,16 @@ export function StaffDashboard() {
     return { total, pending, approved, rejected, approvedTotal };
   }, [expenses]);
 
-  const handleDelete = async (expenseId: string) => {
-    if (!confirm("Are you sure you want to delete this expense?")) return;
+  const requestDelete = (expenseId: string) => {
+    setDeleteExpenseId(expenseId);
+    setDeleteOpen(true);
+  };
+
+  const handleDelete = async () => {
+    if (!deleteExpenseId) return;
 
     try {
-      const response = await fetch(`/api/expenses/${expenseId}`, {
+      const response = await fetch(`/api/expenses/${deleteExpenseId}`, {
         method: "DELETE",
       });
 
@@ -84,6 +92,8 @@ export function StaffDashboard() {
       }
 
       toast.success("Expense deleted");
+      setDeleteOpen(false);
+      setDeleteExpenseId(null);
       refetch();
     } catch (error) {
       console.error("[v0] Delete expense error:", error);
@@ -271,7 +281,7 @@ export function StaffDashboard() {
                           <Button
                             size="sm"
                             variant="destructive"
-                            onClick={() => handleDelete(expense.id)}
+                            onClick={() => requestDelete(expense.id)}
                           >
                             Delete
                           </Button>
@@ -285,6 +295,19 @@ export function StaffDashboard() {
           </CardContent>
         </Card>
       </main>
+
+      <DeleteConfirmationDialog
+        open={deleteOpen}
+        onOpenChange={(open) => {
+          setDeleteOpen(open);
+          if (!open) setDeleteExpenseId(null);
+        }}
+        title="Delete expense?"
+        description="This action cannot be undone."
+        confirmLabel="Delete"
+        onConfirm={handleDelete}
+      />
+
       {editingExpense ? (
         <EditExpenseDialog
           expense={editingExpense}

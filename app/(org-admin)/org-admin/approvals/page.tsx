@@ -1,4 +1,4 @@
-import { ApprovalsManagement } from "@/components/org-admin/approvals-management";
+import { ApprovalsView } from "@/components/org-admin/approvals-view";
 
 export default function OrgAdminApprovalsPage() {
   return (
@@ -10,7 +10,7 @@ export default function OrgAdminApprovalsPage() {
         </p>
       </div>
 
-      <ApprovalsManagement />
+      <ApprovalsView />
     </div>
   );
 }

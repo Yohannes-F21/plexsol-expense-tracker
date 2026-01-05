@@ -18,16 +18,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+import { DeleteConfirmationDialog } from "@/components/delete-confirmation-dialog";
 import {
   Select,
   SelectContent,
@@ -397,44 +388,28 @@ export function ExpensesTable(props: { role: "ORG_ADMIN" | "STAFF" }) {
         </CardContent>
       </Card>
 
-      <AlertDialog
+      <DeleteConfirmationDialog
         open={deleteOpen}
         onOpenChange={(open) => {
           if (isDeleting) return;
           setDeleteOpen(open);
           if (!open) setDeleteTarget(null);
         }}
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete expense?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This will remove the expense from active use. Existing records
-              will keep their history.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              disabled={isDeleting || !deleteTarget}
-              onClick={async () => {
-                if (!deleteTarget) return;
-                if (deleteTarget.status === "APPROVED") {
-                  toast.error("Approved expenses cannot be deleted");
-                  setDeleteOpen(false);
-                  setDeleteTarget(null);
-                  return;
-                }
-                await handleDelete(deleteTarget.id);
-                setDeleteOpen(false);
-                setDeleteTarget(null);
-              }}
-            >
-              {isDeleting ? "Deleting..." : "Delete"}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+        title="Delete expense?"
+        description="This will remove the expense from active use. Existing records will keep their history."
+        onConfirm={async () => {
+          if (!deleteTarget) return;
+          if (deleteTarget.status === "APPROVED") {
+            toast.error("Approved expenses cannot be deleted");
+            setDeleteOpen(false);
+            setDeleteTarget(null);
+            return;
+          }
+          await handleDelete(deleteTarget.id);
+          setDeleteOpen(false);
+          setDeleteTarget(null);
+        }}
+      />
     </>
   );
 }
