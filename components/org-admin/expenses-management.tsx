@@ -1,11 +1,12 @@
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   flexRender,
   getCoreRowModel,
   getFilteredRowModel,
+  getPaginationRowModel,
   getSortedRowModel,
   useReactTable,
   type ColumnDef,
@@ -42,6 +43,7 @@ import { formatCurrency } from "@/lib/utils";
 import { toast } from "sonner";
 import { CreateExpenseDialog } from "@/components/create-expense-dialog";
 import { EditExpenseDialog } from "@/components/edit-expense-dialog";
+import { DataTablePagination } from "@/components/data-table-pagination";
 
 type Expense = {
   id: string;
@@ -67,6 +69,10 @@ export function ExpensesManagement() {
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
+  const [{ pageIndex, pageSize }, setPagination] = useState({
+    pageIndex: 0,
+    pageSize: 20,
+  });
 
   const { data, isLoading } = useQuery({
     queryKey: ["org-admin-expenses"],
@@ -239,13 +245,21 @@ export function ExpensesManagement() {
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
+    getPaginationRowModel: getPaginationRowModel(),
     onSortingChange: setSorting,
     onColumnFiltersChange: setColumnFilters,
+    onPaginationChange: setPagination,
     state: {
       sorting,
       columnFilters,
+      pagination: { pageIndex, pageSize },
     },
   });
+
+  useEffect(() => {
+    table.setPageIndex(0);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [columnFilters, sorting, statusFilter]);
 
   if (isLoading) {
     return (
@@ -367,6 +381,13 @@ export function ExpensesManagement() {
                 )}
               </TableBody>
             </Table>
+          </div>
+
+          <div className="mt-4">
+            <DataTablePagination
+              table={table}
+              storageKey="org-admin-expenses-page-size"
+            />
           </div>
         </CardContent>
       </Card>

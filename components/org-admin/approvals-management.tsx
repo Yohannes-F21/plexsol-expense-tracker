@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { apiClient } from "@/lib/api-client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -16,7 +16,8 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { Search, Eye } from "lucide-react";
+import { Search, Eye, Move, MoveRight } from "lucide-react";
+import { ServerDataTablePagination } from "@/components/data-table-pagination";
 
 type ApprovalRow = {
   id: string;
@@ -47,6 +48,8 @@ function formatMoney(x: any) {
 
 export function ApprovalsManagement() {
   const [query, setQuery] = useState("");
+  const [pageIndex, setPageIndex] = useState(0);
+  const [pageSize, setPageSize] = useState(20);
 
   const { data, isLoading, error } = useQuery({
     queryKey: ["approvals"],
@@ -73,6 +76,15 @@ export function ApprovalsManagement() {
       );
     });
   }, [approvals, query]);
+
+  useEffect(() => {
+    setPageIndex(0);
+  }, [query]);
+
+  const paged = useMemo(() => {
+    const start = pageIndex * pageSize;
+    return filtered.slice(start, start + pageSize);
+  }, [filtered, pageIndex, pageSize]);
 
   if (isLoading) {
     return <div className="text-muted-foreground">Loading approvals...</div>;
@@ -112,14 +124,14 @@ export function ApprovalsManagement() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filtered.length === 0 ? (
+              {paged.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={8} className="h-24 text-center">
                     No expenses awaiting approval.
                   </TableCell>
                 </TableRow>
               ) : (
-                filtered.map((row) => (
+                paged.map((row) => (
                   <TableRow key={row.id}>
                     <TableCell>
                       <div className="font-medium">
@@ -157,7 +169,7 @@ export function ApprovalsManagement() {
                     <TableCell className="">
                       <Button asChild size="sm" variant="outline">
                         <Link href={`/org-admin/approvals/${row.id}`}>
-                          Approve/Reject
+                          Approve <MoveRight className="ml-2 h-4 w-4" />
                         </Link>
                       </Button>
                     </TableCell>
@@ -166,6 +178,20 @@ export function ApprovalsManagement() {
               )}
             </TableBody>
           </Table>
+        </div>
+
+        <div className="mt-4">
+          <ServerDataTablePagination
+            totalCount={filtered.length}
+            pageIndex={pageIndex}
+            pageSize={pageSize}
+            onPageIndexChange={setPageIndex}
+            onPageSizeChange={(size) => {
+              setPageSize(size);
+              setPageIndex(0);
+            }}
+            storageKey="org-admin-approvals-page-size"
+          />
         </div>
       </CardContent>
     </Card>

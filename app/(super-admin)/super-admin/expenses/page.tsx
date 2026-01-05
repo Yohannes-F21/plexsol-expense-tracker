@@ -7,7 +7,9 @@ export default function SuperAdminExpensesPage() {
     <QueryProvider>
       <div className="space-y-6">
         <div>
-          <h1 className="text-2xl font-bold text-foreground">Expenses</h1>
+          <h1 className="text-2xl font-bold text-foreground">
+            Expenses Management
+          </h1>
           <p className="text-muted-foreground mt-1">
             Manage all Expenses in the system
           </p>

@@ -1,12 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   flexRender,
   getCoreRowModel,
   getFilteredRowModel,
+  getPaginationRowModel,
   getSortedRowModel,
   useReactTable,
   type ColumnDef,
@@ -44,6 +45,7 @@ import {
 } from "@/components/ui/table";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Search, SquarePen, Trash2, Eye } from "lucide-react";
+import { DataTablePagination } from "@/components/data-table-pagination";
 
 type ExpenseRow = {
   id: string;
@@ -83,6 +85,10 @@ export function ExpensesTable(props: { role: "ORG_ADMIN" | "STAFF" }) {
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<ExpenseRow | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [{ pageIndex, pageSize }, setPagination] = useState({
+    pageIndex: 0,
+    pageSize: 20,
+  });
 
   const { data, isLoading } = useQuery({
     queryKey: ["expenses"],
@@ -281,10 +287,21 @@ export function ExpensesTable(props: { role: "ORG_ADMIN" | "STAFF" }) {
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
+    getPaginationRowModel: getPaginationRowModel(),
     onSortingChange: setSorting,
     onColumnFiltersChange: setColumnFilters,
-    state: { sorting, columnFilters },
+    onPaginationChange: setPagination,
+    state: {
+      sorting,
+      columnFilters,
+      pagination: { pageIndex, pageSize },
+    },
   });
+
+  useEffect(() => {
+    table.setPageIndex(0);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [columnFilters, sorting, statusFilter]);
 
   if (isLoading) {
     return (
@@ -369,6 +386,13 @@ export function ExpensesTable(props: { role: "ORG_ADMIN" | "STAFF" }) {
                 )}
               </TableBody>
             </Table>
+          </div>
+
+          <div className="mt-4">
+            <DataTablePagination
+              table={table}
+              storageKey={`${props.role.toLowerCase()}-expenses-page-size`}
+            />
           </div>
         </CardContent>
       </Card>
