@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import { use } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -15,6 +14,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
+import { canEditExpense } from "@/lib/expense-permissions";
 
 function asNumber(x: any): number {
   if (typeof x === "number") return x;
@@ -30,12 +30,12 @@ function formatMoney(x: any) {
   return n.toFixed(2);
 }
 
-export default function StaffExpenseDetailPage({
-  params,
-}: {
-  params: Promise<{ id: string }>;
+export function ExpenseDetailPage(props: {
+  role: "STAFF" | "ORG_ADMIN";
+  expenseId: string;
+  backHref: string;
 }) {
-  const { id } = use(params);
+  const id = props.expenseId;
   const { data, isLoading, error } = useQuery({
     queryKey: ["expense", id],
     queryFn: async () => {
@@ -51,6 +51,7 @@ export default function StaffExpenseDetailPage({
     return <div className="text-destructive">{(error as Error).message}</div>;
 
   const expense = data?.expense;
+  const showEdit = canEditExpense({ role: props.role, status: expense.status });
 
   return (
     <div className="space-y-6">
@@ -63,11 +64,11 @@ export default function StaffExpenseDetailPage({
         </div>
         <div className="flex gap-2">
           <Button asChild variant="outline">
-            <Link href="/dashboard/expenses">Back</Link>
+            <Link href={props.backHref}>Back</Link>
           </Button>
-          {expense.status !== "APPROVED" ? (
+          {showEdit ? (
             <Button asChild>
-              <Link href={`/dashboard/expenses/${expense.id}/edit`}>Edit</Link>
+              <Link href={`/expenses/${expense.id}/edit`}>Edit</Link>
             </Button>
           ) : null}
         </div>
@@ -117,6 +118,35 @@ export default function StaffExpenseDetailPage({
                     {expense.tinNumber}
                   </span>
                 </div>
+
+                {props.role === "ORG_ADMIN" ? (
+                  <>
+                    <div className="flex items-start justify-between gap-4">
+                      <span className="text-muted-foreground">FS No.</span>
+                      <span className="text-right font-mono text-xs">
+                        {expense.fsNumber}
+                      </span>
+                    </div>
+                    {expense.mrcNumber ? (
+                      <div className="flex items-start justify-between gap-4">
+                        <span className="text-muted-foreground">MRC No.</span>
+                        <span className="text-right font-mono text-xs">
+                          {expense.mrcNumber}
+                        </span>
+                      </div>
+                    ) : null}
+                    {expense.invoiceNumber ? (
+                      <div className="flex items-start justify-between gap-4">
+                        <span className="text-muted-foreground">
+                          Invoice No.
+                        </span>
+                        <span className="text-right font-mono text-xs">
+                          {expense.invoiceNumber}
+                        </span>
+                      </div>
+                    ) : null}
+                  </>
+                ) : null}
               </div>
             </div>
 
@@ -130,50 +160,93 @@ export default function StaffExpenseDetailPage({
                     {new Date(expense.purchasedDate).toLocaleDateString()}
                   </span>
                 </div>
-                <div className="flex items-start justify-between gap-4">
-                  <span className="text-muted-foreground">FS No.</span>
-                  <span className="text-right font-mono text-xs">
-                    {expense.fsNumber}
-                  </span>
-                </div>
-                {expense.mrcNumber ? (
-                  <div className="flex items-start justify-between gap-4">
-                    <span className="text-muted-foreground">MRC No.</span>
-                    <span className="text-right font-mono text-xs">
-                      {expense.mrcNumber}
-                    </span>
-                  </div>
+
+                {props.role === "STAFF" ? (
+                  <>
+                    <div className="flex items-start justify-between gap-4">
+                      <span className="text-muted-foreground">FS No.</span>
+                      <span className="text-right font-mono text-xs">
+                        {expense.fsNumber}
+                      </span>
+                    </div>
+                    {expense.mrcNumber ? (
+                      <div className="flex items-start justify-between gap-4">
+                        <span className="text-muted-foreground">MRC No.</span>
+                        <span className="text-right font-mono text-xs">
+                          {expense.mrcNumber}
+                        </span>
+                      </div>
+                    ) : null}
+                    {expense.invoiceNumber ? (
+                      <div className="flex items-start justify-between gap-4">
+                        <span className="text-muted-foreground">
+                          Invoice No.
+                        </span>
+                        <span className="text-right font-mono text-xs">
+                          {expense.invoiceNumber}
+                        </span>
+                      </div>
+                    ) : null}
+                  </>
                 ) : null}
-                {expense.invoiceNumber ? (
-                  <div className="flex items-start justify-between gap-4">
-                    <span className="text-muted-foreground">Invoice No.</span>
-                    <span className="text-right font-mono text-xs">
-                      {expense.invoiceNumber}
-                    </span>
-                  </div>
-                ) : null}
+
                 <div className="flex items-start justify-between gap-4">
                   <span className="text-muted-foreground">Payment</span>
                   <span className="text-right">
                     {String(expense.paymentMethod).replace(/_/g, " ")}
                   </span>
                 </div>
+
+                {props.role === "ORG_ADMIN" ? (
+                  <div className="flex items-start justify-between gap-4">
+                    <span className="text-muted-foreground">Created by</span>
+                    <span className="text-right font-mono text-xs">
+                      {expense.createdByUser?.email ?? "-"}
+                    </span>
+                  </div>
+                ) : null}
               </div>
             </div>
           </div>
 
           <div className="rounded-lg border overflow-x-auto">
-            <Table className="min-w-[1100px]">
+            <Table className="min-w-275">
               <TableHeader>
-                <TableRow className="bg-muted/30">
-                  <TableHead className="w-14">No</TableHead>
+                <TableRow
+                  className={
+                    props.role === "STAFF" ? "bg-muted/30" : "bg-muted/70"
+                  }
+                >
+                  <TableHead
+                    className={props.role === "STAFF" ? "w-14" : "w-14"}
+                  >
+                    No
+                  </TableHead>
                   <TableHead>Description</TableHead>
                   <TableHead>VAT</TableHead>
                   <TableHead>UOM</TableHead>
                   <TableHead>Purchase Type</TableHead>
-                  <TableHead className="text-right">Quantity</TableHead>
-                  <TableHead className="text-right">Unit Price</TableHead>
-                  <TableHead className="text-right">Total Price</TableHead>
+                  <TableHead
+                    className={
+                      props.role === "STAFF" ? "text-right" : undefined
+                    }
+                  >
+                    Quantity
+                  </TableHead>
+                  <TableHead
+                    className={
+                      props.role === "STAFF" ? "text-right" : undefined
+                    }
+                  >
+                    Unit Price
+                  </TableHead>
+                  <TableHead
+                    className={
+                      props.role === "STAFF" ? "text-right" : undefined
+                    }
+                  >
+                    Total Price
+                  </TableHead>
                   <TableHead>Policy</TableHead>
                 </TableRow>
               </TableHeader>
@@ -194,13 +267,31 @@ export default function StaffExpenseDetailPage({
                     </TableCell>
                     <TableCell>{it.unitOfMeasure?.label ?? "-"}</TableCell>
                     <TableCell>{it.purchaseType?.label ?? "-"}</TableCell>
-                    <TableCell className="text-right tabular-nums">
+                    <TableCell
+                      className={
+                        props.role === "STAFF"
+                          ? "text-right tabular-nums"
+                          : undefined
+                      }
+                    >
                       {formatMoney(it.quantity)}
                     </TableCell>
-                    <TableCell className="text-right tabular-nums">
+                    <TableCell
+                      className={
+                        props.role === "STAFF"
+                          ? "text-right tabular-nums"
+                          : undefined
+                      }
+                    >
                       {formatMoney(it.unitPrice)}
                     </TableCell>
-                    <TableCell className="text-right tabular-nums">
+                    <TableCell
+                      className={
+                        props.role === "STAFF"
+                          ? "text-right tabular-nums"
+                          : undefined
+                      }
+                    >
                       {formatMoney(it.lineTotal)}
                     </TableCell>
                     <TableCell>
@@ -236,7 +327,11 @@ export default function StaffExpenseDetailPage({
                       {formatMoney(expense.vat)}
                     </TableCell>
                   </TableRow>
-                  <TableRow className="bg-muted/20">
+                  <TableRow
+                    className={
+                      props.role === "STAFF" ? "bg-muted/20" : "bg-muted/70"
+                    }
+                  >
                     <TableCell className="text-sm font-medium">
                       Grand Total
                     </TableCell>

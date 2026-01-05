@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { requireRole } from "@/lib/auth";
+import { canDeleteExpense, canEditExpense } from "@/lib/expense-permissions";
 import { prisma } from "@/lib/prisma";
 import { ExpenseStatus, Prisma } from "@prisma/client";
 
@@ -83,10 +84,6 @@ async function evaluatePolicyViolations(args: {
   return { perItem, anyViolated };
 }
 
-function canStaffEdit(status: string) {
-  return status === "PENDING" || status === "WARNING" || status === "REJECTED";
-}
-
 export async function PUT(request: Request, context: any) {
   try {
     const session = await requireRole(["ORG_ADMIN", "STAFF"]);
@@ -142,14 +139,17 @@ export async function PUT(request: Request, context: any) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
     }
 
-    if (session.role === "STAFF" && !canStaffEdit(expense.status)) {
-      return NextResponse.json(
-        { error: "Cannot edit this expense at its current status" },
-        { status: 400 }
-      );
+    if (
+      session.role === "STAFF" &&
+      !canEditExpense({ role: session.role, status: expense.status })
+    ) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
-    if (session.role === "ORG_ADMIN" && expense.status === "APPROVED") {
+    if (
+      session.role === "ORG_ADMIN" &&
+      !canEditExpense({ role: session.role, status: expense.status })
+    ) {
       return NextResponse.json(
         { error: "Cannot edit a finalized expense" },
         { status: 400 }
@@ -509,14 +509,17 @@ export async function DELETE(request: Request, context: any) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
     }
 
-    if (session.role === "STAFF" && !canStaffEdit(expense.status)) {
-      return NextResponse.json(
-        { error: "Cannot delete this expense at its current status" },
-        { status: 400 }
-      );
+    if (
+      session.role === "STAFF" &&
+      !canDeleteExpense({ role: session.role, status: expense.status })
+    ) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
-    if (session.role === "ORG_ADMIN" && expense.status === "APPROVED") {
+    if (
+      session.role === "ORG_ADMIN" &&
+      !canDeleteExpense({ role: session.role, status: expense.status })
+    ) {
       return NextResponse.json(
         { error: "Cannot delete a finalized expense" },
         { status: 400 }

@@ -23,7 +23,7 @@ const navItems: NavItem[] = [
   },
   {
     title: "Expenses",
-    href: "/org-admin/expenses",
+    href: "/expenses",
     icon: "receipt",
   },
   {

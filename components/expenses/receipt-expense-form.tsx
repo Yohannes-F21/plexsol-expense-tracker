@@ -288,11 +288,12 @@ export function ReceiptExpenseForm(props: {
     },
     onSuccess: async (data) => {
       await queryClient.invalidateQueries({ queryKey: ["expenses"] });
+      toast.success(
+        props.mode === "edit" ? "Expense updated" : "Expense created"
+      );
       const destination = props.onSuccessNavigateTo
         ? props.onSuccessNavigateTo(data.expense.id)
-        : props.role === "ORG_ADMIN"
-        ? `/org-admin/expenses/${data.expense.id}`
-        : `/dashboard/expenses/${data.expense.id}`;
+        : `/expenses/${data.expense.id}`;
       router.push(destination);
       router.refresh();
     },

@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 
-export default async function OrgAdminExpenseDetailLegacyRedirect({
+export default async function StaffExpenseDetailLegacyRedirect({
   params,
 }: {
   params: Promise<{ id: string }>;

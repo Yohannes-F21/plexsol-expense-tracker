@@ -6,7 +6,7 @@ export default function OrgAdminSettingsPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold">Settings</h1>
+        <h1 className="text-2xl font-bold">Settings</h1>
         <p className="mt-1 text-muted-foreground">
           Manage organization master data used in expense items.
         </p>

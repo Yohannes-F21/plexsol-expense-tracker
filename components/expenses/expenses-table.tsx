@@ -37,6 +37,7 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Search, SquarePen, Trash2, Eye } from "lucide-react";
 import { DataTablePagination } from "@/components/data-table-pagination";
+import { canDeleteExpense, canEditExpense } from "@/lib/expense-permissions";
 
 type ExpenseRow = {
   id: string;
@@ -218,11 +219,15 @@ export function ExpensesTable(props: { role: "ORG_ADMIN" | "STAFF" }) {
         header: "Actions",
         cell: ({ row }) => {
           const expense = row.original;
-          const base =
-            props.role === "ORG_ADMIN"
-              ? "/org-admin/expenses"
-              : "/dashboard/expenses";
-          const locked = expense.status === "APPROVED";
+          const base = "/expenses";
+          const canEdit = canEditExpense({
+            role: props.role,
+            status: expense.status,
+          });
+          const canDelete = canDeleteExpense({
+            role: props.role,
+            status: expense.status,
+          });
 
           return (
             <div className="flex gap-2">
@@ -231,7 +236,7 @@ export function ExpensesTable(props: { role: "ORG_ADMIN" | "STAFF" }) {
                   <Eye className="h-4 w-4" />
                 </Link>
               </Button>
-              {locked ? (
+              {!canEdit ? (
                 <Button size="sm" variant="outline" disabled>
                   <SquarePen className="h-4 w-4" />
                 </Button>
@@ -246,14 +251,20 @@ export function ExpensesTable(props: { role: "ORG_ADMIN" | "STAFF" }) {
                 size="sm"
                 variant="outline"
                 onClick={() => {
-                  if (expense.status === "APPROVED") {
-                    toast.error("Approved expenses cannot be deleted");
+                  if (!canDelete) {
+                    if (expense.status === "APPROVED") {
+                      toast.error("Approved expenses cannot be deleted");
+                    } else if (expense.status === "REJECTED") {
+                      toast.error("Rejected expenses cannot be deleted");
+                    } else {
+                      toast.error("You cannot delete this expense");
+                    }
                     return;
                   }
                   setDeleteTarget(expense);
                   setDeleteOpen(true);
                 }}
-                disabled={locked}
+                disabled={!canDelete}
               >
                 <Trash2 className="h-4 w-4" />
               </Button>
@@ -399,8 +410,16 @@ export function ExpensesTable(props: { role: "ORG_ADMIN" | "STAFF" }) {
         description="This will remove the expense from active use. Existing records will keep their history."
         onConfirm={async () => {
           if (!deleteTarget) return;
-          if (deleteTarget.status === "APPROVED") {
-            toast.error("Approved expenses cannot be deleted");
+          if (
+            !canDeleteExpense({ role: props.role, status: deleteTarget.status })
+          ) {
+            if (deleteTarget.status === "APPROVED") {
+              toast.error("Approved expenses cannot be deleted");
+            } else if (deleteTarget.status === "REJECTED") {
+              toast.error("Rejected expenses cannot be deleted");
+            } else {
+              toast.error("You cannot delete this expense");
+            }
             setDeleteOpen(false);
             setDeleteTarget(null);
             return;
