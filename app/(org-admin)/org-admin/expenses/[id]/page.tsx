@@ -169,7 +169,7 @@ export default function OrgAdminExpenseDetailPage({
           </div>
 
           <div className="rounded-lg border overflow-x-auto">
-            <Table className="min-w-[1100px]">
+            <Table className="min-w-275">
               <TableHeader>
                 <TableRow className="bg-muted/70">
                   <TableHead className="w-14">No</TableHead>

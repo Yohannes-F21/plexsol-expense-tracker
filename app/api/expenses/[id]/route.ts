@@ -259,6 +259,45 @@ export async function PUT(request: Request, context: any) {
 
     const status: ExpenseStatus = anyViolated ? "WARNING" : "PENDING";
 
+    const previousExpense = await prisma.expense.findUnique({
+      where: { id },
+      select: {
+        id: true,
+        purchasedDate: true,
+        companyName: true,
+        tinNumber: true,
+        fsNumber: true,
+        mrcNumber: true,
+        invoiceNumber: true,
+        paymentMethod: true,
+        subtotal: true,
+        vat: true,
+        total: true,
+        status: true,
+      },
+    });
+
+    if (!previousExpense) {
+      return NextResponse.json({ error: "Expense not found" }, { status: 404 });
+    }
+
+    const previousValue = {
+      purchasedDate: previousExpense.purchasedDate?.toISOString?.() ?? null,
+      companyName: previousExpense.companyName,
+      tinNumber: previousExpense.tinNumber,
+      fsNumber: previousExpense.fsNumber,
+      mrcNumber: previousExpense.mrcNumber,
+      invoiceNumber: previousExpense.invoiceNumber,
+      paymentMethod: previousExpense.paymentMethod,
+      subtotal:
+        previousExpense.subtotal?.toString?.() ??
+        String(previousExpense.subtotal),
+      vat: previousExpense.vat?.toString?.() ?? String(previousExpense.vat),
+      total:
+        previousExpense.total?.toString?.() ?? String(previousExpense.total),
+      status: previousExpense.status,
+    };
+
     const updated = await prisma.$transaction(async (tx) => {
       if (itemsInput) {
         await tx.expenseItem.deleteMany({ where: { expenseId: id } });
@@ -321,8 +360,25 @@ export async function PUT(request: Request, context: any) {
           actionType: "EXPENSE_UPDATED",
           entityType: "Expense",
           entityId: updatedExpense.id,
-          previousValue: Prisma.JsonNull,
-          newValue: Prisma.JsonNull,
+          previousValue,
+          newValue: {
+            purchasedDate:
+              updatedExpense.purchasedDate?.toISOString?.() ?? null,
+            companyName: updatedExpense.companyName,
+            tinNumber: updatedExpense.tinNumber,
+            fsNumber: updatedExpense.fsNumber,
+            mrcNumber: updatedExpense.mrcNumber,
+            invoiceNumber: updatedExpense.invoiceNumber,
+            paymentMethod: updatedExpense.paymentMethod,
+            subtotal:
+              updatedExpense.subtotal?.toString?.() ??
+              String(updatedExpense.subtotal),
+            vat: updatedExpense.vat?.toString?.() ?? String(updatedExpense.vat),
+            total:
+              updatedExpense.total?.toString?.() ??
+              String(updatedExpense.total),
+            status: updatedExpense.status,
+          },
         },
       });
 

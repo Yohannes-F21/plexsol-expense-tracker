@@ -35,6 +35,14 @@ export async function POST(request: Request) {
     // Find user
     const user = await prisma.user.findUnique({
       where: { email: validatedData.email },
+      include: {
+        organization: {
+          select: {
+            id: true,
+            isActive: true,
+          },
+        },
+      },
     });
 
     if (!user) {
@@ -62,6 +70,24 @@ export async function POST(request: Request) {
       return NextResponse.json(
         { error: "Invalid credentials" },
         { status: 401 }
+      );
+    }
+
+    // Enforce blocking rules
+    if (!user.isActive) {
+      return NextResponse.json(
+        { error: "Your account is blocked" },
+        { status: 403 }
+      );
+    }
+    if (
+      user.organizationId &&
+      user.organization &&
+      !user.organization.isActive
+    ) {
+      return NextResponse.json(
+        { error: "Your organization is blocked" },
+        { status: 403 }
       );
     }
 

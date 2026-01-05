@@ -21,16 +21,67 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Badge } from "../ui/badge";
 
 type Expense = {
   id: string;
   status: string;
   createdAt: string;
+  purchasedDate: string;
   organization: { id: string; name: string } | null;
   createdByUser: { id: string; name: string | null; email: string };
   companyName: string;
   total: any;
 };
+
+function renderStatusBadge(status: string) {
+  switch (status) {
+    case "PENDING":
+      return (
+        <Badge
+          variant="outline"
+          className="text-yellow-600 bg-orange-100 font-semibold"
+        >
+          Pending
+        </Badge>
+      );
+    case "APPROVED":
+      return (
+        <Badge
+          variant="outline"
+          className="text-green-600 bg-green-100 font-semibold"
+        >
+          Approved
+        </Badge>
+      );
+    case "REJECTED":
+      return (
+        <Badge
+          variant="outline"
+          className="text-red-600 bg-red-100 font-semibold"
+        >
+          Rejected
+        </Badge>
+      );
+    case "WARNING":
+      return (
+        <Badge
+          variant="outline"
+          className="text-orange-600 bg-orange-100 font-semibold"
+        >
+          Warning
+        </Badge>
+      );
+    default:
+      return status ? (
+        <Badge variant="outline" className="text-muted-foreground">
+          {status}
+        </Badge>
+      ) : (
+        "-"
+      );
+  }
+}
 
 function asNumber(x: any): number {
   if (typeof x === "number") return x;
@@ -90,8 +141,8 @@ export function ExpensesTable() {
   const total = data?.total || 0;
 
   return (
-    <div>
-      <div className="flex gap-2 mb-4">
+    <div className="space-y-4">
+      <div className="flex  gap-2 mb-4">
         <Input
           placeholder="Organization ID"
           value={organizationId || ""}
@@ -139,10 +190,10 @@ export function ExpensesTable() {
           <Table>
             <TableHeader>
               <tr>
-                <TableHead>Expense ID</TableHead>
                 <TableHead>Organization</TableHead>
                 <TableHead>Created By</TableHead>
                 <TableHead>Company</TableHead>
+                <TableHead>Purchased Date</TableHead>
                 <TableHead className="text-right">Total</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Created At</TableHead>
@@ -151,16 +202,19 @@ export function ExpensesTable() {
             <TableBody>
               {expenses.map((e) => (
                 <TableRow key={e.id}>
-                  <TableCell>{e.id}</TableCell>
                   <TableCell>{e.organization?.name || "-"}</TableCell>
                   <TableCell>
                     {e.createdByUser?.name || e.createdByUser?.email || "-"}
                   </TableCell>
                   <TableCell>{e.companyName}</TableCell>
-                  <TableCell className="text-right tabular-nums">
-                    {formatMoney(e.total)}
+                  <TableCell>
+                    {new Date(e.purchasedDate).toLocaleDateString()}
                   </TableCell>
-                  <TableCell>{e.status}</TableCell>
+                  <TableCell className="text-right tabular-nums font-mono text-sm font-semibold ">
+                    {formatMoney(e.total)}
+                    <span className="ml-1">ETB</span>
+                  </TableCell>
+                  <TableCell>{renderStatusBadge(e.status)}</TableCell>
                   <TableCell>
                     {new Date(e.createdAt).toLocaleString()}
                   </TableCell>

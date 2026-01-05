@@ -183,8 +183,9 @@ export function ExpensesTable(props: { role: "ORG_ADMIN" | "STAFF" }) {
         accessorKey: "total",
         header: "Total",
         cell: ({ row }) => (
-          <span className="tabular-nums">
+          <span className="tabular-nums font-semibold font-mono">
             {formatMoney(row.original.total)}
+            <span className="ml-1">ETB</span>
           </span>
         ),
       },
@@ -204,6 +205,11 @@ export function ExpensesTable(props: { role: "ORG_ADMIN" | "STAFF" }) {
                   ? "outline"
                   : "secondary"
               }
+              className={`${
+                status === "APPROVED"
+                  ? "text-green-500"
+                  : `${status === "WARNING" ? "text-yellow-500" : ""}`
+              }`}
             >
               {status}
             </Badge>
@@ -357,7 +363,7 @@ export function ExpensesTable(props: { role: "ORG_ADMIN" | "STAFF" }) {
                       colSpan={columns.length}
                       className="h-24 text-center"
                     >
-                      No expenses.
+                      No Expense Found!!!.
                     </TableCell>
                   </TableRow>
                 )}

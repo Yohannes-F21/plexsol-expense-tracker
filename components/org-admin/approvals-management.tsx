@@ -141,8 +141,9 @@ export function ApprovalsManagement() {
                     <TableCell>
                       <span className="font-mono text-xs">{row.tinNumber}</span>
                     </TableCell>
-                    <TableCell className="text-right tabular-nums">
+                    <TableCell className="font-semibold font-mono tabular-nums">
                       {formatMoney(row.total)}
+                      <span className="ml-1">ETB</span>
                     </TableCell>
                     <TableCell>
                       <Badge
@@ -153,10 +154,10 @@ export function ApprovalsManagement() {
                         {row.status}
                       </Badge>
                     </TableCell>
-                    <TableCell className="text-right">
+                    <TableCell className="">
                       <Button asChild size="sm" variant="outline">
                         <Link href={`/org-admin/approvals/${row.id}`}>
-                          <Eye className="h-4 w-4" />
+                          Approve/Reject
                         </Link>
                       </Button>
                     </TableCell>

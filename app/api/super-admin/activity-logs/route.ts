@@ -2,6 +2,13 @@ import { NextResponse } from "next/server";
 import { requireRole } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 
+function humanizeActionType(actionType: string) {
+  return actionType
+    .toLowerCase()
+    .replace(/_/g, " ")
+    .replace(/^\w/, (c) => c.toUpperCase());
+}
+
 export async function GET(request: Request) {
   try {
     await requireRole(["SUPER_ADMIN"]);
@@ -39,7 +46,17 @@ export async function GET(request: Request) {
       }),
     ]);
 
-    return NextResponse.json({ total, logs, page, pageSize });
+    const logsWithDescription = logs.map((l) => ({
+      ...l,
+      actionTypeDescription: humanizeActionType(l.actionType),
+    }));
+
+    return NextResponse.json({
+      total,
+      logs: logsWithDescription,
+      page,
+      pageSize,
+    });
   } catch (error) {
     console.error("[super-admin] Get activity logs error:", error);
     return NextResponse.json(

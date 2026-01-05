@@ -61,7 +61,7 @@ export function SuperAdminDashboard() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl md:text-3xl font-bold text-foreground">
+        <h1 className="text-2xl  font-bold text-foreground">
           Super Admin Dashboard
         </h1>
         <p className="text-sm md:text-base text-muted-foreground mt-1">

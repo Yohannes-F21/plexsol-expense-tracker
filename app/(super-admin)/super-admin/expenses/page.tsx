@@ -5,8 +5,13 @@ import { ExpensesTable } from "@/components/super-admin/expenses-table";
 export default function SuperAdminExpensesPage() {
   return (
     <QueryProvider>
-      <div className="container mx-auto p-6">
-        <h1 className="text-3xl font-bold text-foreground">Expenses</h1>
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-2xl font-bold text-foreground">Expenses</h1>
+          <p className="text-muted-foreground mt-1">
+            Manage all Expenses in the system
+          </p>
+        </div>
         <ExpensesTable />
       </div>
     </QueryProvider>

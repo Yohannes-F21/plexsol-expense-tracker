@@ -31,12 +31,20 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import {
   MoreHorizontal,
   Plus,
   Mail,
   ArrowUpDown,
   Tag,
   Trash,
+  PowerOff,
+  Power,
 } from "lucide-react";
 import { CreateOrganizationDialog } from "@/components/create-organization-dialog";
 import { InviteOrgAdminDialog } from "@/components/invite-org-admin-dialog";
@@ -76,21 +84,9 @@ export function OrganizationsTable() {
   });
   console.log("Organizations:", organizations);
 
-  const deactivateMutation = useMutation({
-    mutationFn: (id: string) =>
-      apiClient(`/api/super-admin/organizations/${id}`, {
-        method: "PATCH",
-        body: JSON.stringify({ isActive: false }),
-      }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["organizations"] });
-      queryClient.invalidateQueries({ queryKey: ["super-admin-stats"] });
-      toast.success("Organization deactivated successfully");
-    },
-    onError: () => {
-      toast.error("Failed to deactivate organization");
-    },
-  });
+  const notifyOrgToggleUnavailable = () => {
+    toast.message("Activate/Deactivate is not available on this page");
+  };
 
   const columns: ColumnDef<Organization>[] = [
     {
@@ -124,10 +120,10 @@ export function OrganizationsTable() {
             className={`${
               isActive
                 ? "bg-green-100 text-green-900"
-                : "bg-red-100 text-red-900"
-            }`}
+                : "bg-red-100 text-red-800"
+            } font-semibold`}
           >
-            {isActive ? "Active" : "Inactive"}
+            {isActive ? "Active" : "Banned"}
           </Badge>
         );
       },
@@ -151,38 +147,62 @@ export function OrganizationsTable() {
       },
     },
     {
+      header: "Actions",
       id: "actions",
       cell: ({ row }) => {
         const org = row.original;
         return (
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" className="h-8 w-8 p-0">
-                <MoreHorizontal className="h-4 w-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem
-                onClick={() => {
-                  setSelectedOrgId(org.id);
-                  setShowInviteDialog(true);
-                }}
-              >
-                <Mail className="mr-2 h-4 w-4" />
-                Invite Admin
-              </DropdownMenuItem>
-              {org.isActive && (
-                <DropdownMenuItem
-                  onClick={() => deactivateMutation.mutate(org.id)}
-                  variant="destructive"
-                  className="text-destructive"
+          <div className="flex items-center gap-2">
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  className=""
+                  onClick={() => {
+                    setSelectedOrgId(org.id);
+                    setShowInviteDialog(true);
+                  }}
                 >
-                  <Trash className="mr-2 h-4 w-4" />
-                  Deactivate
-                </DropdownMenuItem>
-              )}
-            </DropdownMenuContent>
-          </DropdownMenu>
+                  <Mail className="h-4 w-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Invite Admin</p>
+              </TooltipContent>
+            </Tooltip>
+
+            {org.isActive ? (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    className=" text-red-500"
+                    onClick={notifyOrgToggleUnavailable}
+                  >
+                    <Power className="h-4 w-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Deactivate Organization</p>
+                </TooltipContent>
+              </Tooltip>
+            ) : (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    className="text-green-600"
+                    onClick={notifyOrgToggleUnavailable}
+                  >
+                    <Power className="h-4 w-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Activate Organization</p>
+                </TooltipContent>
+              </Tooltip>
+            )}
+          </div>
         );
       },
     },
@@ -212,80 +232,82 @@ export function OrganizationsTable() {
   }
 
   return (
-    <div className="space-y-4">
-      <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 justify-between">
-        <Input
-          placeholder="Filter organizations..."
-          value={(table.getColumn("name")?.getFilterValue() as string) ?? ""}
-          onChange={(event) =>
-            table.getColumn("name")?.setFilterValue(event.target.value)
-          }
-          className="w-full sm:max-w-sm"
-        />
-        <Button
-          onClick={() => setShowCreateDialog(true)}
-          className="w-full sm:w-auto"
-        >
-          <Plus className="mr-2 h-4 w-4" />
-          Create Organization
-        </Button>
-      </div>
+    <TooltipProvider>
+      <div className="space-y-4">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 justify-between">
+          <Input
+            placeholder="Filter organizations..."
+            value={(table.getColumn("name")?.getFilterValue() as string) ?? ""}
+            onChange={(event) =>
+              table.getColumn("name")?.setFilterValue(event.target.value)
+            }
+            className="w-full sm:max-w-sm"
+          />
+          <Button
+            onClick={() => setShowCreateDialog(true)}
+            className="w-full sm:w-auto"
+          >
+            <Plus className="mr-2 h-4 w-4" />
+            Create Organization
+          </Button>
+        </div>
 
-      <div className="rounded-md border overflow-x-auto">
-        <Table>
-          <TableHeader>
-            {table.getHeaderGroups().map((headerGroup) => (
-              <TableRow key={headerGroup.id}>
-                {headerGroup.headers.map((header) => (
-                  <TableHead key={header.id} className="whitespace-nowrap">
-                    {header.isPlaceholder
-                      ? null
-                      : flexRender(
-                          header.column.columnDef.header,
-                          header.getContext()
-                        )}
-                  </TableHead>
-                ))}
-              </TableRow>
-            ))}
-          </TableHeader>
-          <TableBody>
-            {table.getRowModel().rows?.length ? (
-              table.getRowModel().rows.map((row) => (
-                <TableRow key={row.id}>
-                  {row.getVisibleCells().map((cell) => (
-                    <TableCell key={cell.id} className="whitespace-nowrap">
-                      {flexRender(
-                        cell.column.columnDef.cell,
-                        cell.getContext()
-                      )}
-                    </TableCell>
+        <div className="rounded-md border overflow-x-auto">
+          <Table>
+            <TableHeader>
+              {table.getHeaderGroups().map((headerGroup) => (
+                <TableRow key={headerGroup.id}>
+                  {headerGroup.headers.map((header) => (
+                    <TableHead key={header.id} className="whitespace-nowrap">
+                      {header.isPlaceholder
+                        ? null
+                        : flexRender(
+                            header.column.columnDef.header,
+                            header.getContext()
+                          )}
+                    </TableHead>
                   ))}
                 </TableRow>
-              ))
-            ) : (
-              <TableRow>
-                <TableCell
-                  colSpan={columns.length}
-                  className="h-24 text-center"
-                >
-                  No organizations found.
-                </TableCell>
-              </TableRow>
-            )}
-          </TableBody>
-        </Table>
-      </div>
+              ))}
+            </TableHeader>
+            <TableBody>
+              {table.getRowModel().rows?.length ? (
+                table.getRowModel().rows.map((row) => (
+                  <TableRow key={row.id}>
+                    {row.getVisibleCells().map((cell) => (
+                      <TableCell key={cell.id} className="whitespace-nowrap">
+                        {flexRender(
+                          cell.column.columnDef.cell,
+                          cell.getContext()
+                        )}
+                      </TableCell>
+                    ))}
+                  </TableRow>
+                ))
+              ) : (
+                <TableRow>
+                  <TableCell
+                    colSpan={columns.length}
+                    className="h-24 text-center"
+                  >
+                    No organizations found.
+                  </TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
+        </div>
 
-      <CreateOrganizationDialog
-        open={showCreateDialog}
-        onOpenChange={setShowCreateDialog}
-      />
-      <InviteOrgAdminDialog
-        open={showInviteDialog}
-        onOpenChange={setShowInviteDialog}
-        organizationId={selectedOrgId}
-      />
-    </div>
+        <CreateOrganizationDialog
+          open={showCreateDialog}
+          onOpenChange={setShowCreateDialog}
+        />
+        <InviteOrgAdminDialog
+          open={showInviteDialog}
+          onOpenChange={setShowInviteDialog}
+          organizationId={selectedOrgId}
+        />
+      </div>
+    </TooltipProvider>
   );
 }

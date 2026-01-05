@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { ExpensesTable } from "@/components/expenses/expenses-table";
+import { Plus } from "lucide-react";
 
 export default function OrgAdminExpensesPage() {
   return (
@@ -13,7 +14,10 @@ export default function OrgAdminExpensesPage() {
           </p>
         </div>
         <Button asChild>
-          <Link href="/org-admin/expenses/new">New Expense</Link>
+          <Link href="/org-admin/expenses/new">
+            <Plus></Plus>
+            New Expense
+          </Link>
         </Button>
       </div>
 

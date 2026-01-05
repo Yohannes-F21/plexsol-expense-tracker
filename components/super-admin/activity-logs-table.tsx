@@ -13,17 +13,132 @@ import {
 } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Files } from "lucide-react";
 
 type Log = {
   id: string;
   actionType: string;
   entityType: string;
   entityId: string;
+  previousValue: any;
+  newValue: any;
   createdAt: string;
   user: { id: string; name: string | null; role: string };
   organization: { id: string; name: string } | null;
   actionTypeDescription?: string;
 };
+
+type ChangeRow = {
+  field: string;
+  previous: string;
+  updated: string;
+};
+
+function isPlainObject(x: unknown): x is Record<string, unknown> {
+  return !!x && typeof x === "object" && !Array.isArray(x);
+}
+
+function toDisplayValue(v: unknown) {
+  if (v === null || v === undefined) return "-";
+  if (typeof v === "string") return v;
+  if (typeof v === "number" || typeof v === "boolean") return String(v);
+  try {
+    return JSON.stringify(v);
+  } catch {
+    return String(v);
+  }
+}
+
+function toTitleCase(key: string) {
+  return key
+    .replace(/([a-z0-9])([A-Z])/g, "$1 $2")
+    .replace(/_/g, " ")
+    .replace(/^./, (c) => c.toUpperCase());
+}
+
+function getChanges(previousValue: unknown, newValue: unknown): ChangeRow[] {
+  const prevObj = isPlainObject(previousValue) ? previousValue : undefined;
+  const nextObj = isPlainObject(newValue) ? newValue : undefined;
+
+  if (!prevObj && !nextObj) {
+    const prev = toDisplayValue(previousValue);
+    const next = toDisplayValue(newValue);
+    if (prev === next) return [];
+    return [{ field: "Value", previous: prev, updated: next }];
+  }
+
+  const keys = new Set<string>([
+    ...Object.keys(prevObj ?? {}),
+    ...Object.keys(nextObj ?? {}),
+  ]);
+
+  const rows: ChangeRow[] = [];
+  for (const key of Array.from(keys).sort()) {
+    const prev = toDisplayValue(prevObj ? prevObj[key] : undefined);
+    const next = toDisplayValue(nextObj ? nextObj[key] : undefined);
+    if (prev !== next) {
+      rows.push({ field: toTitleCase(key), previous: prev, updated: next });
+    }
+  }
+  return rows;
+}
+
+function DetailsDialog({ log }: { log: Log }) {
+  const [open, setOpen] = useState(false);
+  const changes = getChanges(log.previousValue, log.newValue);
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <Button variant="ghost" size="sm" onClick={() => setOpen(true)}>
+        <Files className="h-4 w-4" />
+      </Button>
+      <DialogContent className="sm:max-w-3xl">
+        <DialogHeader>
+          <DialogTitle>Transaction Update Log</DialogTitle>
+        </DialogHeader>
+
+        <div className="text-sm text-muted-foreground">
+          Found {changes.length} change{changes.length === 1 ? "" : "s"}
+        </div>
+
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Field</TableHead>
+              <TableHead>Previous Value</TableHead>
+              <TableHead>Updated Value</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {changes.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={3} className="text-muted-foreground">
+                  No field changes captured
+                </TableCell>
+              </TableRow>
+            ) : (
+              changes.map((c) => (
+                <TableRow key={c.field}>
+                  <TableCell className="font-medium">{c.field}</TableCell>
+                  <TableCell className="text-muted-foreground">
+                    {c.previous}
+                  </TableCell>
+                  <TableCell className="text-green-600">{c.updated}</TableCell>
+                </TableRow>
+              ))
+            )}
+          </TableBody>
+        </Table>
+      </DialogContent>
+    </Dialog>
+  );
+}
 
 export function ActivityLogsTable() {
   const [organizationId, setOrganizationId] = useState<string | undefined>(
@@ -119,8 +234,7 @@ export function ActivityLogsTable() {
                 <TableHead>Organization</TableHead>
                 <TableHead>Action</TableHead>
                 <TableHead>Entity</TableHead>
-                <TableHead>Entity ID</TableHead>
-                <TableHead>Description</TableHead>
+                <TableHead>Details</TableHead>
               </tr>
             </TableHeader>
             <TableBody>
@@ -134,8 +248,9 @@ export function ActivityLogsTable() {
                   <TableCell>{l.organization?.name || "-"}</TableCell>
                   <TableCell>{l.actionType}</TableCell>
                   <TableCell>{l.entityType}</TableCell>
-                  <TableCell>{l.entityId}</TableCell>
-                  <TableCell>{l.actionTypeDescription || ""}</TableCell>
+                  <TableCell>
+                    <DetailsDialog log={l} />
+                  </TableCell>
                 </TableRow>
               ))}
             </TableBody>

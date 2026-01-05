@@ -13,14 +13,17 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
 
     const organizationId = searchParams.get("organizationId");
+    const isActiveParam = searchParams.get("isActive");
 
     // UUID v4 validation regex
     // const uuidV4Regex =
     //   /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-    const whereClause: { organizationId?: string } = {};
+    const whereClause: { organizationId?: string; isActive?: boolean } = {};
     if (organizationId) {
       whereClause.organizationId = organizationId;
     }
+    if (isActiveParam === "true") whereClause.isActive = true;
+    if (isActiveParam === "false") whereClause.isActive = false;
 
     const users = await prisma.user.findMany({
       where: whereClause,

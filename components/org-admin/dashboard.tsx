@@ -1,27 +1,33 @@
-"use client"
+"use client";
 
-import { useQuery } from "@tanstack/react-query"
-import { apiClient } from "@/lib/api-client"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { DollarSign, Clock, XCircle, AlertTriangle } from "lucide-react"
-import { Skeleton } from "@/components/ui/skeleton"
-import { ExpensesChart } from "./expenses-chart"
-import { ExpensesByCategoryChart } from "./expenses-by-category-chart"
-import { RecentTransactionsTable } from "./recent-transactions-table"
+import { useQuery } from "@tanstack/react-query";
+import { apiClient } from "@/lib/api-client";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { DollarSign, Clock, XCircle, AlertTriangle } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
+import { ExpensesChart } from "./expenses-chart";
+import { ExpensesByCategoryChart } from "./expenses-by-category-chart";
+import { RecentTransactionsTable } from "./recent-transactions-table";
 
 interface Stats {
-  totalExpenses: number
-  totalExpenseAmount: number
-  pendingApprovals: number
-  rejectedExpenses: number
-  warningExpenses: number
+  totalExpenses: number;
+  totalExpenseAmount: number;
+  pendingApprovals: number;
+  rejectedExpenses: number;
+  warningExpenses: number;
 }
 
 export function OrgAdminDashboard() {
   const { data: stats, isLoading } = useQuery<Stats>({
     queryKey: ["org-admin-stats"],
     queryFn: () => apiClient<Stats>("/api/org-admin/stats"),
-  })
+  });
 
   const kpis = [
     {
@@ -52,12 +58,14 @@ export function OrgAdminDashboard() {
       color: "text-yellow-600",
       bgColor: "bg-yellow-50",
     },
-  ]
+  ];
 
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl md:text-3xl font-bold text-foreground">Organization Dashboard</h1>
+        <h1 className="text-2xl  font-bold text-foreground">
+          Organization Dashboard
+        </h1>
         <p className="text-sm md:text-base text-muted-foreground mt-1">
           Monitor your organization's expense activities
         </p>
@@ -68,7 +76,9 @@ export function OrgAdminDashboard() {
         {kpis.map((kpi) => (
           <Card key={kpi.title} className="shadow-sm">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">{kpi.title}</CardTitle>
+              <CardTitle className="text-sm font-medium text-muted-foreground">
+                {kpi.title}
+              </CardTitle>
               <div className={`rounded-lg p-2 ${kpi.bgColor}`}>
                 <kpi.icon className={`h-4 w-4 ${kpi.color}`} />
               </div>
@@ -77,7 +87,9 @@ export function OrgAdminDashboard() {
               {isLoading ? (
                 <Skeleton className="h-8 w-20" />
               ) : (
-                <div className="text-2xl font-bold text-foreground">{kpi.value}</div>
+                <div className="text-2xl font-bold text-foreground">
+                  {kpi.value}
+                </div>
               )}
             </CardContent>
           </Card>
@@ -88,8 +100,12 @@ export function OrgAdminDashboard() {
       <div className="grid gap-6 grid-cols-1 lg:grid-cols-2">
         <Card className="shadow-sm">
           <CardHeader>
-            <CardTitle className="text-base md:text-lg">Monthly Expense Trend</CardTitle>
-            <CardDescription className="text-sm">Expenses over the last 6 months</CardDescription>
+            <CardTitle className="text-base md:text-lg">
+              Monthly Expense Trend
+            </CardTitle>
+            <CardDescription className="text-sm">
+              Expenses over the last 6 months
+            </CardDescription>
           </CardHeader>
           <CardContent>
             <ExpensesChart />
@@ -98,8 +114,12 @@ export function OrgAdminDashboard() {
 
         <Card className="shadow-sm">
           <CardHeader>
-            <CardTitle className="text-base md:text-lg">Expenses by Category</CardTitle>
-            <CardDescription className="text-sm">Breakdown of expenses by category</CardDescription>
+            <CardTitle className="text-base md:text-lg">
+              Expenses by Category
+            </CardTitle>
+            <CardDescription className="text-sm">
+              Breakdown of expenses by category
+            </CardDescription>
           </CardHeader>
           <CardContent>
             <ExpensesByCategoryChart />
@@ -110,13 +130,17 @@ export function OrgAdminDashboard() {
       {/* Recent Transactions */}
       <Card className="shadow-sm">
         <CardHeader>
-          <CardTitle className="text-base md:text-lg">Recent Transactions</CardTitle>
-          <CardDescription className="text-sm">Last 10 expense submissions</CardDescription>
+          <CardTitle className="text-base md:text-lg">
+            Recent Transactions
+          </CardTitle>
+          <CardDescription className="text-sm">
+            Last 10 expense submissions
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <RecentTransactionsTable />
         </CardContent>
       </Card>
     </div>
-  )
+  );
 }
