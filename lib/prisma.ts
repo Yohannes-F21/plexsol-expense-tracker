@@ -9,12 +9,32 @@ if (!connectionString) {
   throw new Error("DATABASE_URL environment variable is not set");
 }
 
-const adapter = new PrismaNeon({ connectionString });
+function shouldUseNeonAdapter(url: string) {
+  if (process.env.PRISMA_ADAPTER === "neon") return true;
+  if (process.env.PRISMA_ADAPTER === "none") return false;
+
+  // Heuristic: PrismaNeon uses WebSockets and is intended for Neon-hosted Postgres.
+  // Local Postgres / many hosted Postgres URLs will fail the WS upgrade (non-101).
+  try {
+    const host = new URL(url).host.toLowerCase();
+    return (
+      host.includes("neon.tech") ||
+      host.includes("neon") ||
+      host.includes("pooler")
+    );
+  } catch {
+    return false;
+  }
+}
+
+const useNeonAdapter = shouldUseNeonAdapter(connectionString);
 
 export const prisma =
   globalForPrisma.prisma ??
   new PrismaClient({
-    adapter,
+    ...(useNeonAdapter
+      ? { adapter: new PrismaNeon({ connectionString }) }
+      : {}),
     log:
       process.env.NODE_ENV === "development"
         ? ["query", "error", "warn"]

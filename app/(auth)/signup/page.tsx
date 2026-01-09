@@ -47,7 +47,7 @@ export default function SignUpPage() {
       }
 
       toast.success("Super Admin account created successfully");
-      router.push("/super-admin");
+      router.push("/super-admin/dashboard");
     } catch (error) {
       console.error(" Sign up error:", error);
       toast.error("An error occurred");
