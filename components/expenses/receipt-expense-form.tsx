@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { z } from "zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -23,6 +23,13 @@ import {
 } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
   Table,
   TableBody,
   TableCell,
@@ -34,7 +41,7 @@ import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Plus, Trash2 } from "lucide-react";
+import { Loader2, Plus, Trash2 } from "lucide-react";
 
 const paymentMethodSchema = z.enum([
   "CASH",
@@ -77,6 +84,134 @@ type OcrReceiptResponse = {
   purchasedDate?: string; // dd/MM/yyyy (from OCR)
   items: Array<{ name: string; quantity: number; unitPrice: number }>;
 };
+
+function guessImageMimeTypeFromFilename(name: string): string | null {
+  const n = String(name ?? "")
+    .toLowerCase()
+    .trim();
+  if (n.endsWith(".jpg") || n.endsWith(".jpeg")) return "image/jpeg";
+  if (n.endsWith(".png")) return "image/png";
+  if (n.endsWith(".webp")) return "image/webp";
+  if (n.endsWith(".heic")) return "image/heic";
+  if (n.endsWith(".heif")) return "image/heif";
+  return null;
+}
+
+function normalizeCapturedImageFile(file: File): File {
+  // Some mobile browsers provide captured photos with an empty MIME type.
+  // Our API validates content-type strictly, so we best-effort infer from filename.
+  if (file.type && file.type.trim()) return file;
+
+  const guessed = guessImageMimeTypeFromFilename(file.name);
+  if (!guessed) return file;
+  return new File([file], file.name || "receipt", {
+    type: guessed,
+    lastModified: file.lastModified,
+  });
+}
+
+async function downscaleToJpeg(
+  file: File,
+  opts?: { maxSide?: number; quality?: number }
+) {
+  // Camera captures can be very large; keep output small so OCR doesn't time out.
+  const initialMaxSide = opts?.maxSide ?? 1024;
+  const initialQuality = opts?.quality ?? 0.75;
+  const targetMaxBytes = 600_000; // ~0.6MB (reduces OCR.space timeout risk)
+
+  // Keep original if already reasonably small.
+  if (file.size > 0 && file.size <= 450_000 && file.type === "image/jpeg") {
+    return file;
+  }
+
+  const objectUrl = URL.createObjectURL(file);
+  try {
+    const img = await new Promise<HTMLImageElement>((resolve, reject) => {
+      const el = new Image();
+      el.onload = () => resolve(el);
+      el.onerror = () => reject(new Error("Failed to load captured image"));
+      el.src = objectUrl;
+    });
+
+    const srcW = img.naturalWidth || img.width;
+    const srcH = img.naturalHeight || img.height;
+    if (!srcW || !srcH) return file;
+
+    const attempts: Array<{ maxSide: number; quality: number }> = [
+      { maxSide: initialMaxSide, quality: initialQuality },
+      { maxSide: Math.min(1024, initialMaxSide), quality: 0.7 },
+      { maxSide: 900, quality: 0.65 },
+      { maxSide: 768, quality: 0.6 },
+      { maxSide: 640, quality: 0.55 },
+      { maxSide: 576, quality: 0.5 },
+      { maxSide: 512, quality: 0.45 },
+    ];
+
+    let best: Blob | null = null;
+
+    for (const attempt of attempts) {
+      const scale = Math.min(1, attempt.maxSide / Math.max(srcW, srcH));
+      const dstW = Math.max(1, Math.round(srcW * scale));
+      const dstH = Math.max(1, Math.round(srcH * scale));
+
+      const canvas = document.createElement("canvas");
+      canvas.width = dstW;
+      canvas.height = dstH;
+      const ctx = canvas.getContext("2d", { alpha: false });
+      if (!ctx) continue;
+      ctx.imageSmoothingEnabled = true;
+      ctx.imageSmoothingQuality = "high";
+      ctx.drawImage(img, 0, 0, dstW, dstH);
+
+      const blob = await new Promise<Blob | null>((resolve) =>
+        canvas.toBlob(resolve, "image/jpeg", attempt.quality)
+      );
+
+      if (!blob) continue;
+      if (!best || blob.size < best.size) best = blob;
+      if (blob.size <= targetMaxBytes) {
+        best = blob;
+        break;
+      }
+    }
+
+    // Still too big? Make one last aggressive attempt.
+    if (best && best.size > targetMaxBytes) {
+      const scale = Math.min(1, 480 / Math.max(srcW, srcH));
+      const dstW = Math.max(1, Math.round(srcW * scale));
+      const dstH = Math.max(1, Math.round(srcH * scale));
+
+      const canvas = document.createElement("canvas");
+      canvas.width = dstW;
+      canvas.height = dstH;
+      const ctx = canvas.getContext("2d", { alpha: false });
+      if (ctx) {
+        ctx.imageSmoothingEnabled = true;
+        ctx.imageSmoothingQuality = "high";
+        ctx.drawImage(img, 0, 0, dstW, dstH);
+        const blob = await new Promise<Blob | null>((resolve) =>
+          canvas.toBlob(resolve, "image/jpeg", 0.42)
+        );
+        if (blob && blob.size < best.size) best = blob;
+      }
+    }
+
+    if (!best) return file;
+
+    // Preserve a sensible filename.
+    const baseName = (file.name || "receipt").replace(/\.[^/.]+$/, "");
+    const outName = `${baseName || "receipt"}.jpg`;
+
+    return new File([best], outName, {
+      type: "image/jpeg",
+      lastModified: Date.now(),
+    });
+  } catch {
+    return file;
+  } finally {
+    URL.revokeObjectURL(objectUrl);
+  }
+}
 
 type CategoryTypeUi = "operational" | "administrative";
 
@@ -154,6 +289,25 @@ export function ReceiptExpenseForm(props: {
   const router = useRouter();
   const queryClient = useQueryClient();
   const scanInputRef = useRef<HTMLInputElement | null>(null);
+  const captureInputRef = useRef<HTMLInputElement | null>(null);
+
+  const [captureOpen, setCaptureOpen] = useState(false);
+  const [capturedFile, setCapturedFile] = useState<File | null>(null);
+  const [capturedPreviewUrl, setCapturedPreviewUrl] = useState<string | null>(
+    null
+  );
+  const [isSubmittingCapture, setIsSubmittingCapture] = useState(false);
+
+  useEffect(() => {
+    if (!capturedFile) {
+      setCapturedPreviewUrl(null);
+      return;
+    }
+
+    const url = URL.createObjectURL(capturedFile);
+    setCapturedPreviewUrl(url);
+    return () => URL.revokeObjectURL(url);
+  }, [capturedFile]);
 
   const [items, setItems] = useState<
     Array<ReceiptExpenseItemInput & { categoryType: CategoryTypeUi }>
@@ -316,8 +470,9 @@ export function ReceiptExpenseForm(props: {
 
   const ocrMutation = useMutation({
     mutationFn: async (file: File) => {
+      const normalizedFile = normalizeCapturedImageFile(file);
       const fd = new FormData();
-      fd.append("file", file);
+      fd.append("file", normalizedFile);
 
       const res = await fetch("/api/ocr/receipt", {
         method: "POST",
@@ -325,7 +480,17 @@ export function ReceiptExpenseForm(props: {
       });
 
       const data = await res.json();
-      // API returns 200 even on upstream OCR errors (best-effort), so just validate shape.
+
+      // API returns 200 even on upstream OCR errors (best-effort),
+      // but non-2xx means our request was invalid (e.g., unsupported file type).
+      if (!res.ok) {
+        const msg =
+          data && typeof data === "object" && "error" in data
+            ? String((data as any).error)
+            : "OCR request failed";
+        throw new Error(msg);
+      }
+
       return data as OcrReceiptResponse;
     },
     onSuccess: (data) => {
@@ -405,10 +570,16 @@ export function ReceiptExpenseForm(props: {
       ].filter((v) => String(v ?? "").trim()).length;
 
       if (filledHeader <= 1 && parsedItems.length === 0) {
-        toast.warning("OCR results look incomplete. Please review manually.");
+        toast.warning(
+          "OCR couldn't extract fields. Try a clearer photo; you can still fill manually."
+        );
       } else {
         toast.success("Receipt scanned. Please review before submitting.");
       }
+
+      // If this came from mobile/tablet capture, close preview dialog.
+      setCaptureOpen(false);
+      setCapturedFile(null);
     },
     onError: (err) => {
       toast.warning(
@@ -448,28 +619,143 @@ export function ReceiptExpenseForm(props: {
           <CardHeader className="flex flex-row items-center justify-between gap-3">
             <CardTitle>Receipt Info</CardTitle>
             {props.mode === "create" ? (
-              <div>
-                <input
-                  ref={scanInputRef}
-                  type="file"
-                  accept="image/*"
-                  className="hidden"
-                  onChange={(e) => {
-                    const f = e.target.files?.[0];
-                    e.target.value = "";
-                    if (!f) return;
-                    ocrMutation.mutate(f);
-                  }}
-                />
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => scanInputRef.current?.click()}
-                  disabled={ocrMutation.isPending}
-                >
-                  {ocrMutation.isPending ? "Uploading..." : "Upload Receipt"}
-                </Button>
+              <div className="flex items-center gap-2">
+                {/* Desktop upload flow (unchanged) */}
+                <div className="hidden lg:block">
+                  <input
+                    ref={scanInputRef}
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={(e) => {
+                      const f = e.target.files?.[0];
+                      e.target.value = "";
+                      if (!f) return;
+                      ocrMutation.mutate(f);
+                    }}
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => scanInputRef.current?.click()}
+                    disabled={ocrMutation.isPending}
+                  >
+                    {ocrMutation.isPending ? "Uploading..." : "Upload Receipt"}
+                  </Button>
+                </div>
+
+                {/* Mobile/tablet camera capture flow */}
+                <div className="lg:hidden">
+                  <input
+                    ref={captureInputRef}
+                    type="file"
+                    accept="image/*"
+                    capture="environment"
+                    className="hidden"
+                    onChange={(e) => {
+                      const f = e.target.files?.[0];
+                      e.target.value = "";
+                      if (!f) return;
+                      setCapturedFile(f);
+                      setCaptureOpen(true);
+                    }}
+                  />
+
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => captureInputRef.current?.click()}
+                    disabled={ocrMutation.isPending}
+                  >
+                    Scan Receipt
+                  </Button>
+
+                  <Dialog
+                    open={captureOpen}
+                    onOpenChange={(open) => {
+                      setCaptureOpen(open);
+                      if (!open) setCapturedFile(null);
+                    }}
+                  >
+                    <DialogContent>
+                      <DialogHeader>
+                        <DialogTitle>Receipt Preview</DialogTitle>
+                      </DialogHeader>
+
+                      {capturedPreviewUrl ? (
+                        <div className="space-y-3">
+                          <div className="overflow-hidden rounded-md border">
+                            <img
+                              src={capturedPreviewUrl}
+                              alt="Receipt preview"
+                              className="h-auto w-full object-contain"
+                            />
+                          </div>
+
+                          {ocrMutation.isPending ? (
+                            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                              Processing receipt…
+                            </div>
+                          ) : null}
+
+                          {isSubmittingCapture && !ocrMutation.isPending ? (
+                            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                              Preparing image…
+                            </div>
+                          ) : null}
+                        </div>
+                      ) : (
+                        <div className="text-sm text-muted-foreground">
+                          No image selected.
+                        </div>
+                      )}
+
+                      <DialogFooter className="flex w-full flex-row items-center justify-end gap-2">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          onClick={() => captureInputRef.current?.click()}
+                          disabled={
+                            ocrMutation.isPending || isSubmittingCapture
+                          }
+                        >
+                          Retake
+                        </Button>
+                        <Button
+                          type="button"
+                          onClick={async () => {
+                            if (!capturedFile) return;
+                            try {
+                              setIsSubmittingCapture(true);
+
+                              // Camera-captured images are often very large (and/or HEIC).
+                              // Downscale + convert to JPEG to reduce OCR timeouts.
+                              const normalized =
+                                normalizeCapturedImageFile(capturedFile);
+                              const prepared = await downscaleToJpeg(
+                                normalized
+                              );
+                              await ocrMutation.mutateAsync(prepared);
+                            } finally {
+                              setIsSubmittingCapture(false);
+                            }
+                          }}
+                          disabled={
+                            !capturedFile ||
+                            ocrMutation.isPending ||
+                            isSubmittingCapture
+                          }
+                        >
+                          {ocrMutation.isPending ? "Submitting…" : "Submit"}
+                        </Button>
+                      </DialogFooter>
+                    </DialogContent>
+                  </Dialog>
+                </div>
               </div>
             ) : null}
           </CardHeader>
