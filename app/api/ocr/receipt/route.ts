@@ -40,7 +40,8 @@ type OcrSpaceResponse = {
 
 function asErrorMessage(msg: unknown): string | undefined {
   if (typeof msg === "string") return msg;
-  if (Array.isArray(msg)) return msg.filter((x) => typeof x === "string").join("; ");
+  if (Array.isArray(msg))
+    return msg.filter((x) => typeof x === "string").join("; ");
   return undefined;
 }
 

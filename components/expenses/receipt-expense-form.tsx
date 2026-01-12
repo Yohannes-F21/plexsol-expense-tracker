@@ -381,8 +381,14 @@ export function ReceiptExpenseForm(props: {
               vatCategory: "G" as any,
               unitOfMeasureId: undefined,
               purchaseTypeId: undefined,
-              quantity: Number.isFinite(it.quantity) && it.quantity > 0 ? it.quantity : 1,
-              unitPrice: Number.isFinite(it.unitPrice) && it.unitPrice >= 0 ? it.unitPrice : 0,
+              quantity:
+                Number.isFinite(it.quantity) && it.quantity > 0
+                  ? it.quantity
+                  : 1,
+              unitPrice:
+                Number.isFinite(it.unitPrice) && it.unitPrice >= 0
+                  ? it.unitPrice
+                  : 0,
             }));
 
           return mapped.length ? [...base, ...mapped] : prev;
@@ -462,7 +468,7 @@ export function ReceiptExpenseForm(props: {
                   onClick={() => scanInputRef.current?.click()}
                   disabled={ocrMutation.isPending}
                 >
-                  {ocrMutation.isPending ? "Scanning..." : "Scan Receipt"}
+                  {ocrMutation.isPending ? "Uploading..." : "Upload Receipt"}
                 </Button>
               </div>
             ) : null}

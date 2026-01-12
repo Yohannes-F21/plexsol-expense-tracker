@@ -1,10 +1,12 @@
 # Setup Instructions for SaaS Expense Tracker
 
 ## Prerequisites
+
 - Node.js 18+ installed
 - A Neon database (already connected via v0)
 
 ## Quick Start
+
 Create a `.env` file in your project root:
 
 ```env
@@ -22,14 +24,8 @@ OPENAI_MODEL="gpt-4o-mini"
 You can copy env vars from your Vercel project settings → Environment Variables.
 
 ## Receipt OCR Setup
+
 The app includes a Receipt OCR feature (Scan Receipt in the receipt form) backed by OCR.space, with receipt field extraction via OpenAI.
-
-
-
-
-
-
-
 
 ### 1. Get an OCR.space API key
 
@@ -49,16 +45,16 @@ Notes:
 
 - The key is used server-side only by `/api/ocr/receipt`.
 - Do not expose this key in client-side code.
-Generate Prisma Client and push schema to database:
+  Generate Prisma Client and push schema to database:
 
-```bash
+````bash
 npx prisma generate
 	- `OCR_SPACE_API_KEY` is set in `.env`
 	- The key is valid and has remaining quota
 
 ```bash
 npm run dev
-```
+````
 
 Open [http://localhost:3000](http://localhost:3000)
 
@@ -78,11 +74,11 @@ Open [http://localhost:3000](http://localhost:3000)
 
 ## User Roles & Access
 
-| Role | Sign Up | Access | Can Invite |
-|------|---------|--------|------------|
-| **SUPER_ADMIN** | Direct signup | `/super-admin` | Org Admins only |
-| **ORG_ADMIN** | Invitation only | `/admin` | Staff only |
-| **STAFF** | Invitation only | `/dashboard` | None |
+| Role            | Sign Up         | Access         | Can Invite      |
+| --------------- | --------------- | -------------- | --------------- |
+| **SUPER_ADMIN** | Direct signup   | `/super-admin` | Org Admins only |
+| **ORG_ADMIN**   | Invitation only | `/admin`       | Staff only      |
+| **STAFF**       | Invitation only | `/dashboard`   | None            |
 
 ## Available Scripts
 
@@ -106,11 +102,13 @@ npx prisma migrate dev   # Create migrations (optional)
 ## Troubleshooting
 
 ### "Environment variable not found: DATABASE_URL"
+
 - Ensure `.env` file exists in project root
 - Check DATABASE_URL is spelled correctly
 - Restart dev server after creating `.env`
 
 ### "Prisma schema validation error"
+
 ```bash
 # Clear cache and regenerate
 rm -rf node_modules/.prisma
@@ -118,11 +116,13 @@ npx prisma generate
 ```
 
 ### "JWT token invalid"
+
 - Ensure JWT_SECRET is set in `.env`
 - JWT_SECRET must be at least 32 characters
 - Generate a new one using the command above
 
 ### Database Connection Issues
+
 - Verify DATABASE_URL is correct
 - Check Neon database is active
 - Ensure IP allowlist includes your IP (if configured)

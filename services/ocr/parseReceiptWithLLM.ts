@@ -45,7 +45,9 @@ function coerceStringOrNull(value: unknown): string | null {
   return v ? v : null;
 }
 
-function coercePaymentMethod(value: unknown): LlmReceiptResult["paymentMethod"] {
+function coercePaymentMethod(
+  value: unknown
+): LlmReceiptResult["paymentMethod"] {
   const v = typeof value === "string" ? value.trim().toLowerCase() : "";
   if (v === "cash") return "cash";
   if (v === "check") return "check";
@@ -155,7 +157,9 @@ async function callOpenAiJson(args: {
   }
 }
 
-export async function parseReceiptWithLLM(ocrText: string): Promise<LlmReceiptResult> {
+export async function parseReceiptWithLLM(
+  ocrText: string
+): Promise<LlmReceiptResult> {
   const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) return FALLBACK;
 
@@ -163,7 +167,8 @@ export async function parseReceiptWithLLM(ocrText: string): Promise<LlmReceiptRe
   if (!normalized) return FALLBACK;
 
   // Keep payload bounded; OCR can be huge.
-  const clipped = normalized.length > 12_000 ? normalized.slice(0, 12_000) : normalized;
+  const clipped =
+    normalized.length > 12_000 ? normalized.slice(0, 12_000) : normalized;
 
   const result = await callOpenAiJson({
     apiKey,
