@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { z } from "zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -68,6 +68,15 @@ const receiptSchema = z.object({
 
 export type ReceiptExpenseItemInput = z.infer<typeof itemSchema>;
 export type ReceiptExpenseHeaderInput = z.infer<typeof receiptSchema>;
+
+type OcrReceiptResponse = {
+  companyName?: string;
+  tinNumber?: string;
+  fsNumber?: string;
+  invoiceNumber?: string;
+  purchasedDate?: string; // dd/MM/yyyy (from OCR)
+  items: Array<{ name: string; quantity: number; unitPrice: number }>;
+};
 
 type CategoryTypeUi = "operational" | "administrative";
 
@@ -144,6 +153,7 @@ export function ReceiptExpenseForm(props: {
 }) {
   const router = useRouter();
   const queryClient = useQueryClient();
+  const scanInputRef = useRef<HTMLInputElement | null>(null);
 
   const [items, setItems] = useState<
     Array<ReceiptExpenseItemInput & { categoryType: CategoryTypeUi }>
@@ -304,6 +314,105 @@ export function ReceiptExpenseForm(props: {
     },
   });
 
+  const ocrMutation = useMutation({
+    mutationFn: async (file: File) => {
+      const fd = new FormData();
+      fd.append("file", file);
+
+      const res = await fetch("/api/ocr/receipt", {
+        method: "POST",
+        body: fd,
+      });
+
+      const data = await res.json();
+      // API returns 200 even on upstream OCR errors (best-effort), so just validate shape.
+      return data as OcrReceiptResponse;
+    },
+    onSuccess: (data) => {
+      const setIfEmpty = (
+        key: keyof ReceiptExpenseHeaderInput,
+        value: string | undefined
+      ) => {
+        const v = String(value ?? "").trim();
+        if (!v) return;
+        const current = String(form.getValues(key) ?? "").trim();
+        if (!current) form.setValue(key, v as any, { shouldDirty: true });
+      };
+
+      setIfEmpty("companyName", data.companyName);
+      setIfEmpty("tinNumber", data.tinNumber);
+      setIfEmpty("fsNumber", data.fsNumber);
+      setIfEmpty("invoiceNumber", data.invoiceNumber);
+
+      // Convert dd/MM/yyyy -> yyyy-mm-dd for <input type="date">
+      if (data.purchasedDate) {
+        const m = String(data.purchasedDate).match(
+          /^\s*(\d{2})\/(\d{2})\/(\d{4})\s*$/
+        );
+        if (m) {
+          const dd = m[1];
+          const mm = m[2];
+          const yyyy = m[3];
+          const current = String(form.getValues("purchasedDate") ?? "").trim();
+          if (!current) {
+            form.setValue("purchasedDate", `${yyyy}-${mm}-${dd}` as any, {
+              shouldDirty: true,
+            });
+          }
+        }
+      }
+
+      const parsedItems = Array.isArray(data.items) ? data.items : [];
+      if (parsedItems.length) {
+        setItems((prev) => {
+          const isBlankStarter =
+            prev.length === 1 &&
+            !String(prev[0].itemName ?? "").trim() &&
+            !String(prev[0].subcategoryId ?? "").trim();
+
+          const base = isBlankStarter ? [] : prev;
+          const mapped = parsedItems
+            .filter((it) => String(it.name ?? "").trim())
+            .slice(0, 25)
+            .map((it) => ({
+              itemName: String(it.name).trim(),
+              categoryType: "operational" as CategoryTypeUi,
+              subcategoryId: "",
+              vatCategory: "G" as any,
+              unitOfMeasureId: undefined,
+              purchaseTypeId: undefined,
+              quantity: Number.isFinite(it.quantity) && it.quantity > 0 ? it.quantity : 1,
+              unitPrice: Number.isFinite(it.unitPrice) && it.unitPrice >= 0 ? it.unitPrice : 0,
+            }));
+
+          return mapped.length ? [...base, ...mapped] : prev;
+        });
+      }
+
+      // Non-blocking confidence warning (heuristic)
+      const filledHeader = [
+        data.companyName,
+        data.tinNumber,
+        data.fsNumber,
+        data.invoiceNumber,
+        data.purchasedDate,
+      ].filter((v) => String(v ?? "").trim()).length;
+
+      if (filledHeader <= 1 && parsedItems.length === 0) {
+        toast.warning("OCR results look incomplete. Please review manually.");
+      } else {
+        toast.success("Receipt scanned. Please review before submitting.");
+      }
+    },
+    onError: (err) => {
+      toast.warning(
+        err instanceof Error
+          ? `OCR failed: ${err.message}`
+          : "OCR failed. You can still enter details manually."
+      );
+    },
+  });
+
   const onSubmit = form.handleSubmit(async (header) => {
     const submitItems = items.map(({ categoryType: _ct, ...rest }) => rest);
     const parsedItems = z.array(itemSchema).min(1).safeParse(submitItems);
@@ -330,8 +439,33 @@ export function ReceiptExpenseForm(props: {
     <form onSubmit={onSubmit} className="space-y-6">
       <div className="grid lg:grid-cols-12">
         <Card className="lg:col-span-4">
-          <CardHeader>
+          <CardHeader className="flex flex-row items-center justify-between gap-3">
             <CardTitle>Receipt Info</CardTitle>
+            {props.mode === "create" ? (
+              <div>
+                <input
+                  ref={scanInputRef}
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={(e) => {
+                    const f = e.target.files?.[0];
+                    e.target.value = "";
+                    if (!f) return;
+                    ocrMutation.mutate(f);
+                  }}
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => scanInputRef.current?.click()}
+                  disabled={ocrMutation.isPending}
+                >
+                  {ocrMutation.isPending ? "Scanning..." : "Scan Receipt"}
+                </Button>
+              </div>
+            ) : null}
           </CardHeader>
           <CardContent className="space-y-4">
             <Form {...form}>

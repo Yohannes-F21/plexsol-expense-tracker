@@ -5,43 +5,56 @@
 - A Neon database (already connected via v0)
 
 ## Quick Start
-
-### 1. Create Environment Variables
-
 Create a `.env` file in your project root:
 
 ```env
 DATABASE_URL="your_neon_database_url_here"
 JWT_SECRET="your_generated_jwt_secret_here"
+
+# (Optional) Receipt OCR (OCR.space + OpenAI)
+# Backend-only: never expose these keys to the client.
+OCR_SPACE_API_KEY="your_ocr_space_api_key_here"
+OPENAI_API_KEY="your_openai_api_key_here"
+# Optional override (defaults to gpt-4o-mini)
+OPENAI_MODEL="gpt-4o-mini"
 ```
 
-**Where to get DATABASE_URL:**
-- In v0: Check the "Vars" section in the left sidebar
-- Or copy from your Vercel project settings → Environment Variables
-- Or from Neon dashboard → Connection String
+You can copy env vars from your Vercel project settings → Environment Variables.
 
-**Generate JWT_SECRET:**
-Run this command in your terminal:
-```bash
-node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
+## Receipt OCR Setup
+The app includes a Receipt OCR feature (Scan Receipt in the receipt form) backed by OCR.space, with receipt field extraction via OpenAI.
+
+
+
+
+
+
+
+
+### 1. Get an OCR.space API key
+
+- Create an account on OCR.space and copy your API key.
+
+### 2. Configure the dev server
+
+Set `OCR_SPACE_API_KEY` and `OPENAI_API_KEY` in `.env`.
+
+```env
+OCR_SPACE_API_KEY="your_ocr_space_api_key_here"
+OPENAI_API_KEY="your_openai_api_key_here"
+OPENAI_MODEL="gpt-4o-mini"
 ```
 
-### 2. Install Dependencies
+Notes:
 
-```bash
-npm install
-```
-
-### 3. Setup Database
-
+- The key is used server-side only by `/api/ocr/receipt`.
+- Do not expose this key in client-side code.
 Generate Prisma Client and push schema to database:
 
 ```bash
 npx prisma generate
-npx prisma db push
-```
-
-### 4. Start Development Server
+	- `OCR_SPACE_API_KEY` is set in `.env`
+	- The key is valid and has remaining quota
 
 ```bash
 npm run dev
