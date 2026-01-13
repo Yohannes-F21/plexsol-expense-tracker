@@ -45,7 +45,7 @@ export function ExpensesChart() {
         <XAxis dataKey="month" />
         <YAxis />
         <Tooltip />
-        <Bar dataKey="total" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
+        <Bar dataKey="total" fill="var(--primary)" radius={[4, 4, 0, 0]} />
       </BarChart>
     </ResponsiveContainer>
   );

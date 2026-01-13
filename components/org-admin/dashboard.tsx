@@ -9,7 +9,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { DollarSign, Clock, XCircle, AlertTriangle } from "lucide-react";
+import { DollarSign, Clock, Users } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ExpensesChart } from "./expenses-chart";
 import { ExpensesByCategoryChart } from "./expenses-by-category-chart";
@@ -19,8 +19,7 @@ interface Stats {
   totalExpenses: number;
   totalExpenseAmount: number;
   pendingApprovals: number;
-  rejectedExpenses: number;
-  warningExpenses: number;
+  totalStaffs: number;
 }
 
 export function OrgAdminDashboard() {
@@ -31,32 +30,40 @@ export function OrgAdminDashboard() {
 
   const kpis = [
     {
-      title: "Total Expenses",
+      title: "Total Expense Amount",
       value: `${(stats?.totalExpenseAmount ?? 0).toLocaleString()} ETB`,
       icon: DollarSign,
-      color: "text-green-600",
-      bgColor: "bg-green-50",
+      titleColor: "text-blue-600",
+      cardBg: "bg-blue-50",
+      iconBg: "bg-blue-500",
+      iconColor: "text-white",
+      helperText: "Approved expenses total",
+      helperTextColor: "text-green-600",
+      interactive: true,
     },
     {
       title: "Pending Approvals",
       value: stats?.pendingApprovals ?? 0,
       icon: Clock,
-      color: "text-orange-600",
-      bgColor: "bg-orange-50",
+      titleColor: "text-yellow-600",
+      cardBg: "bg-yellow-50",
+      iconBg: "bg-yellow-500",
+      iconColor: "text-white",
+      helperText: "Needs review",
+      helperTextColor: "text-yellow-600",
+      interactive: true,
     },
     {
-      title: "Rejected Expenses",
-      value: stats?.rejectedExpenses ?? 0,
-      icon: XCircle,
-      color: "text-red-600",
-      bgColor: "bg-red-50",
-    },
-    {
-      title: "Warning Expenses",
-      value: stats?.warningExpenses ?? 0,
-      icon: AlertTriangle,
-      color: "text-yellow-600",
-      bgColor: "bg-yellow-50",
+      title: "Total Staffs",
+      value: stats?.totalStaffs ?? 0,
+      icon: Users,
+      titleColor: "text-green-700",
+      cardBg: "bg-green-50",
+      iconBg: "bg-green-500",
+      iconColor: "text-white",
+      helperText: "Active staff members",
+      helperTextColor: "text-green-600",
+      interactive: true,
     },
   ];
 
@@ -72,25 +79,39 @@ export function OrgAdminDashboard() {
       </div>
 
       {/* KPI Cards */}
-      <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
         {kpis.map((kpi) => (
-          <Card key={kpi.title} className="shadow-sm">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
+          <Card
+            key={kpi.title}
+            className={
+              `shadow-sm transition-transform duration-200  ` +
+              (kpi.interactive ? "hover:scale-[1.03]" : "")
+            }
+          >
+            <CardHeader className="flex flex-row items-start justify-between space-y-0 pb-2">
+              <CardTitle className={`text-sm font-medium ${kpi.titleColor}`}>
                 {kpi.title}
               </CardTitle>
-              <div className={`rounded-lg p-2 ${kpi.bgColor}`}>
-                <kpi.icon className={`h-4 w-4 ${kpi.color}`} />
+              <div
+                className={
+                  "h-11 w-11 rounded-full shadow-md flex items-center justify-center " +
+                  kpi.iconBg
+                }
+              >
+                <kpi.icon className={`h-5 w-5 ${kpi.iconColor}`} />
               </div>
             </CardHeader>
-            <CardContent>
+            <CardContent className="space-y-2">
               {isLoading ? (
-                <Skeleton className="h-8 w-20" />
+                <Skeleton className="h-8 w-24" />
               ) : (
-                <div className="text-2xl font-bold text-foreground">
+                <div className="text-3xl font-semibold text-foreground">
                   {kpi.value}
                 </div>
               )}
+              <div className={`text-sm ${kpi.helperTextColor}`}>
+                {kpi.helperText}
+              </div>
             </CardContent>
           </Card>
         ))}

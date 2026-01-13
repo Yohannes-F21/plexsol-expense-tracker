@@ -16,6 +16,7 @@ export async function GET() {
 
     const [
       totalUsers,
+      totalStaffs,
       totalExpenses,
       pendingExpenses,
       approvedExpenses,
@@ -23,6 +24,9 @@ export async function GET() {
       warningExpenses,
     ] = await Promise.all([
       prisma.user.count({ where: { organizationId: orgId } }),
+      prisma.user.count({
+        where: { organizationId: orgId, role: "STAFF", isActive: true },
+      }),
       prisma.expense.count({
         where: { organizationId: orgId, isActive: true },
       }),
@@ -55,6 +59,7 @@ export async function GET() {
 
     return NextResponse.json({
       totalUsers,
+      totalStaffs,
       totalExpenses,
       pendingExpenses,
       approvedExpenses,
