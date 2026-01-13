@@ -50,6 +50,7 @@ import { toast } from "sonner";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Card, CardContent } from "@/components/ui/card";
 import { DataTablePagination } from "@/components/data-table-pagination";
+import { Switch } from "@/components/ui/switch";
 
 interface Organization {
   id: string;
@@ -113,32 +114,13 @@ export function OrganizationsTable() {
     disabled?: boolean;
   }) => {
     return (
-      <button
-        type="button"
-        role="switch"
-        aria-checked={checked}
+      <Switch
+        checked={checked}
+        onCheckedChange={onCheckedChange}
         disabled={disabled}
-        onClick={() => onCheckedChange(!checked)}
-        className={
-          "relative inline-flex h-6 w-22 items-center rounded-full border px-1 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 " +
-          (checked ? "bg-green-400" : "bg-red-400")
-        }
-      >
-        <span
-          className={
-            "absolute inset-0 flex items-center justify-center text-[11px] font-medium leading-none " +
-            (checked ? "text-primary-foreground" : "text-primary-foreground")
-          }
-        >
-          {checked ? "Active" : "Blocked"}
-        </span>
-        <span
-          className={
-            "absolute top-0.5 h-4.5 w-4.5 rounded-full bg-background shadow-xs transition-all " +
-            (checked ? "right-0.5" : "left-0.5")
-          }
-        />
-      </button>
+        aria-label="Toggle organization status"
+        className="data-[state=unchecked]:bg-destructive dark:data-[state=unchecked]:bg-destructive"
+      />
     );
   };
 

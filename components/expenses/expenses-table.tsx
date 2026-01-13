@@ -175,7 +175,11 @@ export function ExpensesTable(props: { role: "ORG_ADMIN" | "STAFF" }) {
       {
         accessorKey: "paymentMethod",
         header: "Payment",
-        cell: ({ row }) => row.original.paymentMethod.replace(/_/g, " "),
+        cell: ({ row }) => (
+          <span className="capitalize">
+            {row.original.paymentMethod.toLowerCase().replace(/_/g, " ")}
+          </span>
+        ),
       },
       {
         accessorKey: "total",
@@ -193,21 +197,22 @@ export function ExpensesTable(props: { role: "ORG_ADMIN" | "STAFF" }) {
         cell: ({ row }) => {
           const status = row.original.status;
           const label = String(status ?? "");
+          const displayLabel = label ? label.toLowerCase() : "";
 
           const className =
             label === "PENDING"
-              ? "text-yellow-600 bg-orange-100 font-semibold"
+              ? "text-yellow-600 bg-orange-100  text-xs"
               : label === "APPROVED"
-              ? "text-green-600 bg-green-100 font-semibold"
+              ? "text-green-600 bg-green-100  text-xs"
               : label === "REJECTED"
-              ? "text-red-600 bg-red-100 font-semibold"
+              ? "text-red-600 bg-red-100  text-xs"
               : label === "WARNING"
-              ? "text-orange-600 bg-orange-100 font-semibold"
+              ? "text-orange-600 bg-orange-100  text-xs"
               : "text-muted-foreground";
 
           return (
-            <Badge variant="outline" className={className}>
-              {label || "-"}
+            <Badge variant="outline" className={`${className} capitalize`}>
+              {displayLabel || "-"}
             </Badge>
           );
         },

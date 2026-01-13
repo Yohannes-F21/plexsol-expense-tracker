@@ -262,10 +262,16 @@ export function ExpenseDetailPage(props: {
                         {it.subcategory?.name ?? "-"}
                       </div>
                     </TableCell>
-                    <TableCell className="font-mono text-xs">
-                      {it.vatCategory ?? "-"}
+                    <TableCell className=" text-xs">
+                      {it.vatCategory
+                        ? it.vatCategory === "G"
+                          ? "GOOD"
+                          : "SERVICE"
+                        : "-"}
                     </TableCell>
-                    <TableCell>{it.unitOfMeasure?.label ?? "-"}</TableCell>
+                    <TableCell className="text-xs">
+                      {it.unitOfMeasure?.code ?? "-"}
+                    </TableCell>
                     <TableCell>{it.purchaseType?.label ?? "-"}</TableCell>
                     <TableCell
                       className={

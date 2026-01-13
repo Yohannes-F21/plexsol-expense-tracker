@@ -41,7 +41,7 @@ export function AppHeader({ user, organizationName }: AppHeaderProps) {
     <header className="flex h-16 items-center justify-between border-b border-border bg-background px-4 md:px-6">
       <div className="flex items-center gap-2 ml-12 md:ml-0">
         {organizationName && (
-          <h1 className="text-base md:text-lg font-semibold text-foreground truncate">
+          <h1 className="text-base md:text-xl font-semibold text-foreground truncate">
             {organizationName}
           </h1>
         )}

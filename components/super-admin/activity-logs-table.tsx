@@ -20,7 +20,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Card, CardContent } from "@/components/ui/card";
-import { Files } from "lucide-react";
+import { Text } from "lucide-react";
 import { ServerDataTablePagination } from "@/components/data-table-pagination";
 
 type Log = {
@@ -98,7 +98,7 @@ function DetailsDialog({ log }: { log: Log }) {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <Button variant="ghost" size="sm" onClick={() => setOpen(true)}>
-        <Files className="h-4 w-4" />
+        <Text className="h-4 w-4" />
       </Button>
       <DialogContent className="sm:max-w-3xl">
         <DialogHeader>

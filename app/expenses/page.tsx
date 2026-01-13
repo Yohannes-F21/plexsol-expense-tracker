@@ -20,7 +20,7 @@ export default async function ExpensesPage() {
         <div>
           {role === "ORG_ADMIN" ? (
             <>
-              <h1 className="text-2xl font-bold">Expenses Management</h1>
+              <h1 className="text-2xl font-bold">Expense Management</h1>
               <p className="text-muted-foreground">
                 Review and approve expense requests from your team
               </p>
