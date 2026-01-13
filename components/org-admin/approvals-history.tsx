@@ -132,8 +132,11 @@ export function ApprovalsHistory() {
                     <TableCell>
                       <div className="space-y-1">
                         <Badge
-                          variant={
-                            h.action === "APPROVED" ? "default" : "destructive"
+                          variant="outline"
+                          className={
+                            h.action === "APPROVED"
+                              ? "text-green-600 bg-green-100 font-semibold"
+                              : "text-red-600 bg-red-100 font-semibold"
                           }
                         >
                           {h.action === "APPROVED" ? "Approved" : "Rejected"}

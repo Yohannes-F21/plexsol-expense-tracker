@@ -192,24 +192,22 @@ export function ExpensesTable(props: { role: "ORG_ADMIN" | "STAFF" }) {
         header: "Status",
         cell: ({ row }) => {
           const status = row.original.status;
+          const label = String(status ?? "");
+
+          const className =
+            label === "PENDING"
+              ? "text-yellow-600 bg-orange-100 font-semibold"
+              : label === "APPROVED"
+              ? "text-green-600 bg-green-100 font-semibold"
+              : label === "REJECTED"
+              ? "text-red-600 bg-red-100 font-semibold"
+              : label === "WARNING"
+              ? "text-orange-600 bg-orange-100 font-semibold"
+              : "text-muted-foreground";
+
           return (
-            <Badge
-              variant={
-                status === "APPROVED"
-                  ? "default"
-                  : status === "REJECTED"
-                  ? "destructive"
-                  : status === "WARNING"
-                  ? "outline"
-                  : "secondary"
-              }
-              className={`${
-                status === "APPROVED"
-                  ? "text-green-500"
-                  : `${status === "WARNING" ? "text-yellow-500" : ""}`
-              }`}
-            >
-              {status}
+            <Badge variant="outline" className={className}>
+              {label || "-"}
             </Badge>
           );
         },

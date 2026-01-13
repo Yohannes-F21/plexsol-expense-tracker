@@ -13,12 +13,7 @@ import {
   type SortingState,
   type ColumnFiltersState,
 } from "@tanstack/react-table";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
+import { TooltipProvider } from "@/components/ui/tooltip";
 import { apiClient } from "@/lib/api-client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -31,13 +26,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { MoreHorizontal, ArrowUpDown, PowerOff, Power } from "lucide-react";
+import { ArrowUpDown } from "lucide-react";
 import { toast } from "sonner";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -117,6 +106,45 @@ export function UsersTable() {
     },
   });
 
+  const UserActiveSwitch = ({
+    checked,
+    onCheckedChange,
+    disabled,
+  }: {
+    checked: boolean;
+    onCheckedChange: (next: boolean) => void;
+    disabled?: boolean;
+  }) => {
+    return (
+      <button
+        type="button"
+        role="switch"
+        aria-checked={checked}
+        disabled={disabled}
+        onClick={() => onCheckedChange(!checked)}
+        className={
+          "relative inline-flex h-6 w-22 items-center rounded-full border px-1 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 " +
+          (checked ? "bg-primary" : "bg-input")
+        }
+      >
+        <span
+          className={
+            "absolute inset-0 flex items-center justify-center text-[11px] font-medium leading-none " +
+            (checked ? "text-primary-foreground" : "text-muted-foreground")
+          }
+        >
+          {checked ? "Active" : "Blocked"}
+        </span>
+        <span
+          className={
+            "absolute top-0.5 h-4.5 w-4.5 rounded-full bg-background shadow-xs transition-all " +
+            (checked ? "right-0.5" : "left-0.5")
+          }
+        />
+      </button>
+    );
+  };
+
   const columns: ColumnDef<User>[] = [
     {
       accessorKey: "name",
@@ -164,69 +192,16 @@ export function UsersTable() {
       accessorKey: "isActive",
       header: "Status",
       cell: ({ row }) => {
+        const user = row.original;
         const isActive = row.getValue("isActive") as boolean;
         return (
-          <Badge
-            className={`${
-              isActive
-                ? "bg-green-100 text-green-800"
-                : "bg-red-100 text-red-800"
-            } font-semibold`}
-          >
-            {isActive ? "Active" : "Banned"}
-          </Badge>
-        );
-      },
-    },
-    {
-      header: "Actions",
-      id: "actions",
-      cell: ({ row }) => {
-        const user = row.original;
-        return (
-          <>
-            {user.isActive ? (
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    className=" text-red-500"
-                    onClick={() =>
-                      toggleActiveMutation.mutate({
-                        id: user.id,
-                        isActive: !user.isActive,
-                      })
-                    }
-                  >
-                    <Power className="h-4 w-4" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>Deactivate User</p>
-                </TooltipContent>
-              </Tooltip>
-            ) : (
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    className="text-green-600"
-                    onClick={() =>
-                      toggleActiveMutation.mutate({
-                        id: user.id,
-                        isActive: !user.isActive,
-                      })
-                    }
-                  >
-                    <Power className="h-4 w-4" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>Activate User</p>
-                </TooltipContent>
-              </Tooltip>
-            )}
-          </>
+          <UserActiveSwitch
+            checked={isActive}
+            disabled={toggleActiveMutation.isPending}
+            onCheckedChange={(next) =>
+              toggleActiveMutation.mutate({ id: user.id, isActive: next })
+            }
+          />
         );
       },
     },

@@ -56,9 +56,9 @@ const vatCategorySchema = z.enum(["G", "S"]);
 const itemSchema = z.object({
   itemName: z.string().min(1, "Item name is required"),
   subcategoryId: z.string().min(1, "Subcategory is required"),
-  vatCategory: vatCategorySchema.optional(),
-  unitOfMeasureId: z.string().optional(),
-  purchaseTypeId: z.string().optional(),
+  vatCategory: vatCategorySchema,
+  unitOfMeasureId: z.string().min(1, "Unit of measure is required"),
+  purchaseTypeId: z.string().min(1, "Purchase type is required"),
   quantity: z.coerce.number().positive("Qty must be > 0"),
   unitPrice: z.coerce.number().nonnegative("Unit price must be >= 0"),
 });
@@ -318,8 +318,8 @@ export function ReceiptExpenseForm(props: {
         categoryType: normalizeCategoryType(it.subcategory?.type),
         subcategoryId: it.subcategoryId,
         vatCategory: (it.vatCategory as any) ?? "G",
-        unitOfMeasureId: it.unitOfMeasureId ?? undefined,
-        purchaseTypeId: it.purchaseTypeId ?? undefined,
+        unitOfMeasureId: it.unitOfMeasureId ?? "",
+        purchaseTypeId: it.purchaseTypeId ?? "",
         quantity: asNumber(it.quantity),
         unitPrice: asNumber(it.unitPrice),
       }));
@@ -330,8 +330,8 @@ export function ReceiptExpenseForm(props: {
         categoryType: "operational",
         subcategoryId: "",
         vatCategory: "G",
-        unitOfMeasureId: undefined,
-        purchaseTypeId: undefined,
+        unitOfMeasureId: "",
+        purchaseTypeId: "",
         quantity: 1,
         unitPrice: 0,
       },
@@ -544,8 +544,8 @@ export function ReceiptExpenseForm(props: {
               categoryType: "operational" as CategoryTypeUi,
               subcategoryId: "",
               vatCategory: "G" as any,
-              unitOfMeasureId: undefined,
-              purchaseTypeId: undefined,
+              unitOfMeasureId: "",
+              purchaseTypeId: "",
               quantity:
                 Number.isFinite(it.quantity) && it.quantity > 0
                   ? it.quantity
@@ -594,7 +594,8 @@ export function ReceiptExpenseForm(props: {
     const submitItems = items.map(({ categoryType: _ct, ...rest }) => rest);
     const parsedItems = z.array(itemSchema).min(1).safeParse(submitItems);
     if (!parsedItems.success) {
-      toast.error("Please fix the items table errors");
+      const first = parsedItems.error.issues?.[0];
+      toast.error(first?.message || "Please complete all item fields");
       return;
     }
 
@@ -899,6 +900,9 @@ export function ReceiptExpenseForm(props: {
                   itemName: "",
                   categoryType: "operational",
                   subcategoryId: "",
+                  vatCategory: "G",
+                  unitOfMeasureId: "",
+                  purchaseTypeId: "",
                   quantity: 1,
                   unitPrice: 0,
                 },
@@ -1034,15 +1038,14 @@ export function ReceiptExpenseForm(props: {
 
                       <TableCell>
                         <Select
-                          value={it.unitOfMeasureId ?? NONE_OPTION}
+                          value={it.unitOfMeasureId || ""}
                           onValueChange={(v) =>
                             setItems((prev) =>
                               prev.map((p, i) =>
                                 i === idx
                                   ? {
                                       ...p,
-                                      unitOfMeasureId:
-                                        v === NONE_OPTION ? undefined : v,
+                                      unitOfMeasureId: v,
                                     }
                                   : p
                               )
@@ -1051,22 +1054,13 @@ export function ReceiptExpenseForm(props: {
                           disabled={isLoadingUnits}
                         >
                           <SelectTrigger>
-                            {it.unitOfMeasureId &&
-                            it.unitOfMeasureId !== NONE_OPTION ? (
-                              <span className="truncate">
-                                {unitById.get(it.unitOfMeasureId)?.label ??
-                                  "Select"}
-                              </span>
-                            ) : (
-                              <SelectValue
-                                placeholder={
-                                  isLoadingUnits ? "Loading..." : "Select"
-                                }
-                              />
-                            )}
+                            <SelectValue
+                              placeholder={
+                                isLoadingUnits ? "Loading..." : "Select"
+                              }
+                            />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value={NONE_OPTION}>None</SelectItem>
                             {units.map((u) => (
                               <SelectItem
                                 key={u.id}
@@ -1089,15 +1083,14 @@ export function ReceiptExpenseForm(props: {
 
                       <TableCell>
                         <Select
-                          value={it.purchaseTypeId ?? NONE_OPTION}
+                          value={it.purchaseTypeId || ""}
                           onValueChange={(v) =>
                             setItems((prev) =>
                               prev.map((p, i) =>
                                 i === idx
                                   ? {
                                       ...p,
-                                      purchaseTypeId:
-                                        v === NONE_OPTION ? undefined : v,
+                                      purchaseTypeId: v,
                                     }
                                   : p
                               )
@@ -1106,24 +1099,13 @@ export function ReceiptExpenseForm(props: {
                           disabled={isLoadingPurchaseTypes}
                         >
                           <SelectTrigger>
-                            {it.purchaseTypeId &&
-                            it.purchaseTypeId !== NONE_OPTION ? (
-                              <span className="truncate">
-                                {purchaseTypeById.get(it.purchaseTypeId)
-                                  ?.label ?? "Select"}
-                              </span>
-                            ) : (
-                              <SelectValue
-                                placeholder={
-                                  isLoadingPurchaseTypes
-                                    ? "Loading..."
-                                    : "Select"
-                                }
-                              />
-                            )}
+                            <SelectValue
+                              placeholder={
+                                isLoadingPurchaseTypes ? "Loading..." : "Select"
+                              }
+                            />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value={NONE_OPTION}>None</SelectItem>
                             {purchaseTypes.map((p) => (
                               <SelectItem
                                 key={p.id}

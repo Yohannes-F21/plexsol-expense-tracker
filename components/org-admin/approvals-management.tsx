@@ -159,11 +159,14 @@ export function ApprovalsManagement() {
                     </TableCell>
                     <TableCell>
                       <Badge
-                        variant={
-                          row.status === "WARNING" ? "outline" : "secondary"
+                        variant="outline"
+                        className={
+                          row.status === "WARNING"
+                            ? "text-orange-600 bg-orange-100 font-semibold"
+                            : "text-yellow-600 bg-orange-100 font-semibold"
                         }
                       >
-                        {row.status}
+                        {row.status === "WARNING" ? "Warning" : "Pending"}
                       </Badge>
                     </TableCell>
                     <TableCell className="">

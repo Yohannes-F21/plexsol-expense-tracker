@@ -24,7 +24,6 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Badge } from "@/components/ui/badge";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -44,8 +43,6 @@ import {
   ArrowUpDown,
   Tag,
   Trash,
-  PowerOff,
-  Power,
 } from "lucide-react";
 import { CreateOrganizationDialog } from "@/components/create-organization-dialog";
 import { InviteOrgAdminDialog } from "@/components/invite-org-admin-dialog";
@@ -89,10 +86,60 @@ export function OrganizationsTable() {
       return data;
     },
   });
-  console.log("Organizations:", organizations);
 
-  const notifyOrgToggleUnavailable = () => {
-    toast.message("Activate/Deactivate is not available on this page");
+  const toggleOrgActiveMutation = useMutation({
+    mutationFn: ({ id, isActive }: { id: string; isActive: boolean }) =>
+      apiClient(`/api/super-admin/organizations/${id}`, {
+        method: "PATCH",
+        body: JSON.stringify({ isActive }),
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["organizations"] });
+      queryClient.invalidateQueries({ queryKey: ["super-admin-stats"] });
+      toast.success("Organization status updated successfully");
+    },
+    onError: () => {
+      toast.error("Failed to update organization status");
+    },
+  });
+
+  const OrgActiveSwitch = ({
+    checked,
+    onCheckedChange,
+    disabled,
+  }: {
+    checked: boolean;
+    onCheckedChange: (next: boolean) => void;
+    disabled?: boolean;
+  }) => {
+    return (
+      <button
+        type="button"
+        role="switch"
+        aria-checked={checked}
+        disabled={disabled}
+        onClick={() => onCheckedChange(!checked)}
+        className={
+          "relative inline-flex h-6 w-22 items-center rounded-full border px-1 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 " +
+          (checked ? "bg-green-400" : "bg-red-400")
+        }
+      >
+        <span
+          className={
+            "absolute inset-0 flex items-center justify-center text-[11px] font-medium leading-none " +
+            (checked ? "text-primary-foreground" : "text-primary-foreground")
+          }
+        >
+          {checked ? "Active" : "Blocked"}
+        </span>
+        <span
+          className={
+            "absolute top-0.5 h-4.5 w-4.5 rounded-full bg-background shadow-xs transition-all " +
+            (checked ? "right-0.5" : "left-0.5")
+          }
+        />
+      </button>
+    );
   };
 
   const columns: ColumnDef<Organization>[] = [
@@ -121,17 +168,16 @@ export function OrganizationsTable() {
       accessorKey: "isActive",
       header: "Status",
       cell: ({ row }) => {
+        const org = row.original;
         const isActive = row.getValue("isActive") as boolean;
         return (
-          <Badge
-            className={`${
-              isActive
-                ? "bg-green-100 text-green-900"
-                : "bg-red-100 text-red-800"
-            } font-semibold`}
-          >
-            {isActive ? "Active" : "Banned"}
-          </Badge>
+          <OrgActiveSwitch
+            checked={isActive}
+            disabled={toggleOrgActiveMutation.isPending}
+            onCheckedChange={(next) =>
+              toggleOrgActiveMutation.mutate({ id: org.id, isActive: next })
+            }
+          />
         );
       },
     },
@@ -177,38 +223,6 @@ export function OrganizationsTable() {
                 <p>Invite Admin</p>
               </TooltipContent>
             </Tooltip>
-
-            {org.isActive ? (
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    className=" text-red-500"
-                    onClick={notifyOrgToggleUnavailable}
-                  >
-                    <Power className="h-4 w-4" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>Deactivate Organization</p>
-                </TooltipContent>
-              </Tooltip>
-            ) : (
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    className="text-green-600"
-                    onClick={notifyOrgToggleUnavailable}
-                  >
-                    <Power className="h-4 w-4" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>Activate Organization</p>
-                </TooltipContent>
-              </Tooltip>
-            )}
           </div>
         );
       },
