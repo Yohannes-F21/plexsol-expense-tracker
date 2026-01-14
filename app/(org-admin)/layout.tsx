@@ -33,7 +33,7 @@ const navItems: NavItem[] = [
   },
   {
     title: "Staff",
-    href: "/org-admin/team", //for the moment keep it as /admin/team to avoid breaking existing links
+    href: "/org-admin/team",
     icon: "users",
   },
   {
@@ -45,6 +45,11 @@ const navItems: NavItem[] = [
     title: "Policies",
     href: "/org-admin/policies",
     icon: "shield",
+  },
+  {
+    title: "Reports",
+    href: "/org-admin/reports",
+    icon: "activity",
   },
   {
     title: "Settings",
