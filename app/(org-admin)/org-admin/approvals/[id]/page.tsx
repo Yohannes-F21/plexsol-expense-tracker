@@ -6,6 +6,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { apiClient } from "@/lib/api-client";
 import { Button } from "@/components/ui/button";
+import { BackButton } from "@/components/back-button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
@@ -37,6 +38,7 @@ import {
 } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { useState } from "react";
+import { ArrowLeft } from "lucide-react";
 
 type ApprovalAction = "APPROVED" | "REJECTED";
 
@@ -175,9 +177,7 @@ export default function OrgAdminApprovalDetailPage({
           </p>
         </div>
         <div className="flex gap-2">
-          <Button asChild variant="outline">
-            <Link href="/org-admin/approvals">Back</Link>
-          </Button>
+          <BackButton href="/org-admin/approvals" />
         </div>
       </div>
 
@@ -275,11 +275,17 @@ export default function OrgAdminApprovalDetailPage({
                 <TableHeader>
                   <TableRow className="bg-muted/70">
                     <TableHead className="w-14">No</TableHead>
-                    <TableHead className="w-1/5">Description</TableHead>
-                    <TableHead className="w-1/5">Quantity</TableHead>
-                    <TableHead className="w-1/5">Unit Price</TableHead>
-                    <TableHead className="w-1/5">Total Price</TableHead>
-                    <TableHead className="w-1/5">Policy</TableHead>
+                    <TableHead className="w-[40%]">Description</TableHead>
+                    <TableHead className="w-[12%] text-right">
+                      Quantity
+                    </TableHead>
+                    <TableHead className="w-[16%] text-right">
+                      Unit Price
+                    </TableHead>
+                    <TableHead className="w-[16%] text-right">
+                      Total Price
+                    </TableHead>
+                    <TableHead className="w-[16%]">Policy</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -288,15 +294,23 @@ export default function OrgAdminApprovalDetailPage({
                       <TableCell className="text-muted-foreground">
                         {index + 1}
                       </TableCell>
-                      <TableCell>
-                        <div className="font-medium">{it.itemName}</div>
-                        <div className="text-xs text-muted-foreground">
+                      <TableCell className="overflow-hidden">
+                        <div className="font-medium truncate">
+                          {it.itemName}
+                        </div>
+                        <div className="text-xs text-muted-foreground truncate">
                           {it.subcategory?.name ?? "-"}
                         </div>
                       </TableCell>
-                      <TableCell>{formatMoney(it.quantity)}</TableCell>
-                      <TableCell>{formatMoney(it.unitPrice)}</TableCell>
-                      <TableCell>{formatMoney(it.lineTotal)}</TableCell>
+                      <TableCell className="text-right tabular-nums whitespace-nowrap">
+                        {formatMoney(it.quantity)}
+                      </TableCell>
+                      <TableCell className="text-right tabular-nums whitespace-nowrap">
+                        {formatMoney(it.unitPrice)}
+                      </TableCell>
+                      <TableCell className="text-right tabular-nums whitespace-nowrap">
+                        {formatMoney(it.lineTotal)}
+                      </TableCell>
                       <TableCell>
                         {it.hasPolicyViolation ? (
                           <Badge variant="outline">Warning</Badge>
@@ -345,7 +359,7 @@ export default function OrgAdminApprovalDetailPage({
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="lg:sticky lg:top-6 lg:self-start">
           <CardHeader>
             <CardTitle>Action</CardTitle>
           </CardHeader>
@@ -407,63 +421,6 @@ export default function OrgAdminApprovalDetailPage({
           </CardContent>
         </Card>
       </div>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Approval History</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="rounded-md border">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Action</TableHead>
-                  <TableHead>Performed By</TableHead>
-                  <TableHead>Comment</TableHead>
-                  <TableHead className="text-right">Date</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {expense.approvalHistory.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={4} className="h-20 text-center">
-                      No approval actions yet.
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  expense.approvalHistory.map((h) => (
-                    <TableRow key={h.id}>
-                      <TableCell>
-                        <Badge
-                          variant={
-                            h.action === "APPROVED" ? "default" : "destructive"
-                          }
-                        >
-                          {h.action}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <div className="font-medium">
-                          {h.performedBy.name || "-"}
-                        </div>
-                        <div className="text-xs text-muted-foreground">
-                          {h.performedBy.email}
-                        </div>
-                      </TableCell>
-                      <TableCell className="text-sm text-muted-foreground">
-                        {h.comment || "-"}
-                      </TableCell>
-                      <TableCell className="text-right text-sm text-muted-foreground">
-                        {new Date(h.createdAt).toLocaleString()}
-                      </TableCell>
-                    </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
-          </div>
-        </CardContent>
-      </Card>
 
       <AlertDialog
         open={approveOpen}

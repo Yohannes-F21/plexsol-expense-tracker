@@ -18,7 +18,6 @@ export async function GET() {
     const policies = await prisma.expensePolicy.findMany({
       where: {
         organizationId: session.organizationId,
-        isActive: true,
       },
       orderBy: {
         createdAt: "desc",

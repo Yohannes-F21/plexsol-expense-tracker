@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { canEditExpense } from "@/lib/expense-permissions";
+import { BackButton } from "@/components/back-button";
 
 function asNumber(x: any): number {
   if (typeof x === "number") return x;
@@ -63,9 +64,7 @@ export function ExpenseDetailPage(props: {
           </p>
         </div>
         <div className="flex gap-2">
-          <Button asChild variant="outline">
-            <Link href={props.backHref}>Back</Link>
-          </Button>
+          <BackButton href={props.backHref} />
           {showEdit ? (
             <Button asChild>
               <Link href={`/expenses/${expense.id}/edit`}>Edit</Link>

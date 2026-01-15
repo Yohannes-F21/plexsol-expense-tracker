@@ -8,6 +8,7 @@ import {
   type ReceiptExpenseDetail,
 } from "@/components/expenses/receipt-expense-form";
 import { canEditExpense } from "@/lib/expense-permissions";
+import { BackButton } from "@/components/back-button";
 
 export function ExpenseFormPage(props: {
   role: "STAFF" | "ORG_ADMIN";
@@ -50,9 +51,7 @@ export function ExpenseFormPage(props: {
                 This expense can’t be edited.
               </p>
             </div>
-            <Button asChild variant="outline">
-              <Link href={props.backHref}>Back</Link>
-            </Button>
+            <BackButton href={props.backHref} />
           </div>
         </div>
       );
@@ -72,9 +71,7 @@ export function ExpenseFormPage(props: {
               : "Update receipt info and items."}
           </p>
         </div>
-        <Button asChild variant="outline">
-          <Link href={props.backHref}>Back</Link>
-        </Button>
+        <BackButton href={props.backHref} />
       </div>
 
       <ReceiptExpenseForm

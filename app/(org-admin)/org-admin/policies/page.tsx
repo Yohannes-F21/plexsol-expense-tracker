@@ -32,7 +32,14 @@ import {
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Eye, Pencil, Trash2, ShieldAlert } from "lucide-react";
+import {
+  ChevronDown,
+  Eye,
+  Filter,
+  Pencil,
+  ShieldAlert,
+  Trash2,
+} from "lucide-react";
 import { toast } from "sonner";
 import { DeleteConfirmationDialog } from "@/components/delete-confirmation-dialog";
 
@@ -66,11 +73,8 @@ interface PolicyFormState {
 
 function formatDate(value: string) {
   const date = new Date(value);
-  return date.toLocaleDateString(undefined, {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  });
+  if (Number.isNaN(date.getTime())) return "-";
+  return date.toISOString().slice(0, 10);
 }
 
 function PolicyFormDialog({
@@ -358,67 +362,117 @@ function PolicyCard({
   onEdit: () => void;
   onDelete: () => void;
 }) {
-  const rulesSummary = useMemo(() => {
-    const limit = policy.maxAmount
-      ? `Limit: Maximum amount $${policy.maxAmount}`
-      : "No limit set";
-    return limit;
-  }, [policy.maxAmount]);
+  const rules = useMemo(() => {
+    const lines: string[] = [];
+
+    if (
+      typeof policy.maxAmount === "number" &&
+      Number.isFinite(policy.maxAmount)
+    ) {
+      lines.push(`Limit: Maximum amount $${policy.maxAmount}`);
+    }
+
+    if (policy.requiresReceipt) {
+      lines.push("Requirement: Receipt required");
+    }
+
+    if (policy.autoApprove) {
+      lines.push("Requirement: Auto-approve eligible expenses");
+    }
+
+    if (lines.length === 0) {
+      lines.push("No rules configured");
+    }
+
+    return lines;
+  }, [policy.autoApprove, policy.maxAmount, policy.requiresReceipt]);
+
+  const visibleRules = rules.slice(0, 2);
+  const moreCount = Math.max(0, rules.length - visibleRules.length);
 
   return (
     <Card className="shadow-sm">
-      <CardHeader className="flex flex-row items-start justify-between space-y-0">
-        <div className="space-y-2">
-          <div className="flex items-center gap-2">
-            <CardTitle className="text-base md:text-lg">
-              {policy.policyName}
-            </CardTitle>
-            <Badge variant={policy.isActive ? "default" : "secondary"}>
-              {policy.isActive ? "Active" : "Inactive"}
-            </Badge>
-            <Badge variant="outline">{categoryLabel}</Badge>
+      <CardHeader className="space-y-2">
+        <div className="flex items-start justify-between gap-4">
+          <div className="space-y-2">
+            <div className="flex flex-wrap items-center gap-2">
+              <CardTitle className="text-base md:text-lg">
+                {policy.policyName}
+              </CardTitle>
+              <Badge variant={policy.isActive ? "default" : "secondary"}>
+                {policy.isActive ? "Active" : "Inactive"}
+              </Badge>
+              <Badge variant="outline">{categoryLabel}</Badge>
+            </div>
+            <CardDescription>
+              {policy.description || "No description provided"}
+            </CardDescription>
           </div>
-          <CardDescription>
-            {policy.description || "No description provided"}
-          </CardDescription>
+
+          <div className="flex items-center gap-2">
+            <Button
+              size="icon"
+              variant="outline"
+              onClick={onView}
+              aria-label="View"
+              className="h-9 w-9"
+            >
+              <Eye className="h-4 w-4" />
+            </Button>
+            <Button
+              size="icon"
+              variant="outline"
+              onClick={onEdit}
+              aria-label="Edit"
+              className="h-9 w-9"
+            >
+              <Pencil className="h-4 w-4" />
+            </Button>
+            <Button
+              size="icon"
+              variant="outline"
+              onClick={onDelete}
+              aria-label="Delete"
+              className="h-9 w-9"
+            >
+              <Trash2 className="h-4 w-4 text-destructive" />
+            </Button>
+          </div>
         </div>
-        <div className="flex items-center gap-2">
-          <Button
-            size="icon"
-            variant="ghost"
-            onClick={onView}
-            aria-label="View"
-          >
-            <Eye className="h-4 w-4" />
-          </Button>
-          <Button
-            size="icon"
-            variant="ghost"
-            onClick={onEdit}
-            aria-label="Edit"
-          >
-            <Pencil className="h-4 w-4" />
-          </Button>
-          <Button
-            size="icon"
-            variant="ghost"
-            onClick={onDelete}
-            aria-label="Delete"
-          >
-            <Trash2 className="h-4 w-4 text-destructive" />
-          </Button>
+
+        <div className="flex flex-col gap-2 text-sm text-muted-foreground md:flex-row md:items-center md:gap-8">
+          <div className="flex items-center gap-2">
+            <span>Updated: {formatDate(policy.createdAt)}</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <span>— violations</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <ShieldAlert className="h-4 w-4" />
+            <span>— compliance</span>
+          </div>
         </div>
       </CardHeader>
+
       <CardContent className="space-y-3">
-        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <ShieldAlert className="h-4 w-4" />
-          <span>Compliance: placeholder</span>
+        <div className="text-xs font-medium text-muted-foreground">
+          POLICY RULES:
         </div>
-        <div className="text-sm font-medium text-foreground">
-          {rulesSummary}
-        </div>
-        <div className="text-xs text-muted-foreground">
-          Updated {formatDate(policy.createdAt)}
+        <div className="space-y-2">
+          {visibleRules.map((line) => (
+            <div
+              key={line}
+              className="rounded-md bg-muted/40 px-3 py-2 text-sm text-foreground"
+            >
+              {line}
+            </div>
+          ))}
+
+          {moreCount > 0 ? (
+            <div className="text-sm text-muted-foreground">
+              +{moreCount} more rules
+            </div>
+          ) : null}
         </div>
       </CardContent>
     </Card>
@@ -427,6 +481,9 @@ function PolicyCard({
 
 export default function PoliciesPage() {
   const queryClient = useQueryClient();
+  const [filterMode, setFilterMode] = useState<"all" | "active" | "inactive">(
+    "all"
+  );
   const [dialogMode, setDialogMode] = useState<"create" | "edit" | "view">(
     "create"
   );
@@ -453,6 +510,12 @@ export default function PoliciesPage() {
 
   const categories = categoriesData?.categories ?? [];
   const policies = policiesData?.policies ?? [];
+
+  const filteredPolicies = useMemo(() => {
+    if (filterMode === "active") return policies.filter((p) => p.isActive);
+    if (filterMode === "inactive") return policies.filter((p) => !p.isActive);
+    return policies;
+  }, [filterMode, policies]);
 
   const createMutation = useMutation({
     mutationFn: (payload: PolicyFormState) =>
@@ -531,18 +594,39 @@ export default function PoliciesPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <h1 className="text-2xl  font-bold">Expense Policies</h1>
+          <h1 className="text-2xl font-bold">Expense Policies</h1>
           <p className="text-muted-foreground mt-1">
-            Define and manage spending policies for your organization.
+            Manage and configure your organization's expense policies
           </p>
         </div>
-        <Button onClick={openCreate}>Create Policy</Button>
+
+        <div className="flex items-center gap-3">
+          <Select
+            value={filterMode}
+            onValueChange={(val) => setFilterMode(val as typeof filterMode)}
+          >
+            <SelectTrigger className="w-40">
+              <div className="flex items-center gap-2">
+                <Filter className="h-4 w-4" />
+                <SelectValue placeholder="All Policies" />
+              </div>
+              <ChevronDown className="h-4 w-4 opacity-50" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Policies</SelectItem>
+              <SelectItem value="active">Active</SelectItem>
+              <SelectItem value="inactive">Inactive</SelectItem>
+            </SelectContent>
+          </Select>
+
+          <Button onClick={openCreate}>Create Policy</Button>
+        </div>
       </div>
 
       {policiesLoading || categoriesLoading ? (
-        <div className="grid gap-4 md:grid-cols-2">
+        <div className="space-y-4">
           {[...Array(4)].map((_, idx) => (
             <Card key={idx} className="shadow-sm">
               <CardContent className="space-y-3 pt-6">
@@ -553,7 +637,7 @@ export default function PoliciesPage() {
             </Card>
           ))}
         </div>
-      ) : policies.length === 0 ? (
+      ) : filteredPolicies.length === 0 ? (
         <Card className="shadow-sm">
           <CardContent className="py-10 text-center space-y-3">
             <p className="text-lg font-semibold">No policies created yet</p>
@@ -565,8 +649,8 @@ export default function PoliciesPage() {
           </CardContent>
         </Card>
       ) : (
-        <div className="grid gap-4 md:grid-cols-2">
-          {policies.map((policy) => {
+        <div className="space-y-4">
+          {filteredPolicies.map((policy) => {
             const categoryId = policy.allowedCategories?.[0];
             const categoryLabel =
               categories.find((c) => c.id === categoryId)?.name ||
