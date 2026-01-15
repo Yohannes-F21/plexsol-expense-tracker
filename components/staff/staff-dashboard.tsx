@@ -20,6 +20,7 @@ import {
   AlertTriangle,
 } from "lucide-react";
 import { toast } from "sonner";
+import { Loader } from "@/components/loader";
 import { CreateExpenseDialog } from "@/components/create-expense-dialog";
 import { EditExpenseDialog } from "@/components/edit-expense-dialog";
 import { formatCurrency } from "@/lib/utils";
@@ -103,7 +104,7 @@ export function StaffDashboard() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        Loading...
+        <Loader size="lg" ariaLabel="Loading dashboard" showLabel />
       </div>
     );
   }

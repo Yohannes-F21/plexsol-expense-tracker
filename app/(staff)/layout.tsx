@@ -20,7 +20,7 @@ const navItems: NavItem[] = [
   },
   {
     title: "Policies",
-    href: "/dashboard/policies",
+    href: "/policies",
     icon: "shield",
   },
 ];
@@ -36,11 +36,18 @@ export default async function StaffLayout({
     redirect("/signin");
   }
 
-  const organization = session.organizationId
-    ? await prisma.organization.findUnique({
+  let organization: { name: string } | null = null;
+  if (session.organizationId) {
+    try {
+      organization = await prisma.organization.findUnique({
         where: { id: session.organizationId },
-      })
-    : null;
+        select: { name: true },
+      });
+    } catch (e) {
+      console.warn("[staff-layout] Failed to load organization", e);
+      organization = null;
+    }
+  }
 
   return (
     <QueryProvider>

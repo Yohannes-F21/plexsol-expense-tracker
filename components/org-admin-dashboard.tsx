@@ -20,6 +20,7 @@ import {
   UserPlus,
 } from "lucide-react";
 import { toast } from "sonner";
+import { Loader } from "@/components/loader";
 import { useRouter } from "next/navigation";
 import { InviteUserDialog } from "@/components/invite-user-dialog";
 import { format } from "date-fns";
@@ -151,7 +152,7 @@ export function OrgAdminDashboard() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        Loading...
+        <Loader size="lg" ariaLabel="Loading dashboard" showLabel />
       </div>
     );
   }

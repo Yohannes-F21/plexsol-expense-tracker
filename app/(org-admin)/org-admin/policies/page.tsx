@@ -594,80 +594,80 @@ export default function PoliciesPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-bold">Expense Policies</h1>
-          <p className="text-muted-foreground mt-1">
-            Manage and configure your organization's expense policies
-          </p>
-        </div>
+      <Card>
+        <CardHeader className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+          <div>
+            <CardTitle className="text-2xl">Expense Policies</CardTitle>
+            <CardDescription>
+              Manage and configure your organization's expense policies
+            </CardDescription>
+          </div>
 
-        <div className="flex items-center gap-3">
-          <Select
-            value={filterMode}
-            onValueChange={(val) => setFilterMode(val as typeof filterMode)}
-          >
-            <SelectTrigger className="w-40">
-              <div className="flex items-center gap-2">
-                <Filter className="h-4 w-4" />
-                <SelectValue placeholder="All Policies" />
-              </div>
-              <ChevronDown className="h-4 w-4 opacity-50" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Policies</SelectItem>
-              <SelectItem value="active">Active</SelectItem>
-              <SelectItem value="inactive">Inactive</SelectItem>
-            </SelectContent>
-          </Select>
+          <div className="flex items-center gap-3">
+            <Select
+              value={filterMode}
+              onValueChange={(val) => setFilterMode(val as typeof filterMode)}
+            >
+              <SelectTrigger className="w-40">
+                <div className="flex items-center gap-2">
+                  <Filter className="h-4 w-4" />
+                  <SelectValue placeholder="All Policies" />
+                </div>
+                <ChevronDown className="h-4 w-4 opacity-50" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Policies</SelectItem>
+                <SelectItem value="active">Active</SelectItem>
+                <SelectItem value="inactive">Inactive</SelectItem>
+              </SelectContent>
+            </Select>
 
-          <Button onClick={openCreate}>Create Policy</Button>
-        </div>
-      </div>
-
-      {policiesLoading || categoriesLoading ? (
-        <div className="space-y-4">
-          {[...Array(4)].map((_, idx) => (
-            <Card key={idx} className="shadow-sm">
-              <CardContent className="space-y-3 pt-6">
-                <Skeleton className="h-5 w-40" />
-                <Skeleton className="h-4 w-24" />
-                <Skeleton className="h-10" />
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      ) : filteredPolicies.length === 0 ? (
-        <Card className="shadow-sm">
-          <CardContent className="py-10 text-center space-y-3">
-            <p className="text-lg font-semibold">No policies created yet</p>
-            <p className="text-sm text-muted-foreground">
-              Create your first policy to start enforcing spend rules for your
-              team.
-            </p>
             <Button onClick={openCreate}>Create Policy</Button>
-          </CardContent>
-        </Card>
-      ) : (
-        <div className="space-y-4">
-          {filteredPolicies.map((policy) => {
-            const categoryId = policy.allowedCategories?.[0];
-            const categoryLabel =
-              categories.find((c) => c.id === categoryId)?.name ||
-              "Uncategorized";
-            return (
-              <PolicyCard
-                key={policy.id}
-                policy={policy}
-                categoryLabel={categoryLabel}
-                onView={() => openView(policy)}
-                onEdit={() => openEdit(policy)}
-                onDelete={() => handleDeleteClick(policy)}
-              />
-            );
-          })}
-        </div>
-      )}
+          </div>
+        </CardHeader>
+
+        <CardContent>
+          {policiesLoading || categoriesLoading ? (
+            <div className="space-y-4">
+              {[...Array(4)].map((_, idx) => (
+                <div key={idx} className="rounded-lg border p-6 space-y-3">
+                  <Skeleton className="h-5 w-40" />
+                  <Skeleton className="h-4 w-24" />
+                  <Skeleton className="h-10" />
+                </div>
+              ))}
+            </div>
+          ) : filteredPolicies.length === 0 ? (
+            <div className="py-10 text-center space-y-3">
+              <p className="text-lg font-semibold">No policies created yet</p>
+              <p className="text-sm text-muted-foreground">
+                Create your first policy to start enforcing spend rules for your
+                team.
+              </p>
+              <Button onClick={openCreate}>Create Policy</Button>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {filteredPolicies.map((policy) => {
+                const categoryId = policy.allowedCategories?.[0];
+                const categoryLabel =
+                  categories.find((c) => c.id === categoryId)?.name ||
+                  "Uncategorized";
+                return (
+                  <PolicyCard
+                    key={policy.id}
+                    policy={policy}
+                    categoryLabel={categoryLabel}
+                    onView={() => openView(policy)}
+                    onEdit={() => openEdit(policy)}
+                    onDelete={() => handleDeleteClick(policy)}
+                  />
+                );
+              })}
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       <DeleteConfirmationDialog
         open={deleteOpen}

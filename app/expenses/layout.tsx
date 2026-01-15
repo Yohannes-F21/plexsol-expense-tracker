@@ -76,11 +76,18 @@ export default async function ExpensesLayout({
 
   const role = session.role;
 
-  const organization = session.organizationId
-    ? await prisma.organization.findUnique({
+  let organization: { name: string } | null = null;
+  if (session.organizationId) {
+    try {
+      organization = await prisma.organization.findUnique({
         where: { id: session.organizationId },
-      })
-    : null;
+        select: { name: true },
+      });
+    } catch (e) {
+      console.warn("[expenses-layout] Failed to load organization", e);
+      organization = null;
+    }
+  }
 
   const navItems = role === "ORG_ADMIN" ? orgAdminNavItems : staffNavItems;
 

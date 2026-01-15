@@ -3,6 +3,7 @@
 import React, { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { apiClient } from "@/lib/api-client";
+import { Loader } from "@/components/loader";
 import {
   Table,
   TableHeader,
@@ -222,7 +223,9 @@ export function ActivityLogsTable() {
         </div>
 
         {isLoading ? (
-          <div>Loading...</div>
+          <div className="flex items-center justify-center py-10">
+            <Loader size="lg" ariaLabel="Loading activity logs" showLabel />
+          </div>
         ) : logs.length === 0 ? (
           <div className="text-center text-muted-foreground">
             No activity logs found

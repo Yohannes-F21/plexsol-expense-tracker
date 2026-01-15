@@ -16,6 +16,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { toast } from "sonner";
+import { Loader } from "@/components/loader";
 
 function AcceptInviteForm() {
   const router = useRouter();
@@ -139,7 +140,13 @@ function AcceptInviteForm() {
 
 export default function AcceptInvitePage() {
   return (
-    <Suspense fallback={<div>Loading...</div>}>
+    <Suspense
+      fallback={
+        <div className="flex min-h-screen items-center justify-center">
+          <Loader size="lg" ariaLabel="Loading invitation" showLabel />
+        </div>
+      }
+    >
       <AcceptInviteForm />
     </Suspense>
   );

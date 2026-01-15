@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { apiClient } from "@/lib/api-client";
+import { Loader } from "@/components/loader";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -76,7 +77,11 @@ export function ApprovalsHistory() {
   }, [history, pageIndex, pageSize]);
 
   if (isLoading) {
-    return <div className="text-muted-foreground">Loading history...</div>;
+    return (
+      <div className="flex items-center justify-center py-10">
+        <Loader size="lg" ariaLabel="Loading approval history" showLabel />
+      </div>
+    );
   }
 
   if (error) {

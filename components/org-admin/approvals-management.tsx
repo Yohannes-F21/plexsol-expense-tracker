@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { apiClient } from "@/lib/api-client";
+import { Loader } from "@/components/loader";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -87,7 +88,11 @@ export function ApprovalsManagement() {
   }, [filtered, pageIndex, pageSize]);
 
   if (isLoading) {
-    return <div className="text-muted-foreground">Loading approvals...</div>;
+    return (
+      <div className="flex items-center justify-center py-10">
+        <Loader size="lg" ariaLabel="Loading approvals" showLabel />
+      </div>
+    );
   }
 
   if (error) {

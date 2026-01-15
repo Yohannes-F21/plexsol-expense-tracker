@@ -173,7 +173,7 @@ export function TeamManagement() {
                         </p>
                       </div>
                     </div>
-                    <div className="flex items-center gap-3">
+                    <div className="flex  items-center gap-6">
                       <Badge
                         variant={
                           user.role === "ORG_ADMIN" ? "default" : "secondary"

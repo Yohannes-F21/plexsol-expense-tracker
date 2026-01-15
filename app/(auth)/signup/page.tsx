@@ -8,6 +8,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Card,
   CardContent,
@@ -17,6 +18,8 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { toast } from "sonner";
+import { Loader } from "@/components/loader";
+import { Lock, Mail, Phone, User } from "lucide-react";
 
 export default function SignUpPage() {
   const router = useRouter();
@@ -27,6 +30,7 @@ export default function SignUpPage() {
     phoneNumber: "",
   });
   const [isLoading, setIsLoading] = useState(false);
+  const [acceptTerms, setAcceptTerms] = useState(true);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -57,70 +61,106 @@ export default function SignUpPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-muted/30 p-4">
-      <Card className="w-full max-w-md">
-        <CardHeader>
-          <CardTitle className="text-2xl">Create Super Admin Account</CardTitle>
-          <CardDescription>Sign up as a platform administrator</CardDescription>
+    <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-background p-4">
+      <div className="pointer-events-none absolute inset-0 -z-10">
+        <div className="absolute -left-24 -top-24 h-96 w-96 rounded-full bg-primary/10 blur-3xl" />
+        <div className="absolute -bottom-24 -right-24 h-96 w-96 rounded-full bg-primary/10 blur-3xl" />
+      </div>
+
+      <Card className="w-full max-w-md border bg-background/80 shadow-2xl shadow-primary/50 backdrop-blur">
+        <CardHeader className="space-y-2 text-center">
+          <CardTitle className="text-3xl font-semibold">Sign up</CardTitle>
+          <CardDescription>Create your account to continue.</CardDescription>
         </CardHeader>
         <form onSubmit={handleSubmit}>
           <CardContent className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="name">Your Name</Label>
-              <Input
-                id="name"
-                type="text"
-                placeholder="John Doe"
-                value={formData.name}
-                onChange={(e) =>
-                  setFormData({ ...formData, name: e.target.value })
-                }
-                required
-              />
+              <div className="relative">
+                <User className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  id="name"
+                  type="text"
+                  placeholder="John Doe"
+                  value={formData.name}
+                  onChange={(e) =>
+                    setFormData({ ...formData, name: e.target.value })
+                  }
+                  className="pl-10"
+                  required
+                />
+              </div>
             </div>
             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>
-              <Input
-                id="email"
-                type="email"
-                placeholder="admin@example.com"
-                value={formData.email}
-                onChange={(e) =>
-                  setFormData({ ...formData, email: e.target.value })
-                }
-                required
-              />
+              <div className="relative">
+                <Mail className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  id="email"
+                  type="email"
+                  placeholder="you@example.com"
+                  value={formData.email}
+                  onChange={(e) =>
+                    setFormData({ ...formData, email: e.target.value })
+                  }
+                  className="pl-10"
+                  required
+                />
+              </div>
             </div>
             <div className="space-y-2">
               <Label htmlFor="phoneNumber">Phone Number (Optional)</Label>
-              <Input
-                id="phoneNumber"
-                type="tel"
-                placeholder="+1 234 567 8900"
-                value={formData.phoneNumber}
-                onChange={(e) =>
-                  setFormData({ ...formData, phoneNumber: e.target.value })
-                }
-              />
+              <div className="relative">
+                <Phone className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  id="phoneNumber"
+                  type="tel"
+                  placeholder="+251 9xx xxx xxx"
+                  value={formData.phoneNumber}
+                  onChange={(e) =>
+                    setFormData({ ...formData, phoneNumber: e.target.value })
+                  }
+                  className="pl-10"
+                />
+              </div>
             </div>
             <div className="space-y-2">
               <Label htmlFor="password">Password</Label>
-              <Input
-                id="password"
-                type="password"
-                placeholder="Minimum 8 characters"
-                value={formData.password}
-                onChange={(e) =>
-                  setFormData({ ...formData, password: e.target.value })
-                }
-                required
-                minLength={8}
-              />
+              <div className="relative">
+                <Lock className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  id="password"
+                  type="password"
+                  placeholder="Minimum 8 characters"
+                  value={formData.password}
+                  onChange={(e) =>
+                    setFormData({ ...formData, password: e.target.value })
+                  }
+                  className="pl-10"
+                  required
+                  minLength={8}
+                />
+              </div>
             </div>
+
+            <label className="flex items-center gap-2 pt-1 text-sm text-muted-foreground">
+              <Checkbox
+                checked={acceptTerms}
+                onCheckedChange={(val) => setAcceptTerms(val === true)}
+              />
+              I agree to the terms
+            </label>
           </CardContent>
-          <CardFooter className="flex flex-col space-y-4">
+          <CardFooter className="flex flex-col mt-4 space-y-4">
             <Button type="submit" className="w-full" disabled={isLoading}>
-              {isLoading ? "Creating account..." : "Create Super Admin Account"}
+              {isLoading ? (
+                <span className="inline-flex items-center gap-2">
+                  <Loader size="sm" className="text-primary-foreground" />
+                  Creating account
+                </span>
+              ) : (
+                "Sign up"
+              )}
             </Button>
             <p className="text-sm text-center text-muted-foreground">
               Already have an account?{" "}
@@ -128,6 +168,9 @@ export default function SignUpPage() {
                 Sign in
               </Link>
             </p>
+            <div className="w-full border-t pt-4 text-center text-xs text-muted-foreground">
+              © 2026 Plexsol Technologies. All rights reserved.
+            </div>
           </CardFooter>
         </form>
       </Card>

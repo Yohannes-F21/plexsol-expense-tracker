@@ -18,6 +18,7 @@ import {
   Plus,
 } from "lucide-react";
 import { toast } from "sonner";
+import { Loader } from "@/components/loader";
 import { useRouter } from "next/navigation";
 import { CreateOrganizationDialog } from "./create-organization-dialog";
 import { InviteOrgAdminDialog } from "./invite-org-admin-dialog";
@@ -102,7 +103,7 @@ export function SuperAdminDashboard() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        Loading...
+        <Loader size="lg" ariaLabel="Loading dashboard" showLabel />
       </div>
     );
   }

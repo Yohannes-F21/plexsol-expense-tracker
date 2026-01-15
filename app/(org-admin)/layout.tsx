@@ -69,11 +69,18 @@ export default async function OrgAdminLayout({
     redirect("/signin");
   }
 
-  const organization = session.organizationId
-    ? await prisma.organization.findUnique({
+  let organization: { name: string } | null = null;
+  if (session.organizationId) {
+    try {
+      organization = await prisma.organization.findUnique({
         where: { id: session.organizationId },
-      })
-    : null;
+        select: { name: true },
+      });
+    } catch (e) {
+      console.warn("[org-admin-layout] Failed to load organization", e);
+      organization = null;
+    }
+  }
 
   return (
     <QueryProvider>

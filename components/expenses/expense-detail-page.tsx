@@ -16,6 +16,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { canEditExpense } from "@/lib/expense-permissions";
 import { BackButton } from "@/components/back-button";
+import { Loader } from "@/components/loader";
 
 function asNumber(x: any): number {
   if (typeof x === "number") return x;
@@ -47,7 +48,12 @@ export function ExpenseDetailPage(props: {
     },
   });
 
-  if (isLoading) return <div className="text-muted-foreground">Loading...</div>;
+  if (isLoading)
+    return (
+      <div className="flex min-h-screen items-center justify-center">
+        <Loader size="lg" ariaLabel="Loading expense details" showLabel />
+      </div>
+    );
   if (error)
     return <div className="text-destructive">{(error as Error).message}</div>;
 

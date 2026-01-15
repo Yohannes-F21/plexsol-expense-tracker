@@ -9,6 +9,7 @@ import {
 } from "@/components/expenses/receipt-expense-form";
 import { canEditExpense } from "@/lib/expense-permissions";
 import { BackButton } from "@/components/back-button";
+import { Loader } from "@/components/loader";
 
 export function ExpenseFormPage(props: {
   role: "STAFF" | "ORG_ADMIN";
@@ -31,7 +32,11 @@ export function ExpenseFormPage(props: {
 
   if (props.mode === "edit") {
     if (query.isLoading)
-      return <div className="text-muted-foreground">Loading...</div>;
+      return (
+        <div className="flex items-center justify-center py-10">
+          <Loader size="lg" ariaLabel="Loading expense form" showLabel />
+        </div>
+      );
     if (query.error)
       return (
         <div className="text-destructive">{(query.error as Error).message}</div>

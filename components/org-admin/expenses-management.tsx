@@ -44,6 +44,7 @@ import { toast } from "sonner";
 import { CreateExpenseDialog } from "@/components/create-expense-dialog";
 import { EditExpenseDialog } from "@/components/edit-expense-dialog";
 import { DataTablePagination } from "@/components/data-table-pagination";
+import { Loader } from "@/components/loader";
 import { DeleteConfirmationDialog } from "@/components/delete-confirmation-dialog";
 
 type Expense = {
@@ -271,7 +272,7 @@ export function ExpensesManagement() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-96">
-        <div className="text-muted-foreground">Loading expenses...</div>
+        <Loader size="lg" ariaLabel="Loading expenses" showLabel />
       </div>
     );
   }

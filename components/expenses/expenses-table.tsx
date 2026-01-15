@@ -38,6 +38,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Search, SquarePen, Trash2, Eye } from "lucide-react";
 import { DataTablePagination } from "@/components/data-table-pagination";
 import { canDeleteExpense, canEditExpense } from "@/lib/expense-permissions";
+import { Loader } from "../loader";
 
 type ExpenseRow = {
   id: string;
@@ -311,7 +312,7 @@ export function ExpensesTable(props: { role: "ORG_ADMIN" | "STAFF" }) {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-72">
-        <div className="text-muted-foreground">Loading expenses...</div>
+        <Loader size="lg" ariaLabel="Loading expenses" showLabel />
       </div>
     );
   }
