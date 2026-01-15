@@ -9,11 +9,11 @@ const currencyFormatterCache = new Map<string, Intl.NumberFormat>();
 
 /**
  * Format a number as a localized currency string.
- * Defaults to USD if no currency code is provided.
+ * Defaults to ETB if no currency code is provided.
  */
 export function formatCurrency(
   amount: number,
-  currency = "USD",
+  currency = "ETB",
   locale = "en-US"
 ) {
   try {

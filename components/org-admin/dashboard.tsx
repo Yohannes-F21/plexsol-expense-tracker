@@ -9,7 +9,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { DollarSign, Clock, Users } from "lucide-react";
+import { DollarSign, Clock, Receipt, Users } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ExpensesChart } from "./expenses-chart";
 import { ExpensesByCategoryChart } from "./expenses-by-category-chart";
@@ -33,12 +33,24 @@ export function OrgAdminDashboard() {
       title: "Total Expense Amount",
       value: `${(stats?.totalExpenseAmount ?? 0).toLocaleString()} ETB`,
       icon: DollarSign,
-      titleColor: "text-blue-600",
+      titleColor: "text-violet-600",
+      cardBg: "bg-violet-50",
+      iconBg: "bg-violet-500",
+      iconColor: "text-white",
+      helperText: "Approved expenses total",
+      helperTextColor: "text-violet-600",
+      interactive: true,
+    },
+    {
+      title: "Total Expenses",
+      value: stats?.totalExpenses ?? 0,
+      icon: Receipt,
+      titleColor: "text-blue-700",
       cardBg: "bg-blue-50",
       iconBg: "bg-blue-500",
       iconColor: "text-white",
-      helperText: "Approved expenses total",
-      helperTextColor: "text-green-600",
+      helperText: "All submissions",
+      helperTextColor: "text-blue-600",
       interactive: true,
     },
     {
@@ -79,7 +91,7 @@ export function OrgAdminDashboard() {
       </div>
 
       {/* KPI Cards */}
-      <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
         {kpis.map((kpi) => (
           <Card
             key={kpi.title}
@@ -89,7 +101,7 @@ export function OrgAdminDashboard() {
             }
           >
             <CardHeader className="flex flex-row items-start justify-between space-y-0 pb-2">
-              <CardTitle className={`text-sm font-medium ${kpi.titleColor}`}>
+              <CardTitle className={` text-sm font-medium ${kpi.titleColor}`}>
                 {kpi.title}
               </CardTitle>
               <div
@@ -101,15 +113,15 @@ export function OrgAdminDashboard() {
                 <kpi.icon className={`h-5 w-5 ${kpi.iconColor}`} />
               </div>
             </CardHeader>
-            <CardContent className="space-y-2">
+            <CardContent className="space-y-1">
               {isLoading ? (
                 <Skeleton className="h-8 w-24" />
               ) : (
-                <div className="text-3xl font-semibold text-foreground">
+                <div className="text-2xl font-semibold text-foreground">
                   {kpi.value}
                 </div>
               )}
-              <div className={`text-sm ${kpi.helperTextColor}`}>
+              <div className={`text-xs ${kpi.helperTextColor}`}>
                 {kpi.helperText}
               </div>
             </CardContent>
