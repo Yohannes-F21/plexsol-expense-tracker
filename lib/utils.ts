@@ -32,3 +32,25 @@ export function formatCurrency(
     return `${currency} ${amount.toFixed(2)}`;
   }
 }
+
+export function formatError(error: unknown) {
+  if (error instanceof Error) return error.message;
+
+  // ErrorEvent (e.g. WebSocket/network failures) often stringifies to "[object ErrorEvent]".
+  if (typeof error === "object" && error !== null) {
+    const anyErr = error as any;
+
+    if (typeof anyErr.message === "string" && anyErr.message)
+      return anyErr.message;
+    if (typeof anyErr.type === "string" && anyErr.type)
+      return `ErrorEvent(${anyErr.type})`;
+    if (typeof anyErr.code === "string" && anyErr.code) return anyErr.code;
+    if (typeof anyErr.name === "string" && anyErr.name) return anyErr.name;
+  }
+
+  try {
+    return JSON.stringify(error);
+  } catch {
+    return String(error);
+  }
+}

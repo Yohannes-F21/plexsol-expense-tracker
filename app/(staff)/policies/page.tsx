@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { getSession } from "@/lib/auth";
 import prisma from "@/lib/prisma";
+import { formatError } from "@/lib/utils";
 import {
   Card,
   CardContent,
@@ -64,7 +65,7 @@ export default async function StaffPoliciesPage() {
       },
     })) as Policy[];
   } catch (e) {
-    console.warn("[staff-policies] Failed to load policies", e);
+    console.warn("[staff-policies] Failed to load policies:", formatError(e));
     return (
       <div className="text-sm text-destructive">
         Failed to load policies. Please check your database connection.
@@ -88,7 +89,10 @@ export default async function StaffPoliciesPage() {
         select: { id: true, name: true, type: true },
       });
     } catch (e) {
-      console.warn("[staff-policies] Failed to load categories", e);
+      console.warn(
+        "[staff-policies] Failed to load categories:",
+        formatError(e)
+      );
       categories = [];
     }
   }

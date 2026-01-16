@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { getSession } from "@/lib/auth";
 import prisma from "@/lib/prisma";
+import { formatError } from "@/lib/utils";
 import Link from "next/link";
 import {
   Card,
@@ -72,7 +73,10 @@ export default async function DashboardPage() {
       _sum: { total: true },
     });
   } catch (e) {
-    console.warn("[staff-dashboard] Failed to load dashboard stats", e);
+    console.warn(
+      "[staff-dashboard] Failed to load dashboard stats:",
+      formatError(e)
+    );
     grouped = null;
   }
 

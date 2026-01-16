@@ -139,6 +139,22 @@ npx prisma generate
 - Check Neon database is active
 - Ensure IP allowlist includes your IP (if configured)
 
+#### Network / Wi‑Fi restrictions
+
+If the app works on one Wi‑Fi network but fails on another, the failing network is likely blocking outbound database traffic.
+
+- **TCP Postgres (recommended, default)**: requires outbound access to Neon on **port 5432**.
+- **Neon WebSocket adapter (optional)**: requires outbound **WebSocket upgrade** access (typically over **443**). Some corporate proxies block WebSockets and you may see errors like "non-101 status code".
+
+You can control which driver adapter Prisma uses with:
+
+```env
+# auto | pg | neon
+PRISMA_ADAPTER="pg"
+```
+
+If both TCP/5432 and WebSockets are blocked on a network, you’ll need to use a different network (hotspot), a VPN, or run a local Postgres.
+
 ## Project Structure
 
 ```

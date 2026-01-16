@@ -3,6 +3,7 @@ import { requireRole } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { Prisma } from "@prisma/client";
 import { z } from "zod";
+import { formatError } from "@/lib/utils";
 
 export async function GET() {
   try {
@@ -26,7 +27,7 @@ export async function GET() {
 
     return NextResponse.json({ policies });
   } catch (error) {
-    console.error("[v0] Get policies error:", error);
+    console.error("[v0] Get policies error:", formatError(error));
     return NextResponse.json(
       {
         error: error instanceof Error ? error.message : "Internal server error",

@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "build": "next build",
-    "dev": "next dev",
+    "dev": "node --no-enable-source-maps ./node_modules/next/dist/bin/next dev",
     "postinstall": "prisma generate",
     "lint": "eslint .",
     "start": "next start"
@@ -12,8 +12,8 @@
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",
     "@neondatabase/serverless": "^0.10.4",
-    "@prisma/adapter-neon": "^7.2.0",
-    "@prisma/adapter-pg": "^7.2.0",
+    "@prisma/adapter-neon": "7.1.0",
+    "@prisma/adapter-pg": "7.1.0",
     "@prisma/client": "7.1.0",
     "@radix-ui/react-accordion": "1.2.2",
     "@radix-ui/react-alert-dialog": "1.1.4",
@@ -72,6 +72,7 @@
     "tailwind-merge": "^3.3.1",
     "tailwindcss-animate": "^1.0.7",
     "vaul": "^1.1.2",
+    "ws": "^8.18.3",
     "zod": "3.25.76"
   },
   "devDependencies": {
@@ -81,6 +82,7 @@
     "@types/nodemailer": "^7.0.5",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "@types/ws": "^8.5.14",
     "postcss": "^8.5",
     "tailwindcss": "^4.1.9",
     "tw-animate-css": "1.3.3",

@@ -1,6 +1,8 @@
 import { Prisma, PrismaClient } from "@prisma/client";
 import { PrismaNeon } from "@prisma/adapter-neon";
 import { PrismaPg } from "@prisma/adapter-pg";
+import { neonConfig } from "@neondatabase/serverless";
+import WebSocket from "ws";
 import { Pool } from "pg";
 
 const globalForPrisma = globalThis as unknown as {
@@ -14,14 +16,42 @@ if (!connectionString) {
   throw new Error("DATABASE_URL environment variable is not set");
 }
 
+type PrismaAdapterMode = "auto" | "pg" | "neon";
+
+function getAdapterMode(): PrismaAdapterMode {
+  const raw = (process.env.PRISMA_ADAPTER ?? "auto").toLowerCase();
+  if (raw === "pg" || raw === "neon" || raw === "auto") return raw;
+  return "auto";
+}
+
+function isNeonUrl(url: string) {
+  try {
+    const parsed = new URL(url);
+    return parsed.hostname.endsWith("neon.tech");
+  } catch {
+    return false;
+  }
+}
+
+function configureNeonForNode() {
+  // Neon serverless driver uses WebSockets. In Node.js, ensure a WebSocket
+  // implementation is available.
+  // (Node 22+ provides a global WebSocket, but older Node versions don't.)
+  if (typeof (globalThis as any).WebSocket === "undefined") {
+    neonConfig.webSocketConstructor = WebSocket as any;
+  }
+}
+
 function shouldUseNeonAdapter(url: string) {
-  // IMPORTANT: PrismaNeon uses WebSockets. In many Node.js environments (local dev,
-  // corporate proxies, some hosting setups), the WS upgrade can fail with
+  const mode = getAdapterMode();
+  if (mode === "neon") return true;
+  if (mode === "pg") return false;
+
+  // AUTO mode: prefer TCP (pg) unless explicitly opted into Neon.
+  // Some networks/proxies block WebSocket upgrades, which causes
   // "Received network error or non-101 status code".
-  //
-  // Only enable the Neon adapter explicitly.
   void url;
-  return process.env.PRISMA_ADAPTER === "neon";
+  return false;
 }
 
 const useNeonAdapter = shouldUseNeonAdapter(connectionString);
@@ -82,21 +112,17 @@ export const prisma =
   globalForPrisma.prisma ??
   (() => {
     const log: Prisma.LogLevel[] =
-      process.env.NODE_ENV === "development"
-        ? ["query", "error", "warn"]
-        : ["error"];
-
-    // If Prisma Client is running with engine type "client" (common with driver adapters
-    // and some Next.js/Turbopack environments), it requires an adapter.
-    // Prefer a TCP-based adapter (pg) to avoid Neon WebSocket upgrade issues.
-    const pool = getPgPool(connectionString);
+      process.env.NODE_ENV === "development" ? ["error", "warn"] : ["error"];
 
     try {
-      const adapter = (
-        useNeonAdapter
-          ? new PrismaNeon({ connectionString })
-          : new PrismaPg(pool)
-      ) as any;
+      const adapter = (() => {
+        if (useNeonAdapter) {
+          configureNeonForNode();
+          return new PrismaNeon({ connectionString });
+        }
+        const pool = getPgPool(connectionString);
+        return new PrismaPg(pool);
+      })() as any;
 
       return new PrismaClient({
         adapter,

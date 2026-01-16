@@ -14,6 +14,7 @@ import { AppHeader } from "@/components/app-header";
 import { QueryProvider } from "@/lib/query-provider";
 import prisma from "@/lib/prisma";
 import type { NavItem } from "@/components/app-sidebar";
+import { formatError } from "@/lib/utils";
 
 const navItems: NavItem[] = [
   {
@@ -77,7 +78,10 @@ export default async function OrgAdminLayout({
         select: { name: true },
       });
     } catch (e) {
-      console.warn("[org-admin-layout] Failed to load organization", e);
+      console.warn(
+        "[org-admin-layout] Failed to load organization:",
+        formatError(e)
+      );
       organization = null;
     }
   }

@@ -84,7 +84,10 @@ export default async function ExpensesLayout({
         select: { name: true },
       });
     } catch (e) {
-      console.warn("[expenses-layout] Failed to load organization", e);
+      console.warn(
+        "[expenses-layout] Failed to load organization:",
+        e instanceof Error ? e.message : String(e)
+      );
       organization = null;
     }
   }
