@@ -20,7 +20,7 @@ const staffNavItems: NavItem[] = [
   },
   {
     title: "Policies",
-    href: "/dashboard/policies",
+    href: "/policies",
     icon: "shield",
   },
 ];

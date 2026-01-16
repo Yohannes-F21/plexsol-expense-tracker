@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { LogOut } from "lucide-react";
+import { useEffect, useState } from "react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -21,6 +22,11 @@ interface AppHeaderProps {
 
 export function AppHeader({ user, organizationName }: AppHeaderProps) {
   const router = useRouter();
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const handleSignOut = async () => {
     await fetch("/api/auth/signout", { method: "POST" });
@@ -47,35 +53,51 @@ export function AppHeader({ user, organizationName }: AppHeaderProps) {
         )}
       </div>
 
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <Button variant="ghost" className="relative h-10 w-10 rounded-full">
-            <Avatar>
-              <AvatarFallback className="bg-primary text-primary-foreground ">
-                {initials}
-              </AvatarFallback>
-            </Avatar>
-          </Button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className="w-56">
-          <DropdownMenuLabel>
-            <div className="flex flex-col space-y-1">
-              <p className="text-sm font-medium">{displayName}</p>
-              <p className="text-xs text-muted-foreground truncate">
-                {user.email}
-              </p>
-            </div>
-          </DropdownMenuLabel>
-          <DropdownMenuSeparator />
-          <DropdownMenuItem
-            onClick={handleSignOut}
-            className="cursor-pointer text-destructive"
-          >
-            <LogOut className="mr-2 h-4 w-4" />
-            <span>Sign out</span>
-          </DropdownMenuItem>
-        </DropdownMenuContent>
-      </DropdownMenu>
+      {mounted ? (
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" className="relative h-10 w-10 rounded-full">
+              <Avatar>
+                <AvatarFallback className="bg-primary text-primary-foreground ">
+                  {initials}
+                </AvatarFallback>
+              </Avatar>
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-56">
+            <DropdownMenuLabel>
+              <div className="flex flex-col space-y-1">
+                <p className="text-sm font-medium">{displayName}</p>
+                <p className="text-xs text-muted-foreground truncate">
+                  {user.email}
+                </p>
+              </div>
+            </DropdownMenuLabel>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem
+              onClick={handleSignOut}
+              className="cursor-pointer text-destructive"
+            >
+              <LogOut className="mr-2 h-4 w-4" />
+              <span>Sign out</span>
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      ) : (
+        <Button
+          variant="ghost"
+          className="relative h-10 w-10 rounded-full"
+          type="button"
+          aria-label="User menu"
+          disabled
+        >
+          <Avatar>
+            <AvatarFallback className="bg-primary text-primary-foreground ">
+              {initials}
+            </AvatarFallback>
+          </Avatar>
+        </Button>
+      )}
     </header>
   );
 }

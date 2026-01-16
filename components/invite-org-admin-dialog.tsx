@@ -31,7 +31,6 @@ export function InviteOrgAdminDialog({
   onSuccess,
 }: InviteOrgAdminDialogProps) {
   const [email, setEmail] = useState("");
-  const [inviteUrl, setInviteUrl] = useState<string | null>(null);
 
   const inviteMutation = useMutation({
     mutationFn: (data: {
@@ -39,17 +38,17 @@ export function InviteOrgAdminDialog({
       role: string;
       organizationId: string;
     }) =>
-      apiClient<{ invitation: { inviteUrl: string } }>(
+      apiClient<{ success: true }>(
         "/api/invitations/send",
         {
           method: "POST",
           body: JSON.stringify(data),
         }
       ),
-    onSuccess: (data) => {
-      toast.success("Invitation sent successfully");
-      setInviteUrl(data.invitation.inviteUrl);
+    onSuccess: (_data, variables) => {
+      toast.success(`Invitation sent successfully to ${variables.email}`);
       onSuccess?.();
+      handleClose();
     },
     onError: (error: any) => {
       console.error("[v0] Send invitation error:", error);
@@ -70,7 +69,6 @@ export function InviteOrgAdminDialog({
 
   const handleClose = () => {
     setEmail("");
-    setInviteUrl(null);
     onOpenChange(false);
   };
 
@@ -83,54 +81,29 @@ export function InviteOrgAdminDialog({
             Send an invitation for an organization administrator
           </DialogDescription>
         </DialogHeader>
-        {inviteUrl ? (
+        <form onSubmit={handleSubmit}>
           <div className="space-y-4">
             <div className="space-y-2">
-              <Label>Invitation Link</Label>
-              <div className="flex gap-2">
-                <Input value={inviteUrl} readOnly />
-                <Button
-                  onClick={() => {
-                    navigator.clipboard.writeText(inviteUrl);
-                    toast.success("Link copied to clipboard");
-                  }}
-                >
-                  Copy
-                </Button>
-              </div>
+              <Label htmlFor="email">Admin Email</Label>
+              <Input
+                id="email"
+                type="email"
+                placeholder="admin@example.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+              />
             </div>
-            <p className="text-sm text-muted-foreground">
-              Share this link with the invited admin. It expires in 7 days.
-            </p>
-            <DialogFooter>
-              <Button onClick={handleClose}>Done</Button>
-            </DialogFooter>
           </div>
-        ) : (
-          <form onSubmit={handleSubmit}>
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="email">Admin Email</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  placeholder="admin@example.com"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  required
-                />
-              </div>
-            </div>
-            <DialogFooter className="mt-6">
-              <Button type="button" variant="outline" onClick={handleClose}>
-                Cancel
-              </Button>
-              <Button type="submit" disabled={inviteMutation.isPending}>
-                {inviteMutation.isPending ? "Sending..." : "Send Invitation"}
-              </Button>
-            </DialogFooter>
-          </form>
-        )}
+          <DialogFooter className="mt-6">
+            <Button type="button" variant="outline" onClick={handleClose}>
+              Cancel
+            </Button>
+            <Button type="submit" disabled={inviteMutation.isPending}>
+              {inviteMutation.isPending ? "Sending..." : "Send Invitation"}
+            </Button>
+          </DialogFooter>
+        </form>
       </DialogContent>
     </Dialog>
   );

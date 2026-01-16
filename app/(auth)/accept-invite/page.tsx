@@ -66,7 +66,7 @@ function AcceptInviteForm() {
 
       // Redirect based on role
       if (data.user.role === "ORG_ADMIN") {
-        router.push("/admin");
+        router.push("/org-admin/dashboard");
       } else {
         router.push("/dashboard");
       }
@@ -80,7 +80,7 @@ function AcceptInviteForm() {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-muted/30 p-4">
-      <Card className="w-full max-w-md">
+      <Card className="w-full max-w-md shadow-2xl shadow-primary/50 backdrop-blur">
         <CardHeader>
           <CardTitle className="text-2xl">Accept Invitation</CardTitle>
           <CardDescription>Complete your account setup</CardDescription>
@@ -127,7 +127,7 @@ function AcceptInviteForm() {
               />
             </div>
           </CardContent>
-          <CardFooter>
+          <CardFooter className="mt-4">
             <Button type="submit" className="w-full" disabled={isLoading}>
               {isLoading ? "Creating account..." : "Accept & Create Account"}
             </Button>

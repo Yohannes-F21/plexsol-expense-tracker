@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireRole } from "@/lib/auth";
 import { createInvitation } from "@/lib/invitation";
+import { sendInviteEmail } from "@/lib/email";
 import { prisma } from "@/lib/prisma";
 import { Prisma } from "@prisma/client";
 import { z } from "zod";
@@ -18,6 +19,7 @@ export async function POST(request: Request) {
     const validatedData = invitationSchema.parse(body);
 
     let organizationId: string;
+    let organizationName: string;
 
     if (session.role === "SUPER_ADMIN") {
       // Super Admin must specify org and can only invite ORG_ADMIN
@@ -45,6 +47,8 @@ export async function POST(request: Request) {
           { status: 404 }
         );
       }
+
+      organizationName = org.name;
     } else {
       // Org Admin can only invite STAFF to their own organization
       if (!session.organizationId) {
@@ -60,6 +64,20 @@ export async function POST(request: Request) {
         );
       }
       organizationId = session.organizationId;
+
+      const org = await prisma.organization.findUnique({
+        where: { id: organizationId },
+        select: { name: true },
+      });
+
+      if (!org) {
+        return NextResponse.json(
+          { error: "Organization not found" },
+          { status: 404 }
+        );
+      }
+
+      organizationName = org.name;
     }
 
     // Check if user already exists
@@ -98,6 +116,40 @@ export async function POST(request: Request) {
       validatedData.role
     );
 
+    const appUrlFromEnv = process.env.NEXT_PUBLIC_APP_URL;
+    const baseUrl = (appUrlFromEnv ?? new URL(request.url).origin).replace(
+      /\/$/,
+      ""
+    );
+    const inviteUrl = `${baseUrl}/accept-invite?token=${invitation.token}`;
+
+    try {
+      await sendInviteEmail({
+        to: invitation.email,
+        inviteUrl,
+        organizationName,
+        role: validatedData.role,
+        expiresAt: invitation.expiresAt,
+      });
+    } catch (e) {
+      console.error("[v0] Failed to send invite email", e);
+      try {
+        await prisma.invitation.delete({ where: { id: invitation.id } });
+      } catch (cleanupError) {
+        console.warn("[v0] Failed to cleanup invitation after email failure", cleanupError);
+      }
+
+      return NextResponse.json(
+        {
+          error:
+            e instanceof Error
+              ? e.message
+              : "Failed to send invitation email",
+        },
+        { status: 500 }
+      );
+    }
+
     try {
       await prisma.activityLog.create({
         data: {
@@ -114,20 +166,7 @@ export async function POST(request: Request) {
       console.warn("[v0] Failed to create activity log for invitation", e);
     }
 
-    // In production, you would send an email here with the invitation link
-    const inviteUrl = `${
-      process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"
-    }/accept-invite?token=${invitation.token}`;
-
-    return NextResponse.json({
-      success: true,
-      invitation: {
-        id: invitation.id,
-        email: invitation.email,
-        role: invitation.role,
-        inviteUrl,
-      },
-    });
+    return NextResponse.json({ success: true });
   } catch (error) {
     console.error("[v0] Send invitation error:", error);
     if (error instanceof z.ZodError) {

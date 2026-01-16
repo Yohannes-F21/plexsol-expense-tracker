@@ -13,6 +13,18 @@ Create a `.env` file in your project root:
 DATABASE_URL="your_neon_database_url_here"
 JWT_SECRET="your_generated_jwt_secret_here"
 
+# Public app URL (used to generate invitation acceptance links)
+NEXT_PUBLIC_APP_URL="http://localhost:3000"
+
+# SMTP (used to send invitation emails)
+EMAIL_HOST="smtp.your-provider.com"
+EMAIL_PORT="587"
+EMAIL_SECURE="false"
+EMAIL_USER="your_smtp_username"
+EMAIL_PASS="your_smtp_password"
+# Optional (defaults to EMAIL_USER)
+EMAIL_FROM="no-reply@plexsol.com"
+
 # (Optional) Receipt OCR (OCR.space + OpenAI)
 # Backend-only: never expose these keys to the client.
 OCR_SPACE_API_KEY="your_ocr_space_api_key_here"

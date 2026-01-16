@@ -18,7 +18,7 @@ import {
 } from "lucide-react";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 export type NavIconId =
   | "building-2"
@@ -114,6 +114,11 @@ function SidebarContent({
 
 export function AppSidebar({ navItems, role }: AppSidebarProps) {
   const [open, setOpen] = useState(false);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   return (
     <>
@@ -121,26 +126,39 @@ export function AppSidebar({ navItems, role }: AppSidebarProps) {
         <SidebarContent navItems={navItems} role={role} />
       </div>
 
-      <Sheet open={open} onOpenChange={setOpen}>
-        <SheetTrigger asChild className="md:hidden">
-          <Button
-            variant="ghost"
-            size="icon"
-            className="fixed top-4 left-4 z-40"
-          >
-            <Menu className="h-5 w-5" />
-          </Button>
-        </SheetTrigger>
-        <SheetContent side="left" className="p-0 w-64">
-          <div className="flex h-full flex-col bg-sidebar">
-            <SidebarContent
-              navItems={navItems}
-              role={role}
-              onNavigate={() => setOpen(false)}
-            />
-          </div>
-        </SheetContent>
-      </Sheet>
+      {mounted ? (
+        <Sheet open={open} onOpenChange={setOpen}>
+          <SheetTrigger asChild className="md:hidden">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="fixed top-4 left-4 z-40"
+            >
+              <Menu className="h-5 w-5" />
+            </Button>
+          </SheetTrigger>
+          <SheetContent side="left" className="p-0 w-64">
+            <div className="flex h-full flex-col bg-sidebar">
+              <SidebarContent
+                navItems={navItems}
+                role={role}
+                onNavigate={() => setOpen(false)}
+              />
+            </div>
+          </SheetContent>
+        </Sheet>
+      ) : (
+        <Button
+          variant="ghost"
+          size="icon"
+          className="fixed top-4 left-4 z-40 md:hidden"
+          type="button"
+          aria-label="Open navigation"
+          disabled
+        >
+          <Menu className="h-5 w-5" />
+        </Button>
+      )}
     </>
   );
 }
