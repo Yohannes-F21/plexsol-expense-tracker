@@ -132,12 +132,12 @@ export async function POST(request: Request) {
         expiresAt: invitation.expiresAt,
       });
     } catch (e) {
-      console.error("[v0] Failed to send invite email", e);
+      console.error(" Failed to send invite email", e);
       try {
         await prisma.invitation.delete({ where: { id: invitation.id } });
       } catch (cleanupError) {
         console.warn(
-          "[v0] Failed to cleanup invitation after email failure",
+          "Failed to cleanup invitation after email failure",
           cleanupError
         );
       }
@@ -164,12 +164,12 @@ export async function POST(request: Request) {
         },
       });
     } catch (e) {
-      console.warn("[v0] Failed to create activity log for invitation", e);
+      console.warn(" Failed to create activity log for invitation", e);
     }
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error("[v0] Send invitation error:", error);
+    console.error(" Send invitation error:", error);
     if (error instanceof z.ZodError) {
       return NextResponse.json(
         { error: "Invalid input", details: error.errors },

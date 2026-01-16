@@ -48,8 +48,22 @@ export function InviteOrgAdminDialog({
       handleClose();
     },
     onError: (error: any) => {
-      console.error("[v0] Send invitation error:", error);
-      toast.error(error.error || "Failed to send invitation");
+      const message =
+        typeof error === "string"
+          ? error
+          : error instanceof Error
+            ? error.message
+            : typeof error?.message === "string"
+              ? error.message
+              : typeof error?.error === "string"
+                ? error.error
+                : "Failed to send invitation";
+
+      if (message === "Failed to send invitation") {
+        console.error("Send invitation error:", error);
+      }
+
+      toast.error(message);
     },
   });
 
