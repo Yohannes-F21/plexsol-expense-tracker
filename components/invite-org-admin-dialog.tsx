@@ -38,13 +38,10 @@ export function InviteOrgAdminDialog({
       role: string;
       organizationId: string;
     }) =>
-      apiClient<{ success: true }>(
-        "/api/invitations/send",
-        {
-          method: "POST",
-          body: JSON.stringify(data),
-        }
-      ),
+      apiClient<{ success: true }>("/api/invitations/send", {
+        method: "POST",
+        body: JSON.stringify(data),
+      }),
     onSuccess: (_data, variables) => {
       toast.success(`Invitation sent successfully to ${variables.email}`);
       onSuccess?.();

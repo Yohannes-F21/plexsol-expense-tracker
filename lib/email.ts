@@ -30,9 +30,7 @@ function getSmtpConfig() {
   return { host, port, secure, user, pass, fromEmail };
 }
 
-let cachedTransport:
-  | ReturnType<typeof nodemailer.createTransport>
-  | undefined;
+let cachedTransport: ReturnType<typeof nodemailer.createTransport> | undefined;
 
 function getTransport() {
   if (cachedTransport) return cachedTransport;
@@ -83,7 +81,10 @@ export async function sendInviteEmail({
   const textLines = [
     "Hello,",
     "",
-    `You have been invited to join ${organizationName} as ${role.replace("_", " ")}.`,
+    `You have been invited to join ${organizationName} as ${role.replace(
+      "_",
+      " "
+    )}.`,
     "",
     "To accept the invitation, use the link below:",
     inviteUrl,

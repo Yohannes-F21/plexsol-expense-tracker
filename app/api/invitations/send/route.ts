@@ -136,15 +136,16 @@ export async function POST(request: Request) {
       try {
         await prisma.invitation.delete({ where: { id: invitation.id } });
       } catch (cleanupError) {
-        console.warn("[v0] Failed to cleanup invitation after email failure", cleanupError);
+        console.warn(
+          "[v0] Failed to cleanup invitation after email failure",
+          cleanupError
+        );
       }
 
       return NextResponse.json(
         {
           error:
-            e instanceof Error
-              ? e.message
-              : "Failed to send invitation email",
+            e instanceof Error ? e.message : "Failed to send invitation email",
         },
         { status: 500 }
       );
