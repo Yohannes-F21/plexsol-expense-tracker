@@ -39,6 +39,7 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { useState } from "react";
 import { ArrowLeft } from "lucide-react";
+import { Loader } from "@/components/loader";
 
 type ApprovalAction = "APPROVED" | "REJECTED";
 
@@ -161,7 +162,12 @@ export default function OrgAdminApprovalDetailPage({
     },
   });
 
-  if (isLoading) return <div className="text-muted-foreground">Loading...</div>;
+  if (isLoading)
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <Loader size="lg" ariaLabel="Loading expense" showLabel />
+      </div>
+    );
   if (error)
     return <div className="text-destructive">{(error as Error).message}</div>;
   if (!expense)
@@ -169,15 +175,13 @@ export default function OrgAdminApprovalDetailPage({
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="space-y-3">
+        <BackButton href="/org-admin/approvals" className="self-start" />
         <div>
           <h1 className="text-2xl font-semibold">Approval</h1>
           <p className="text-sm text-muted-foreground">
             Review receipt details and take action.
           </p>
-        </div>
-        <div className="flex gap-2">
-          <BackButton href="/org-admin/approvals" />
         </div>
       </div>
 

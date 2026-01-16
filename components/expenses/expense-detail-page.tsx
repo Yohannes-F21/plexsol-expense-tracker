@@ -62,15 +62,15 @@ export function ExpenseDetailPage(props: {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold">Receipt</h1>
-          <p className="text-sm text-muted-foreground">
-            Read-only receipt view.
-          </p>
-        </div>
-        <div className="flex gap-2">
-          <BackButton href={props.backHref} />
+      <div className="space-y-3">
+        <BackButton href={props.backHref} className="self-start" />
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <h1 className="text-2xl font-semibold">Receipt</h1>
+            <p className="text-sm text-muted-foreground">
+              Read-only receipt view.
+            </p>
+          </div>
           {showEdit ? (
             <Button asChild>
               <Link href={`/expenses/${expense.id}/edit`}>Edit</Link>

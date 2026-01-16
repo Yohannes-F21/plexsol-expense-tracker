@@ -49,14 +49,14 @@ export function ExpenseFormPage(props: {
     ) {
       return (
         <div className="space-y-6">
-          <div className="flex items-center justify-between">
+          <div className="space-y-3">
+            <BackButton href={props.backHref} className="self-start" />
             <div>
               <h1 className="text-2xl font-semibold">Edit Expense</h1>
               <p className="text-sm text-muted-foreground">
                 This expense can’t be edited.
               </p>
             </div>
-            <BackButton href={props.backHref} />
           </div>
         </div>
       );
@@ -65,7 +65,8 @@ export function ExpenseFormPage(props: {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="space-y-3">
+        <BackButton href={props.backHref} className="self-start" />
         <div>
           <h1 className="text-2xl font-semibold">
             {props.mode === "create" ? "New Expense" : "Edit Expense"}
@@ -76,7 +77,6 @@ export function ExpenseFormPage(props: {
               : "Update receipt info and items."}
           </p>
         </div>
-        <BackButton href={props.backHref} />
       </div>
 
       <ReceiptExpenseForm

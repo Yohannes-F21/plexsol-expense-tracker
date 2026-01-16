@@ -52,12 +52,12 @@ export function InviteOrgAdminDialog({
         typeof error === "string"
           ? error
           : error instanceof Error
-            ? error.message
-            : typeof error?.message === "string"
-              ? error.message
-              : typeof error?.error === "string"
-                ? error.error
-                : "Failed to send invitation";
+          ? error.message
+          : typeof error?.message === "string"
+          ? error.message
+          : typeof error?.error === "string"
+          ? error.error
+          : "Failed to send invitation";
 
       if (message === "Failed to send invitation") {
         console.error("Send invitation error:", error);
