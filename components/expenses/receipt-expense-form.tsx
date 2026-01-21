@@ -922,47 +922,38 @@ export function ReceiptExpenseForm(props: {
                   )}
                 />
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div
-                    className={
-                      paymentMethod === "CHECK" ||
-                      paymentMethod === "BANK_TRANSFER"
-                        ? ""
-                        : "md:col-span-2"
-                    }
-                  >
-                    <FormField
-                      control={form.control}
-                      name="paymentMethod"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Payment Method</FormLabel>
-                          <Select
-                            value={field.value}
-                            onValueChange={field.onChange}
-                          >
-                            <FormControl>
-                              <SelectTrigger>
-                                <SelectValue placeholder="Select payment method" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              <SelectItem value="CASH">Cash</SelectItem>
-                              <SelectItem value="CHECK">Check</SelectItem>
-                              <SelectItem value="CREDIT_CARD">
-                                Credit Card
-                              </SelectItem>
-                              <SelectItem value="BANK_TRANSFER">
-                                Bank Transfer
-                              </SelectItem>
-                              <SelectItem value="OTHER">Other</SelectItem>
-                            </SelectContent>
-                          </Select>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
+                <div className="grid grid-cols-1 gap-4">
+                  <FormField
+                    control={form.control}
+                    name="paymentMethod"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Payment Method</FormLabel>
+                        <Select
+                          value={field.value}
+                          onValueChange={field.onChange}
+                        >
+                          <FormControl>
+                            <SelectTrigger className="">
+                              <SelectValue placeholder="Select payment method" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="CASH">Cash</SelectItem>
+                            <SelectItem value="CHECK">Check</SelectItem>
+                            <SelectItem value="CREDIT_CARD">
+                              Credit Card
+                            </SelectItem>
+                            <SelectItem value="BANK_TRANSFER">
+                              Bank Transfer
+                            </SelectItem>
+                            <SelectItem value="OTHER">Other</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
 
                   {paymentMethod === "CHECK" ? (
                     <FormField
@@ -1238,12 +1229,26 @@ export function ReceiptExpenseForm(props: {
                           }
                           disabled={isLoadingPurchaseTypes}
                         >
-                          <SelectTrigger>
-                            <SelectValue
-                              placeholder={
-                                isLoadingPurchaseTypes ? "Loading..." : "Select"
-                              }
-                            />
+                          <SelectTrigger className="w-full">
+                            {it.purchaseTypeId ? (
+                              <span
+                                data-slot="select-value"
+                                className="line-clamp-1 flex items-center gap-2"
+                              >
+                                <span className="tabular-nums">
+                                  {purchaseTypeById.get(it.purchaseTypeId)
+                                    ?.label ?? ""}
+                                </span>
+                              </span>
+                            ) : (
+                              <SelectValue
+                                placeholder={
+                                  isLoadingPurchaseTypes
+                                    ? "Loading..."
+                                    : "Select"
+                                }
+                              />
+                            )}
                           </SelectTrigger>
                           <SelectContent>
                             {purchaseTypes.map((p) => (

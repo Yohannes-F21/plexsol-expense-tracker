@@ -175,9 +175,9 @@ export default function OrgAdminApprovalDetailPage({
 
   return (
     <div className="space-y-6">
-      <div className="space-y-3">
-        <BackButton href="/org-admin/approvals" className="self-start" />
-        <div>
+      <div className="flex items-start gap-4">
+        <BackButton href="/org-admin/approvals" />
+        <div className="pt-0.5">
           <h1 className="text-2xl font-semibold">Approval</h1>
           <p className="text-sm text-muted-foreground">
             Review receipt details and take action.

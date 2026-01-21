@@ -62,10 +62,10 @@ export function ExpenseDetailPage(props: {
 
   return (
     <div className="space-y-6">
-      <div className="space-y-3">
-        <BackButton href={props.backHref} className="self-start" />
-        <div className="flex items-start justify-between gap-4">
-          <div>
+      <div className="flex items-start gap-4">
+        <BackButton href={props.backHref} />
+        <div className="flex w-full items-start justify-between gap-4">
+          <div className="pt-0.5">
             <h1 className="text-2xl font-semibold">Receipt</h1>
             <p className="text-sm text-muted-foreground">
               Read-only receipt view.
@@ -201,6 +201,26 @@ export function ExpenseDetailPage(props: {
                     {String(expense.paymentMethod).replace(/_/g, " ")}
                   </span>
                 </div>
+
+                {expense.checkNumber ? (
+                  <div className="flex items-start justify-between gap-4">
+                    <span className="text-muted-foreground">Check No.</span>
+                    <span className="text-right font-mono text-xs">
+                      {expense.checkNumber}
+                    </span>
+                  </div>
+                ) : null}
+
+                {expense.bankAccountId ? (
+                  <div className="flex items-start justify-between gap-4">
+                    <span className="text-muted-foreground">Bank Account</span>
+                    <span className="text-right text-xs">
+                      {expense.bankAccount
+                        ? `${expense.bankAccount.bankName} — ${expense.bankAccount.accountHolderName} — ${expense.bankAccount.accountNumber}`
+                        : expense.bankAccountId}
+                    </span>
+                  </div>
+                ) : null}
 
                 {props.role === "ORG_ADMIN" ? (
                   <div className="flex items-start justify-between gap-4">

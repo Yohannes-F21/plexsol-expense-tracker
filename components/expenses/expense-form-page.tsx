@@ -49,9 +49,9 @@ export function ExpenseFormPage(props: {
     ) {
       return (
         <div className="space-y-6">
-          <div className="space-y-3">
-            <BackButton href={props.backHref} className="self-start" />
-            <div>
+          <div className="flex items-start gap-4">
+            <BackButton href={props.backHref} />
+            <div className="pt-0.5">
               <h1 className="text-2xl font-semibold">Edit Expense</h1>
               <p className="text-sm text-muted-foreground">
                 This expense can’t be edited.
@@ -65,9 +65,9 @@ export function ExpenseFormPage(props: {
 
   return (
     <div className="space-y-6">
-      <div className="space-y-3">
-        <BackButton href={props.backHref} className="self-start" />
-        <div>
+      <div className="flex items-start gap-4">
+        <BackButton href={props.backHref} />
+        <div className="pt-0.5">
           <h1 className="text-2xl font-semibold">
             {props.mode === "create" ? "New Expense" : "Edit Expense"}
           </h1>

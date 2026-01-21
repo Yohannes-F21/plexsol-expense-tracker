@@ -488,6 +488,15 @@ export async function GET(request: Request, context: any) {
         paymentMethod: true,
         checkNumber: true,
         bankAccountId: true,
+        bankAccount: {
+          select: {
+            id: true,
+            bankName: true,
+            accountHolderName: true,
+            accountNumber: true,
+            isActive: true,
+          },
+        },
         subtotal: true,
         vat: true,
         total: true,
