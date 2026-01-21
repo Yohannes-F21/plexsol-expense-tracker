@@ -24,16 +24,40 @@ const expenseItemSchema = z.object({
   purchaseTypeId: z.string().optional(),
 });
 
-const createExpenseSchema = z.object({
-  purchasedDate: z.coerce.date(),
-  companyName: z.string().min(1),
-  tinNumber: z.string().min(1),
-  fsNumber: z.string().min(1),
-  mrcNumber: z.string().trim().optional(),
-  invoiceNumber: z.string().optional(),
-  paymentMethod: paymentMethodSchema,
-  items: z.array(expenseItemSchema).min(1),
-});
+const createExpenseSchema = z
+  .object({
+    purchasedDate: z.coerce.date(),
+    companyName: z.string().min(1),
+    tinNumber: z.string().min(1),
+    fsNumber: z.string().min(1),
+    mrcNumber: z.string().trim().optional(),
+    invoiceNumber: z.string().optional(),
+    paymentMethod: paymentMethodSchema,
+    checkNumber: z.string().trim().optional(),
+    bankAccountId: z.string().trim().optional(),
+    items: z.array(expenseItemSchema).min(1),
+  })
+  .superRefine((values, ctx) => {
+    if (values.paymentMethod === "CHECK") {
+      if (!values.checkNumber?.trim()) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["checkNumber"],
+          message: "Check number is required",
+        });
+      }
+    }
+
+    if (values.paymentMethod === "BANK_TRANSFER") {
+      if (!values.bankAccountId?.trim()) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["bankAccountId"],
+          message: "Bank account is required",
+        });
+      }
+    }
+  });
 
 function round2(value: number) {
   return Math.round((value + Number.EPSILON) * 100) / 100;
@@ -150,6 +174,9 @@ export async function POST(request: Request) {
     const body = await request.json();
     const data = createExpenseSchema.parse(body);
 
+    const checkNumber = data.checkNumber?.trim();
+    const bankAccountId = data.bankAccountId?.trim();
+
     const normalizedItems = data.items.map((it) => ({
       ...it,
       vatCategory: (it.vatCategory ?? "G") as "G" | "S",
@@ -198,6 +225,23 @@ export async function POST(request: Request) {
       }
     }
 
+    if (data.paymentMethod === "BANK_TRANSFER") {
+      const found = await prisma.bankAccount.findFirst({
+        where: {
+          id: bankAccountId,
+          organizationId: session.organizationId,
+          isActive: true,
+        },
+        select: { id: true },
+      });
+      if (!found) {
+        return NextResponse.json(
+          { error: "Invalid bank account selection" },
+          { status: 400 }
+        );
+      }
+    }
+
     const computedItems = normalizedItems.map((it) => {
       const lineTotal = round2(it.quantity * it.unitPrice);
       return {
@@ -238,6 +282,12 @@ export async function POST(request: Request) {
           mrcNumber: data.mrcNumber?.trim() || null,
           invoiceNumber: data.invoiceNumber || null,
           paymentMethod: data.paymentMethod,
+          checkNumber:
+            data.paymentMethod === "CHECK" ? checkNumber ?? null : null,
+          bankAccountId:
+            data.paymentMethod === "BANK_TRANSFER"
+              ? bankAccountId ?? null
+              : null,
           subtotal: new Prisma.Decimal(subtotal),
           vat: new Prisma.Decimal(vat),
           total: new Prisma.Decimal(total),
@@ -269,6 +319,8 @@ export async function POST(request: Request) {
           mrcNumber: true,
           invoiceNumber: true,
           paymentMethod: true,
+          checkNumber: true,
+          bankAccountId: true,
           subtotal: true,
           vat: true,
           total: true,

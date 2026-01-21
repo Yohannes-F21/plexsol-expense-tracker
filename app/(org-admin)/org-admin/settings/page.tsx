@@ -34,6 +34,17 @@ export default function OrgAdminSettingsPage() {
             </CardContent>
           </Card>
         </Link>
+
+        <Link href="/org-admin/settings/bank-accounts" className="block">
+          <Card className="shadow-sm">
+            <CardHeader>
+              <CardTitle>Bank Accounts</CardTitle>
+            </CardHeader>
+            <CardContent className="text-sm text-muted-foreground">
+              Create and manage bank accounts for transfers.
+            </CardContent>
+          </Card>
+        </Link>
       </div>
     </div>
   );

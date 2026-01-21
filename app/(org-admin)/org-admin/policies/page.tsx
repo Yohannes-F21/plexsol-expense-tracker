@@ -412,7 +412,7 @@ function PolicyCard({
           <div className="flex items-center gap-2">
             <Button
               size="icon"
-              variant="outline"
+              variant="ghost"
               onClick={onView}
               aria-label="View"
               className="h-9 w-9"
@@ -421,7 +421,7 @@ function PolicyCard({
             </Button>
             <Button
               size="icon"
-              variant="outline"
+              variant="ghost"
               onClick={onEdit}
               aria-label="Edit"
               className="h-9 w-9"
@@ -430,7 +430,7 @@ function PolicyCard({
             </Button>
             <Button
               size="icon"
-              variant="outline"
+              variant="ghost"
               onClick={onDelete}
               aria-label="Delete"
               className="h-9 w-9"

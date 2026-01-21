@@ -33,6 +33,8 @@ const updateExpenseSchema = z.object({
   mrcNumber: z.string().trim().optional(),
   invoiceNumber: z.string().optional(),
   paymentMethod: paymentMethodSchema.optional(),
+  checkNumber: z.string().trim().optional(),
+  bankAccountId: z.string().trim().optional(),
   items: z.array(expenseItemSchema).min(1).optional(),
 });
 
@@ -114,6 +116,8 @@ export async function PUT(request: Request, context: any) {
         mrcNumber: true,
         invoiceNumber: true,
         paymentMethod: true,
+        checkNumber: true,
+        bankAccountId: true,
         items: {
           select: {
             id: true,
@@ -169,6 +173,49 @@ export async function PUT(request: Request, context: any) {
         ? data.invoiceNumber || null
         : expense.invoiceNumber;
     const nextPaymentMethod = data.paymentMethod ?? expense.paymentMethod;
+
+    const nextCheckNumber =
+      data.checkNumber !== undefined
+        ? data.checkNumber?.trim() || null
+        : expense.checkNumber;
+
+    const nextBankAccountId =
+      data.bankAccountId !== undefined
+        ? data.bankAccountId?.trim() || null
+        : expense.bankAccountId;
+
+    if (nextPaymentMethod === "CHECK") {
+      if (!nextCheckNumber) {
+        return NextResponse.json(
+          { error: "Check number is required" },
+          { status: 400 }
+        );
+      }
+    }
+
+    if (nextPaymentMethod === "BANK_TRANSFER") {
+      if (!nextBankAccountId) {
+        return NextResponse.json(
+          { error: "Bank account is required" },
+          { status: 400 }
+        );
+      }
+
+      const found = await prisma.bankAccount.findFirst({
+        where: {
+          id: nextBankAccountId,
+          organizationId: session.organizationId,
+          isActive: true,
+        },
+        select: { id: true },
+      });
+      if (!found) {
+        return NextResponse.json(
+          { error: "Invalid bank account selection" },
+          { status: 400 }
+        );
+      }
+    }
 
     const itemsInput = data.items;
     const normalizedItems = (itemsInput ?? expense.items).map((it: any) => ({
@@ -270,6 +317,8 @@ export async function PUT(request: Request, context: any) {
         mrcNumber: true,
         invoiceNumber: true,
         paymentMethod: true,
+        checkNumber: true,
+        bankAccountId: true,
         subtotal: true,
         vat: true,
         total: true,
@@ -289,6 +338,8 @@ export async function PUT(request: Request, context: any) {
       mrcNumber: previousExpense.mrcNumber,
       invoiceNumber: previousExpense.invoiceNumber,
       paymentMethod: previousExpense.paymentMethod,
+      checkNumber: previousExpense.checkNumber,
+      bankAccountId: previousExpense.bankAccountId,
       subtotal:
         previousExpense.subtotal?.toString?.() ??
         String(previousExpense.subtotal),
@@ -313,6 +364,9 @@ export async function PUT(request: Request, context: any) {
           mrcNumber: nextMrcNumber,
           invoiceNumber: nextInvoiceNumber,
           paymentMethod: nextPaymentMethod,
+          checkNumber: nextPaymentMethod === "CHECK" ? nextCheckNumber : null,
+          bankAccountId:
+            nextPaymentMethod === "BANK_TRANSFER" ? nextBankAccountId : null,
           subtotal: new Prisma.Decimal(subtotal),
           vat: new Prisma.Decimal(vat),
           total: new Prisma.Decimal(total),
@@ -346,6 +400,8 @@ export async function PUT(request: Request, context: any) {
           mrcNumber: true,
           invoiceNumber: true,
           paymentMethod: true,
+          checkNumber: true,
+          bankAccountId: true,
           subtotal: true,
           vat: true,
           total: true,
@@ -370,6 +426,8 @@ export async function PUT(request: Request, context: any) {
             mrcNumber: updatedExpense.mrcNumber,
             invoiceNumber: updatedExpense.invoiceNumber,
             paymentMethod: updatedExpense.paymentMethod,
+            checkNumber: updatedExpense.checkNumber,
+            bankAccountId: updatedExpense.bankAccountId,
             subtotal:
               updatedExpense.subtotal?.toString?.() ??
               String(updatedExpense.subtotal),
@@ -428,6 +486,8 @@ export async function GET(request: Request, context: any) {
         mrcNumber: true,
         invoiceNumber: true,
         paymentMethod: true,
+        checkNumber: true,
+        bankAccountId: true,
         subtotal: true,
         vat: true,
         total: true,

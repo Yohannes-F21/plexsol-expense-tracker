@@ -63,15 +63,39 @@ const itemSchema = z.object({
   unitPrice: z.coerce.number().nonnegative("Unit price must be >= 0"),
 });
 
-const receiptSchema = z.object({
-  purchasedDate: z.string().min(1, "Purchased date is required"),
-  companyName: z.string().min(1, "Company name is required"),
-  tinNumber: z.string().min(1, "TIN is required"),
-  fsNumber: z.string().min(1, "FS number is required"),
-  mrcNumber: z.string().optional(),
-  invoiceNumber: z.string().optional(),
-  paymentMethod: paymentMethodSchema,
-});
+const receiptSchema = z
+  .object({
+    purchasedDate: z.string().min(1, "Purchased date is required"),
+    companyName: z.string().min(1, "Company name is required"),
+    tinNumber: z.string().min(1, "TIN is required"),
+    fsNumber: z.string().min(1, "FS number is required"),
+    mrcNumber: z.string().optional(),
+    invoiceNumber: z.string().optional(),
+    paymentMethod: paymentMethodSchema,
+    checkNumber: z.string().trim().optional(),
+    bankAccountId: z.string().trim().optional(),
+  })
+  .superRefine((values, ctx) => {
+    if (values.paymentMethod === "CHECK") {
+      if (!values.checkNumber?.trim()) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["checkNumber"],
+          message: "Check number is required",
+        });
+      }
+    }
+
+    if (values.paymentMethod === "BANK_TRANSFER") {
+      if (!values.bankAccountId?.trim()) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["bankAccountId"],
+          message: "Bank account is required",
+        });
+      }
+    }
+  });
 
 export type ReceiptExpenseItemInput = z.infer<typeof itemSchema>;
 export type ReceiptExpenseHeaderInput = z.infer<typeof receiptSchema>;
@@ -233,6 +257,8 @@ export type ReceiptExpenseDetail = {
   mrcNumber: string | null;
   invoiceNumber: string | null;
   paymentMethod: z.infer<typeof paymentMethodSchema>;
+  checkNumber?: string | null;
+  bankAccountId?: string | null;
   subtotal: any;
   vat: any;
   total: any;
@@ -350,8 +376,21 @@ export function ReceiptExpenseForm(props: {
       mrcNumber: props.initial?.mrcNumber ?? "",
       invoiceNumber: props.initial?.invoiceNumber ?? "",
       paymentMethod: (props.initial?.paymentMethod as any) ?? "CASH",
+      checkNumber: props.initial?.checkNumber ?? "",
+      bankAccountId: props.initial?.bankAccountId ?? "",
     },
   });
+
+  const paymentMethod = form.watch("paymentMethod");
+
+  useEffect(() => {
+    if (paymentMethod !== "CHECK") {
+      form.setValue("checkNumber", "");
+    }
+    if (paymentMethod !== "BANK_TRANSFER") {
+      form.setValue("bankAccountId", "");
+    }
+  }, [paymentMethod, form]);
 
   const { data: categoriesPayload, isLoading: isLoadingCategories } = useQuery({
     queryKey: ["categories"],
@@ -411,8 +450,36 @@ export function ReceiptExpenseForm(props: {
       staleTime: 5 * 60 * 1000,
     });
 
+  const { data: bankAccountsPayload, isLoading: isLoadingBankAccounts } =
+    useQuery({
+      queryKey: ["org-admin-bank-accounts"],
+      queryFn: async () => {
+        const res = await fetch("/api/org-admin/bank-accounts", {
+          cache: "no-store",
+        });
+        const payload = await res.json();
+        if (!res.ok)
+          throw new Error(payload.error || "Failed to load bank accounts");
+        return payload as {
+          bankAccounts: Array<{
+            id: string;
+            bankName: string;
+            accountHolderName: string;
+            accountNumber: string;
+            isActive: boolean;
+          }>;
+        };
+      },
+      staleTime: 5 * 60 * 1000,
+    });
+
   const units = unitsPayload?.units ?? [];
   const purchaseTypes = purchaseTypesPayload?.purchaseTypes ?? [];
+  const bankAccounts = bankAccountsPayload?.bankAccounts ?? [];
+  const activeBankAccounts = useMemo(
+    () => bankAccounts.filter((b) => b.isActive),
+    [bankAccounts]
+  );
 
   const unitById = useMemo(() => {
     return new Map(units.map((u) => [u.id, u] as const));
@@ -599,6 +666,9 @@ export function ReceiptExpenseForm(props: {
       return;
     }
 
+    const checkNumber = header.checkNumber?.trim();
+    const bankAccountId = header.bankAccountId?.trim();
+
     const payload = {
       purchasedDate: new Date(header.purchasedDate),
       companyName: header.companyName,
@@ -607,6 +677,9 @@ export function ReceiptExpenseForm(props: {
       mrcNumber: header.mrcNumber?.trim() || undefined,
       invoiceNumber: header.invoiceNumber?.trim() || undefined,
       paymentMethod: header.paymentMethod,
+      checkNumber: header.paymentMethod === "CHECK" ? checkNumber : undefined,
+      bankAccountId:
+        header.paymentMethod === "BANK_TRANSFER" ? bankAccountId : undefined,
       items: parsedItems.data,
     };
 
@@ -849,37 +922,104 @@ export function ReceiptExpenseForm(props: {
                   )}
                 />
 
-                <FormField
-                  control={form.control}
-                  name="paymentMethod"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Payment Method</FormLabel>
-                      <Select
-                        value={field.value}
-                        onValueChange={field.onChange}
-                      >
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select payment method" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value="CASH">Cash</SelectItem>
-                          <SelectItem value="CHECK">Check</SelectItem>
-                          <SelectItem value="CREDIT_CARD">
-                            Credit Card
-                          </SelectItem>
-                          <SelectItem value="BANK_TRANSFER">
-                            Bank Transfer
-                          </SelectItem>
-                          <SelectItem value="OTHER">Other</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div
+                    className={
+                      paymentMethod === "CHECK" ||
+                      paymentMethod === "BANK_TRANSFER"
+                        ? ""
+                        : "md:col-span-2"
+                    }
+                  >
+                    <FormField
+                      control={form.control}
+                      name="paymentMethod"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Payment Method</FormLabel>
+                          <Select
+                            value={field.value}
+                            onValueChange={field.onChange}
+                          >
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select payment method" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              <SelectItem value="CASH">Cash</SelectItem>
+                              <SelectItem value="CHECK">Check</SelectItem>
+                              <SelectItem value="CREDIT_CARD">
+                                Credit Card
+                              </SelectItem>
+                              <SelectItem value="BANK_TRANSFER">
+                                Bank Transfer
+                              </SelectItem>
+                              <SelectItem value="OTHER">Other</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+
+                  {paymentMethod === "CHECK" ? (
+                    <FormField
+                      control={form.control}
+                      name="checkNumber"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Check Number</FormLabel>
+                          <FormControl>
+                            <Input
+                              placeholder="Enter check number"
+                              {...field}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  ) : null}
+
+                  {paymentMethod === "BANK_TRANSFER" ? (
+                    <FormField
+                      control={form.control}
+                      name="bankAccountId"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Bank Account</FormLabel>
+                          <Select
+                            value={field.value}
+                            onValueChange={field.onChange}
+                            disabled={isLoadingBankAccounts}
+                          >
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue
+                                  placeholder={
+                                    isLoadingBankAccounts
+                                      ? "Loading bank accounts..."
+                                      : "Select bank account"
+                                  }
+                                />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              {activeBankAccounts.map((b) => (
+                                <SelectItem key={b.id} value={b.id}>
+                                  {`${b.bankName} — ${b.accountHolderName} — ${b.accountNumber}`}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  ) : null}
+                </div>
               </div>
             </Form>
           </CardContent>

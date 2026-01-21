@@ -92,6 +92,7 @@ model Organization {
   categories        Category[]
   unitsOfMeasure    UnitOfMeasure[]
   purchaseTypes     PurchaseType[]
+  bankAccounts      BankAccount[]
   expensePolicies   ExpensePolicy[]
   activityLogs      ActivityLog[]
   
@@ -164,6 +165,8 @@ model Expense {
   mrcNumber         String?
   invoiceNumber     String?
   paymentMethod     PaymentMethod @default(OTHER)
+  checkNumber       String?
+  bankAccountId     String?
   subtotal          Decimal  @default(0) @db.Decimal(12, 2)
   vat               Decimal  @default(0) @db.Decimal(12, 2)
   total             Decimal  @default(0) @db.Decimal(12, 2)
@@ -178,14 +181,43 @@ model Expense {
   // Relations
   createdByUser     User @relation("UserCreatedExpenses", fields: [createdByUserId], references: [id], onDelete: Cascade)
   organization      Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  bankAccount       BankAccount? @relation(fields: [bankAccountId], references: [id], onDelete: SetNull)
   items             ExpenseItem[]
   approvalHistory   ApprovalHistory[]
   
   @@index([createdByUserId])
   @@index([organizationId])
+  @@index([bankAccountId])
   @@index([status])
   @@index([purchasedDate])
   @@index([createdAt])
+}
+
+model BankAccount {
+  id                String   @id @default(uuid())
+
+  // Multi-tenant support
+  organizationId    String
+
+  // Bank details
+  bankName          String
+  accountHolderName String
+  accountNumber     String
+
+  // Soft delete / status
+  isActive          Boolean  @default(true)
+
+  // Audit
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  // Relations
+  organization      Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  expenses          Expense[]
+
+  @@unique([organizationId, accountNumber])
+  @@index([organizationId])
+  @@index([organizationId, isActive])
 }
 
 model ExpenseItem {
