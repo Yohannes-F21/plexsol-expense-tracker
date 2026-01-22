@@ -57,6 +57,10 @@ export async function GET() {
       },
     });
 
+    const totalExpenseAmountValue = totalExpenseAmount._sum.total
+      ? Number(totalExpenseAmount._sum.total)
+      : 0;
+
     return NextResponse.json({
       totalUsers,
       totalStaffs,
@@ -66,7 +70,7 @@ export async function GET() {
       rejectedExpenses,
       warningExpenses,
       pendingApprovals,
-      totalExpenseAmount: totalExpenseAmount._sum.total || 0,
+      totalExpenseAmount: totalExpenseAmountValue,
     });
   } catch (error) {
     console.error("[v0] Get stats error:", error);

@@ -6,12 +6,10 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   flexRender,
   getCoreRowModel,
-  getFilteredRowModel,
   getPaginationRowModel,
   getSortedRowModel,
   useReactTable,
   type ColumnDef,
-  type ColumnFiltersState,
   type SortingState,
 } from "@tanstack/react-table";
 import { toast } from "sonner";
@@ -34,11 +32,23 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { Search, SquarePen, Trash2, Eye } from "lucide-react";
 import { DataTablePagination } from "@/components/data-table-pagination";
 import { canDeleteExpense, canEditExpense } from "@/lib/expense-permissions";
 import { Loader } from "../loader";
+
+type MoneyLike =
+  | number
+  | string
+  | { toNumber: () => number }
+  | null
+  | undefined;
 
 type ExpenseRow = {
   id: string;
@@ -48,15 +58,19 @@ type ExpenseRow = {
   fsNumber: string;
   mrcNumber?: string | null;
   paymentMethod: "CASH" | "CHECK" | "CREDIT_CARD" | "BANK_TRANSFER" | "OTHER";
-  subtotal: any;
-  vat: any;
-  total: any;
+  subtotal: MoneyLike;
+  vat: MoneyLike;
+  total: MoneyLike;
   status: "PENDING" | "WARNING" | "APPROVED" | "REJECTED";
+  warningItems?: string[];
+  rejectionComment?: string | null;
   createdAt: string;
   createdByUser: { id: string; name: string | null; email: string } | null;
 };
 
-function asNumber(x: any): number {
+const EMPTY_EXPENSES: ExpenseRow[] = [];
+
+function asNumber(x: MoneyLike): number {
   if (typeof x === "number") return x;
   if (typeof x === "string") return Number(x);
   if (x && typeof x === "object" && typeof x.toNumber === "function")
@@ -64,7 +78,7 @@ function asNumber(x: any): number {
   return Number(x);
 }
 
-function formatMoney(x: any) {
+function formatMoney(x: MoneyLike) {
   const n = asNumber(x);
   if (!Number.isFinite(n)) return "-";
   return n.toFixed(2);
@@ -73,7 +87,7 @@ function formatMoney(x: any) {
 export function ExpensesTable(props: { role: "ORG_ADMIN" | "STAFF" }) {
   const queryClient = useQueryClient();
   const [sorting, setSorting] = useState<SortingState>([]);
-  const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
+  const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<ExpenseRow | null>(null);
@@ -93,7 +107,7 @@ export function ExpensesTable(props: { role: "ORG_ADMIN" | "STAFF" }) {
     },
   });
 
-  const expenses = data?.expenses ?? [];
+  const expenses = data?.expenses ?? EMPTY_EXPENSES;
 
   const handleDelete = async (expenseId: string) => {
     try {
@@ -211,10 +225,36 @@ export function ExpensesTable(props: { role: "ORG_ADMIN" | "STAFF" }) {
               ? "text-orange-600 bg-orange-100  text-xs"
               : "text-muted-foreground";
 
-          return (
+          const tooltipText =
+            label === "WARNING"
+              ? (row.original.warningItems ?? []).length
+                ? `Violation: ${(row.original.warningItems ?? [])
+                    .slice(0, 5)
+                    .join(", ")}${
+                    (row.original.warningItems ?? []).length > 5 ? "…" : ""
+                  }`
+                : "Violation: policy limit exceeded"
+              : label === "REJECTED"
+              ? row.original.rejectionComment?.trim()
+                ? `Rejected: ${row.original.rejectionComment.trim()}`
+                : "Rejected: no comment provided"
+              : null;
+
+          const badge = (
             <Badge variant="outline" className={`${className} capitalize`}>
               {displayLabel || "-"}
             </Badge>
+          );
+
+          if (!tooltipText) return badge;
+
+          return (
+            <Tooltip>
+              <TooltipTrigger asChild>{badge}</TooltipTrigger>
+              <TooltipContent className="max-w-xs">
+                {tooltipText}
+              </TooltipContent>
+            </Tooltip>
           );
         },
       },
@@ -282,24 +322,38 @@ export function ExpensesTable(props: { role: "ORG_ADMIN" | "STAFF" }) {
   }, [props.role]);
 
   const filteredData = useMemo(() => {
-    return expenses.filter((e) =>
-      statusFilter === "all" ? true : e.status === statusFilter
-    );
-  }, [expenses, statusFilter]);
+    const q = searchTerm.trim().toLowerCase();
+
+    return expenses.filter((e) => {
+      const matchesStatus =
+        statusFilter === "all" ? true : e.status === statusFilter;
+      if (!matchesStatus) return false;
+      if (!q) return true;
+
+      const companyName = (e.companyName ?? "").toLowerCase();
+      const fsNumber = (e.fsNumber ?? "").toLowerCase();
+      const tinNumber = (e.tinNumber ?? "").toLowerCase();
+      const mrcNumber = (e.mrcNumber ?? "").toLowerCase();
+
+      return (
+        companyName.includes(q) ||
+        fsNumber.includes(q) ||
+        tinNumber.includes(q) ||
+        mrcNumber.includes(q)
+      );
+    });
+  }, [expenses, statusFilter, searchTerm]);
 
   const table = useReactTable({
     data: filteredData,
     columns,
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
-    getFilteredRowModel: getFilteredRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
     onSortingChange: setSorting,
-    onColumnFiltersChange: setColumnFilters,
     onPaginationChange: setPagination,
     state: {
       sorting,
-      columnFilters,
       pagination: { pageIndex, pageSize },
     },
   });
@@ -307,7 +361,7 @@ export function ExpensesTable(props: { role: "ORG_ADMIN" | "STAFF" }) {
   useEffect(() => {
     table.setPageIndex(0);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [columnFilters, sorting, statusFilter]);
+  }, [sorting, statusFilter, searchTerm]);
 
   if (isLoading) {
     return (
@@ -326,11 +380,10 @@ export function ExpensesTable(props: { role: "ORG_ADMIN" | "STAFF" }) {
             <div className="relative">
               <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
               <Input
-                placeholder="Search company..."
+                placeholder="Search company / FS / TIN / MRC..."
                 className="pl-8 w-56"
-                onChange={(e) =>
-                  table.getColumn("companyName")?.setFilterValue(e.target.value)
-                }
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
               />
             </div>
             <Select value={statusFilter} onValueChange={setStatusFilter}>

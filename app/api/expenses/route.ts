@@ -30,7 +30,7 @@ const createExpenseSchema = z
     companyName: z.string().min(1),
     tinNumber: z.string().min(1),
     fsNumber: z.string().min(1),
-    mrcNumber: z.string().trim().optional(),
+    mrcNumber: z.string().trim().min(1, "MRC number is required"),
     invoiceNumber: z.string().optional(),
     paymentMethod: paymentMethodSchema,
     checkNumber: z.string().trim().optional(),
@@ -126,7 +126,7 @@ export async function GET() {
       ...(session.role === "STAFF" ? { createdByUserId: session.id } : {}),
     };
 
-    const expenses = await prisma.expense.findMany({
+    const rawExpenses = await prisma.expense.findMany({
       where,
       select: {
         id: true,
@@ -142,9 +142,27 @@ export async function GET() {
         status: true,
         createdAt: true,
         createdByUser: { select: { id: true, name: true, email: true } },
+        items: {
+          where: { hasPolicyViolation: true },
+          select: { itemName: true },
+        },
+        approvalHistory: {
+          where: { action: "REJECTED" },
+          orderBy: { createdAt: "desc" },
+          take: 1,
+          select: { comment: true },
+        },
       },
       orderBy: { purchasedDate: "desc" },
     });
+
+    const expenses = rawExpenses.map(({ items, approvalHistory, ...rest }) => ({
+      ...rest,
+      warningItems: (items ?? [])
+        .map((it) => String(it.itemName ?? "").trim())
+        .filter(Boolean),
+      rejectionComment: approvalHistory?.[0]?.comment ?? null,
+    }));
 
     return NextResponse.json({ expenses });
   } catch (error) {

@@ -174,6 +174,13 @@ export async function PUT(request: Request, context: any) {
         : expense.invoiceNumber;
     const nextPaymentMethod = data.paymentMethod ?? expense.paymentMethod;
 
+    if (!nextMrcNumber) {
+      return NextResponse.json(
+        { error: "MRC number is required" },
+        { status: 400 }
+      );
+    }
+
     const nextCheckNumber =
       data.checkNumber !== undefined
         ? data.checkNumber?.trim() || null

@@ -69,7 +69,7 @@ const receiptSchema = z
     companyName: z.string().min(1, "Company name is required"),
     tinNumber: z.string().min(1, "TIN is required"),
     fsNumber: z.string().min(1, "FS number is required"),
-    mrcNumber: z.string().optional(),
+    mrcNumber: z.string().trim().min(1, "MRC number is required"),
     invoiceNumber: z.string().optional(),
     paymentMethod: paymentMethodSchema,
     checkNumber: z.string().trim().optional(),
@@ -518,7 +518,12 @@ export function ReceiptExpenseForm(props: {
       return data as { expense: { id: string } };
     },
     onSuccess: async (data) => {
-      await queryClient.invalidateQueries({ queryKey: ["expenses"] });
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["expenses"] }),
+        queryClient.invalidateQueries({
+          queryKey: ["expense", data.expense.id],
+        }),
+      ]);
       toast.success(
         props.mode === "edit" ? "Expense updated" : "Expense created"
       );
@@ -585,12 +590,10 @@ export function ReceiptExpenseForm(props: {
           const dd = m[1];
           const mm = m[2];
           const yyyy = m[3];
-          const current = String(form.getValues("purchasedDate") ?? "").trim();
-          if (!current) {
-            form.setValue("purchasedDate", `${yyyy}-${mm}-${dd}` as any, {
-              shouldDirty: true,
-            });
-          }
+          form.setValue("purchasedDate", `${yyyy}-${mm}-${dd}` as any, {
+            shouldDirty: true,
+            shouldValidate: true,
+          });
         }
       }
 
@@ -674,7 +677,7 @@ export function ReceiptExpenseForm(props: {
       companyName: header.companyName,
       tinNumber: header.tinNumber,
       fsNumber: header.fsNumber,
-      mrcNumber: header.mrcNumber?.trim() || undefined,
+      mrcNumber: header.mrcNumber.trim(),
       invoiceNumber: header.invoiceNumber?.trim() || undefined,
       paymentMethod: header.paymentMethod,
       checkNumber: header.paymentMethod === "CHECK" ? checkNumber : undefined,
@@ -899,7 +902,7 @@ export function ReceiptExpenseForm(props: {
                   name="mrcNumber"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>MRC Number (optional)</FormLabel>
+                      <FormLabel>MRC Number</FormLabel>
                       <FormControl>
                         <Input placeholder="MRC" {...field} />
                       </FormControl>

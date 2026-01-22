@@ -11,7 +11,6 @@ const _geistMono = Geist_Mono({ subsets: ["latin"] });
 export const metadata: Metadata = {
   title: "Expense Tracker",
   description: "Multi-tenant SaaS expense tracking platform",
-  generator: "v0.app",
   icons: {
     icon: [
       {
