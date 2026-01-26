@@ -151,8 +151,8 @@ export function OrgAdminDashboard() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <Loader size="lg" ariaLabel="Loading dashboard" showLabel />
+      <div className="flex items-center justify-center min-h-[50vh]">
+        <Loader size="md" ariaLabel="Loading Dashboard" showLabel />
       </div>
     );
   }

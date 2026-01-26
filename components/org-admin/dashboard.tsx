@@ -100,7 +100,7 @@ export function OrgAdminDashboard() {
               (kpi.interactive ? "hover:scale-[1.03]" : "")
             }
           >
-            <CardHeader className="flex flex-row items-start justify-between space-y-0 pb-2">
+            <CardHeader className="flex flex-row items-start justify-between space-y-0 ">
               <CardTitle className={` text-sm font-medium ${kpi.titleColor}`}>
                 {kpi.title}
               </CardTitle>
@@ -113,7 +113,7 @@ export function OrgAdminDashboard() {
                 <kpi.icon className={`h-5 w-5 ${kpi.iconColor}`} />
               </div>
             </CardHeader>
-            <CardContent className="space-y-1">
+            <CardContent className="">
               {isLoading ? (
                 <Skeleton className="h-8 w-24" />
               ) : (

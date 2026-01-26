@@ -223,8 +223,8 @@ export function ActivityLogsTable() {
         </div>
 
         {isLoading ? (
-          <div className="flex items-center justify-center py-10">
-            <Loader size="lg" ariaLabel="Loading activity logs" showLabel />
+          <div className="flex items-center justify-center min-h-[50vh]">
+            <Loader size="md" ariaLabel="Loading activity logs" showLabel />
           </div>
         ) : logs.length === 0 ? (
           <div className="text-center text-muted-foreground">

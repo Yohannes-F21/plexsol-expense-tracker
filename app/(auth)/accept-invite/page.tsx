@@ -143,7 +143,7 @@ export default function AcceptInvitePage() {
     <Suspense
       fallback={
         <div className="flex min-h-screen items-center justify-center">
-          <Loader size="lg" ariaLabel="Loading invitation" showLabel />
+          <Loader size="md" ariaLabel="Loading Invitation" showLabel />
         </div>
       }
     >

@@ -365,8 +365,8 @@ export function ExpensesTable(props: { role: "ORG_ADMIN" | "STAFF" }) {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center h-72">
-        <Loader size="lg" ariaLabel="Loading expenses" showLabel />
+      <div className="flex items-center justify-center min-h-[50vh]">
+        <Loader size="md" ariaLabel="Loading Expenses" showLabel />
       </div>
     );
   }

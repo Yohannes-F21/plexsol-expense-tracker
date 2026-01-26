@@ -164,8 +164,8 @@ export default function OrgAdminApprovalDetailPage({
 
   if (isLoading)
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <Loader size="lg" ariaLabel="Loading expense" showLabel />
+      <div className="flex items-center justify-center min-h-[50vh]">
+        <Loader size="md" ariaLabel="Loading Expense" showLabel />
       </div>
     );
   if (error)

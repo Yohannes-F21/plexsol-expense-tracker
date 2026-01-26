@@ -50,8 +50,8 @@ export function ExpenseDetailPage(props: {
 
   if (isLoading)
     return (
-      <div className="flex min-h-screen items-center justify-center">
-        <Loader size="lg" ariaLabel="Loading expense details" showLabel />
+      <div className="flex min-h-[50vh] items-center justify-center">
+        <Loader size="md" ariaLabel="Loading Expense Details" showLabel />
       </div>
     );
   if (error)

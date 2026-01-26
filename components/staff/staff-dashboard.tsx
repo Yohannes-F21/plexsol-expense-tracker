@@ -103,8 +103,8 @@ export function StaffDashboard() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <Loader size="lg" ariaLabel="Loading dashboard" showLabel />
+      <div className="flex items-center justify-center min-h-[50vh]">
+        <Loader size="md" ariaLabel="Loading Dashboard" showLabel />
       </div>
     );
   }
@@ -129,7 +129,7 @@ export function StaffDashboard() {
       <main className="container mx-auto px-4 py-8 space-y-8">
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
           <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 ">
               <CardTitle className="text-sm font-medium">
                 Total Expenses
               </CardTitle>
@@ -141,7 +141,7 @@ export function StaffDashboard() {
           </Card>
 
           <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 ">
               <CardTitle className="text-sm font-medium">
                 Pending / Warning
               </CardTitle>
@@ -153,7 +153,7 @@ export function StaffDashboard() {
           </Card>
 
           <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 ">
               <CardTitle className="text-sm font-medium">Approved</CardTitle>
               <CheckCircle className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
@@ -163,7 +163,7 @@ export function StaffDashboard() {
           </Card>
 
           <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 ">
               <CardTitle className="text-sm font-medium">Rejected</CardTitle>
               <XCircle className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
@@ -173,7 +173,7 @@ export function StaffDashboard() {
           </Card>
 
           <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 ">
               <CardTitle className="text-sm font-medium">
                 Approved Total
               </CardTitle>

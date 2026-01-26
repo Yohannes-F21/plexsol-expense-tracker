@@ -178,10 +178,10 @@ export function ExpensesManagement() {
                 status === "APPROVED"
                   ? "default"
                   : status === "REJECTED"
-                  ? "destructive"
-                  : status === "WARNING"
-                  ? "outline"
-                  : "secondary"
+                    ? "destructive"
+                    : status === "WARNING"
+                      ? "outline"
+                      : "secondary"
               }
             >
               {status}
@@ -238,12 +238,12 @@ export function ExpensesManagement() {
         },
       },
     ],
-    [requestDelete]
+    [requestDelete],
   );
 
   const filteredData = useMemo(() => {
     return expenses.filter((expense) =>
-      statusFilter === "all" ? true : expense.status === statusFilter
+      statusFilter === "all" ? true : expense.status === statusFilter,
     );
   }, [expenses, statusFilter]);
 
@@ -271,8 +271,8 @@ export function ExpensesManagement() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center h-96">
-        <Loader size="lg" ariaLabel="Loading expenses" showLabel />
+      <div className="flex items-center justify-center min-h-[50vh]">
+        <Loader size="md" ariaLabel="Loading Expenses" showLabel />
       </div>
     );
   }
@@ -356,7 +356,7 @@ export function ExpensesManagement() {
                           ? null
                           : flexRender(
                               header.column.columnDef.header,
-                              header.getContext()
+                              header.getContext(),
                             )}
                       </TableHead>
                     ))}
@@ -371,7 +371,7 @@ export function ExpensesManagement() {
                         <TableCell key={cell.id} className="whitespace-nowrap">
                           {flexRender(
                             cell.column.columnDef.cell,
-                            cell.getContext()
+                            cell.getContext(),
                           )}
                         </TableCell>
                       ))}

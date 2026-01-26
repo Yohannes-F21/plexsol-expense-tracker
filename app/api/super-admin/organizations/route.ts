@@ -66,55 +66,46 @@ export async function POST(request: Request) {
 
     console.log("Creating organization:", validatedData);
 
-    const [organization] = await prisma.$transaction([
-      prisma.organization.create({
-        data: {
-          name: validatedData.name,
-          industry: validatedData.industry,
-          isActive: true,
-          createdById: session.id,
-        },
-        include: {
-          createdBy: {
-            select: {
-              id: true,
-              name: true,
-              email: true,
-            },
-          },
-          _count: {
-            select: {
-              users: true,
-              expenses: true,
-            },
+    const organization = await prisma.organization.create({
+      data: {
+        name: validatedData.name,
+        industry: validatedData.industry,
+        isActive: true,
+        createdById: session.id,
+      },
+      include: {
+        createdBy: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
           },
         },
-      }),
-      // create activity log entry (JSON fields use Prisma.JsonNull)
-      // note: run in same transaction to ensure consistency
-      prisma.activityLog.create({
+        _count: {
+          select: {
+            users: true,
+            expenses: true,
+          },
+        },
+      },
+    });
+
+    // best-effort activity log (kept outside transaction to avoid timeouts)
+    prisma.activityLog
+      .create({
         data: {
           userId: session.id,
-          organizationId: null,
+          organizationId: organization.id,
           actionType: "ORGANIZATION_CREATED",
           entityType: "Organization",
-          entityId: "", // placeholder will be updated below if needed
+          entityId: organization.id,
           previousValue: Prisma.JsonNull,
           newValue: Prisma.JsonNull,
         },
-      }),
-    ]);
-
-    // Update the activity log entityId to the created organization id (best-effort)
-    try {
-      await prisma.activityLog.updateMany({
-        where: { actionType: "ORGANIZATION_CREATED", userId: session.id },
-        data: { organizationId: organization.id, entityId: organization.id },
+      })
+      .catch((e) => {
+        console.warn("Failed to write organization activity log", e);
       });
-    } catch (e) {
-      // non-fatal
-      console.warn("Failed to update activity log for organization", e);
-    }
 
     return NextResponse.json(organization);
   } catch (error) {

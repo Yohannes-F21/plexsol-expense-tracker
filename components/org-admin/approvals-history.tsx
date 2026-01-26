@@ -78,8 +78,8 @@ export function ApprovalsHistory() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center py-10">
-        <Loader size="lg" ariaLabel="Loading approval history" showLabel />
+      <div className="flex items-center justify-center min-h-[50vh]">
+        <Loader size="md" ariaLabel="Loading Approval History" showLabel />
       </div>
     );
   }

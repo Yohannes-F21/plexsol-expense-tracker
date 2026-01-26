@@ -89,8 +89,8 @@ export function ApprovalsManagement() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center py-10">
-        <Loader size="lg" ariaLabel="Loading approvals" showLabel />
+      <div className="flex items-center justify-center min-h-[50vh]">
+        <Loader size="md" ariaLabel="Loading Approvals" showLabel />
       </div>
     );
   }

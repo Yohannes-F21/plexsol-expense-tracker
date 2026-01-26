@@ -33,8 +33,8 @@ export function ExpenseFormPage(props: {
   if (props.mode === "edit") {
     if (query.isLoading)
       return (
-        <div className="flex items-center justify-center py-10">
-          <Loader size="lg" ariaLabel="Loading expense form" showLabel />
+        <div className="flex items-center justify-center min-h-[50vh]">
+          <Loader size="md" ariaLabel="Loading Expense Form" showLabel />
         </div>
       );
     if (query.error)
