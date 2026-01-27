@@ -207,7 +207,8 @@ export function StaffRefundsPage() {
       {
         accessorKey: "createdAt",
         header: "Created",
-        cell: ({ row }) => new Date(row.original.createdAt).toLocaleDateString(),
+        cell: ({ row }) =>
+          new Date(row.original.createdAt).toLocaleDateString(),
       },
       {
         id: "decisionDate",
@@ -222,7 +223,8 @@ export function StaffRefundsPage() {
         header: "From Account",
         cell: ({ row }) => (
           <div className="text-destructive">
-            {row.original.fromAccount.bankName} - {row.original.fromAccount.accountNumber}
+            {row.original.fromAccount.bankName} -{" "}
+            {row.original.fromAccount.accountNumber}
           </div>
         ),
       },
@@ -231,7 +233,8 @@ export function StaffRefundsPage() {
         header: "To Account",
         cell: ({ row }) => (
           <div className="text-emerald-600">
-            {row.original.toAccount.bankName} - {row.original.toAccount.accountNumber}
+            {row.original.toAccount.bankName} -{" "}
+            {row.original.toAccount.accountNumber}
           </div>
         ),
       },

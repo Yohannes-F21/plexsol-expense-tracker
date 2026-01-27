@@ -90,7 +90,11 @@ export async function POST(request: Request) {
 
     const [fromAccount, toAccount] = await Promise.all([
       prisma.bankAccount.findFirst({
-        where: { id: data.fromAccountId, organizationId: orgId, isActive: true },
+        where: {
+          id: data.fromAccountId,
+          organizationId: orgId,
+          isActive: true,
+        },
         select: { id: true },
       }),
       prisma.bankAccount.findFirst({
@@ -100,7 +104,10 @@ export async function POST(request: Request) {
     ]);
 
     if (!fromAccount) {
-      return NextResponse.json({ error: ERRORS.FROM_NOT_FOUND }, { status: 404 });
+      return NextResponse.json(
+        { error: ERRORS.FROM_NOT_FOUND },
+        { status: 404 },
+      );
     }
 
     if (!toAccount) {
@@ -142,7 +149,9 @@ export async function POST(request: Request) {
     }
 
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Internal server error" },
+      {
+        error: error instanceof Error ? error.message : "Internal server error",
+      },
       { status: 500 },
     );
   }
