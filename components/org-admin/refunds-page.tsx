@@ -1,6 +1,9 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { useForm } from "react-hook-form";
+import { z } from "zod";
+import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   flexRender,
@@ -20,6 +23,15 @@ import {
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
 import {
   Table,
   TableBody,
@@ -38,7 +50,28 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 
+const refundSchema = z
+  .object({
+    fromAccountId: z.string().min(1, "Select a source account"),
+    toAccountId: z.string().min(1, "Select a destination account"),
+    amount: z.coerce.number().positive("Amount must be greater than 0"),
+    remark: z.string().trim().min(1, "Remark is required"),
+  })
+  .refine((data) => data.fromAccountId !== data.toAccountId, {
+    message: "From and to accounts must differ",
+    path: ["toAccountId"],
+  });
+
 type RefundStatus = "PENDING" | "APPROVED" | "REJECTED";
+
+type BankAccount = {
+  id: string;
+  bankName: string;
+  accountHolderName?: string | null;
+  accountNumber: string;
+  balance: string;
+  initialBalance?: string;
+};
 
 type RefundRow = {
   id: string;
@@ -65,6 +98,9 @@ type RefundRow = {
 };
 
 const REFUNDS_QUERY_KEY = ["org-admin-refunds"] as const;
+const BANK_ACCOUNTS_QUERY_KEY = ["org-admin-bank-accounts"] as const;
+
+type RefundFormValues = z.infer<typeof refundSchema>;
 
 function formatCurrency(value: string | number) {
   const num = typeof value === "number" ? value : Number(value);
@@ -93,6 +129,17 @@ export function RefundsPage() {
   );
   const [activeRefund, setActiveRefund] = useState<RefundRow | null>(null);
   const [rejectReason, setRejectReason] = useState("");
+  const [createDialogOpen, setCreateDialogOpen] = useState(false);
+
+  const form = useForm<RefundFormValues>({
+    resolver: zodResolver(refundSchema),
+    defaultValues: {
+      fromAccountId: "",
+      toAccountId: "",
+      amount: 0,
+      remark: "",
+    },
+  });
 
   const refundsQuery = useQuery<{ refunds: RefundRow[] }>({
     queryKey: REFUNDS_QUERY_KEY,
@@ -109,6 +156,24 @@ export function RefundsPage() {
     [refundsQuery.data],
   );
 
+  const bankAccountsQuery = useQuery<{ bankAccounts: BankAccount[] }>({
+    queryKey: BANK_ACCOUNTS_QUERY_KEY,
+    queryFn: async () => {
+      const res = await fetch("/api/org-admin/bank-accounts", {
+        cache: "no-store",
+      });
+      const payload = await res.json().catch(() => ({}));
+      if (!res.ok)
+        throw new Error(payload.error || "Failed to load bank accounts");
+      return payload as { bankAccounts: BankAccount[] };
+    },
+  });
+
+  const bankAccounts = useMemo(
+    () => bankAccountsQuery.data?.bankAccounts ?? [],
+    [bankAccountsQuery.data],
+  );
+
   const approveMutation = useMutation({
     mutationFn: async (id: string) => {
       const res = await fetch(`/api/org-admin/refunds/${id}/approve`, {
@@ -123,6 +188,26 @@ export function RefundsPage() {
       queryClient.invalidateQueries({ queryKey: REFUNDS_QUERY_KEY });
       setDialogAction(null);
       setActiveRefund(null);
+    },
+    onError: (error: Error) => toast.error(error.message),
+  });
+
+  const createMutation = useMutation({
+    mutationFn: async (values: RefundFormValues) => {
+      const res = await fetch("/api/org-admin/refunds", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(values),
+      });
+      const payload = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(payload.error || "Failed to submit refund");
+      return payload;
+    },
+    onSuccess: () => {
+      toast.success("Refund created");
+      queryClient.invalidateQueries({ queryKey: REFUNDS_QUERY_KEY });
+      form.reset({ fromAccountId: "", toAccountId: "", amount: 0, remark: "" });
+      setCreateDialogOpen(false);
     },
     onError: (error: Error) => toast.error(error.message),
   });
@@ -153,15 +238,22 @@ export function RefundsPage() {
       {
         accessorKey: "createdAt",
         header: "Created",
-        cell: ({ row }) => new Date(row.original.createdAt).toLocaleString(),
+        cell: ({ row }) =>
+          new Date(row.original.createdAt).toLocaleDateString(),
       },
       {
         id: "decisionDate",
         header: "Approved/Rejected",
         cell: ({ row }) => {
           const value = row.original.approvedAt || row.original.rejectedAt;
-          return value ? new Date(value).toLocaleString() : "-";
+          return value ? new Date(value).toLocaleDateString() : "-";
         },
+      },
+      {
+        accessorKey: "requester",
+        header: "Requester",
+        cell: ({ row }) =>
+          row.original.requester?.name || row.original.requester?.email || "-",
       },
       {
         accessorKey: "fromAccount",
@@ -211,20 +303,22 @@ export function RefundsPage() {
       {
         accessorKey: "status",
         header: "Status",
-        cell: ({ row }) => <StatusBadge status={row.original.status} />,
+        cell: ({ row }) => (
+          <div className="space-y-1">
+            <StatusBadge status={row.original.status} />
+            {row.original.status === "REJECTED" &&
+            row.original.rejectionReason ? (
+              <p className="text-sm text-destructive">
+                {row.original.rejectionReason}
+              </p>
+            ) : null}
+          </div>
+        ),
       },
       {
         accessorKey: "remark",
         header: "Remark",
         cell: ({ row }) => row.original.remark,
-      },
-      {
-        accessorKey: "rejectionReason",
-        header: "Rejection Reason",
-        cell: ({ row }) =>
-          row.original.status === "REJECTED"
-            ? row.original.rejectionReason
-            : "-",
       },
       {
         id: "actions",
@@ -274,8 +368,11 @@ export function RefundsPage() {
   });
 
   const isLoading = refundsQuery.isLoading;
+  const isSubmitting = approveMutation.isPending || rejectMutation.isPending;
+  const isCreating = createMutation.isPending;
+  const loadingAny = isLoading || bankAccountsQuery.isLoading;
 
-  if (isLoading) {
+  if (loadingAny) {
     return (
       <div className="space-y-4">
         <Skeleton className="h-10 w-48" />
@@ -285,10 +382,10 @@ export function RefundsPage() {
     );
   }
 
-  if (refundsQuery.isError) {
+  if (refundsQuery.isError || bankAccountsQuery.isError) {
     return (
       <div className="rounded-md border border-destructive/50 bg-destructive/5 p-4 text-destructive">
-        Failed to load refunds.
+        Failed to load refunds or accounts.
       </div>
     );
   }
@@ -304,6 +401,7 @@ export function RefundsPage() {
             Review refund requests and approve or reject them.
           </p>
         </div>
+        <Button onClick={() => setCreateDialogOpen(true)}>New Refund</Button>
       </div>
 
       <Card>
@@ -361,6 +459,132 @@ export function RefundsPage() {
           </div>
         </CardContent>
       </Card>
+
+      <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>New Refund</DialogTitle>
+            <DialogDescription>
+              Create a refund request. Balances change only after approval.
+            </DialogDescription>
+          </DialogHeader>
+
+          <form
+            onSubmit={form.handleSubmit((values) =>
+              createMutation.mutate(values),
+            )}
+            className="space-y-5"
+          >
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor="fromAccount">From Account</Label>
+                <Select
+                  value={form.watch("fromAccountId")}
+                  onValueChange={(value) =>
+                    form.setValue("fromAccountId", value, {
+                      shouldValidate: true,
+                    })
+                  }
+                  disabled={isCreating}
+                >
+                  <SelectTrigger id="fromAccount">
+                    <SelectValue placeholder="Select source account" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {bankAccounts.map((account) => (
+                      <SelectItem key={account.id} value={account.id}>
+                        {account.bankName} - {account.accountNumber}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {form.formState.errors.fromAccountId?.message ? (
+                  <p className="text-sm text-destructive">
+                    {form.formState.errors.fromAccountId.message}
+                  </p>
+                ) : null}
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="toAccount">To Account</Label>
+                <Select
+                  value={form.watch("toAccountId")}
+                  onValueChange={(value) =>
+                    form.setValue("toAccountId", value, {
+                      shouldValidate: true,
+                    })
+                  }
+                  disabled={isCreating}
+                >
+                  <SelectTrigger id="toAccount">
+                    <SelectValue placeholder="Select destination account" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {bankAccounts.map((account) => (
+                      <SelectItem key={account.id} value={account.id}>
+                        {account.bankName} - {account.accountNumber}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {form.formState.errors.toAccountId?.message ? (
+                  <p className="text-sm text-destructive">
+                    {form.formState.errors.toAccountId.message}
+                  </p>
+                ) : null}
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="amount">Amount</Label>
+              <Input
+                id="amount"
+                type="number"
+                step="0.01"
+                min="0"
+                placeholder="0.00"
+                disabled={isCreating}
+                {...form.register("amount", { valueAsNumber: true })}
+              />
+              {form.formState.errors.amount?.message ? (
+                <p className="text-sm text-destructive">
+                  {form.formState.errors.amount.message}
+                </p>
+              ) : null}
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="remark">Remark</Label>
+              <Input
+                id="remark"
+                type="text"
+                placeholder="Reason for refund"
+                disabled={isCreating}
+                {...form.register("remark")}
+              />
+              {form.formState.errors.remark?.message ? (
+                <p className="text-sm text-destructive">
+                  {form.formState.errors.remark.message}
+                </p>
+              ) : null}
+            </div>
+
+            <div className="flex justify-end gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setCreateDialogOpen(false)}
+                disabled={isCreating}
+              >
+                Cancel
+              </Button>
+              <Button type="submit" disabled={isCreating}>
+                {isCreating ? "Submitting..." : "Submit Refund"}
+              </Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
 
       <Dialog
         open={Boolean(dialogAction && activeRefund)}

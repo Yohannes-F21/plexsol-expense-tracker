@@ -4,8 +4,18 @@ import { requireRole } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { Prisma } from "@prisma/client";
 
+const createRefundSchema = z.object({
+  fromAccountId: z.string().min(1),
+  toAccountId: z.string().min(1),
+  amount: z.coerce.number().positive(),
+  remark: z.string().trim().min(1, "Remark is required"),
+});
+
 const ERRORS = {
   MISSING_ORG: "Organization ID missing",
+  SAME_ACCOUNT: "From and to accounts must be different",
+  FROM_NOT_FOUND: "Source account not found",
+  TO_NOT_FOUND: "Destination account not found",
 } as const;
 
 export async function GET() {
@@ -63,11 +73,77 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
-  const methodNotAllowed = NextResponse.json(
-    { error: "Not supported. Create refunds via staff endpoint." },
-    { status: 405 },
-  );
+  try {
+    const session = await requireRole(["ORG_ADMIN"]);
+    const orgId = session.organizationId;
 
-  // Explicitly disallow creation from org-admin route in the new workflow
-  return methodNotAllowed;
+    if (!orgId) {
+      return NextResponse.json({ error: ERRORS.MISSING_ORG }, { status: 400 });
+    }
+
+    const body = await request.json();
+    const data = createRefundSchema.parse(body);
+
+    if (data.fromAccountId === data.toAccountId) {
+      return NextResponse.json({ error: ERRORS.SAME_ACCOUNT }, { status: 400 });
+    }
+
+    const [fromAccount, toAccount] = await Promise.all([
+      prisma.bankAccount.findFirst({
+        where: { id: data.fromAccountId, organizationId: orgId, isActive: true },
+        select: { id: true },
+      }),
+      prisma.bankAccount.findFirst({
+        where: { id: data.toAccountId, organizationId: orgId, isActive: true },
+        select: { id: true },
+      }),
+    ]);
+
+    if (!fromAccount) {
+      return NextResponse.json({ error: ERRORS.FROM_NOT_FOUND }, { status: 404 });
+    }
+
+    if (!toAccount) {
+      return NextResponse.json({ error: ERRORS.TO_NOT_FOUND }, { status: 404 });
+    }
+
+    const refund = await prisma.refund.create({
+      data: {
+        organizationId: orgId,
+        requesterId: session.id,
+        fromAccountId: data.fromAccountId,
+        toAccountId: data.toAccountId,
+        amount: new Prisma.Decimal(data.amount),
+        remark: data.remark,
+        rejectionReason: "",
+        status: "PENDING",
+      },
+      select: {
+        id: true,
+        amount: true,
+        status: true,
+        remark: true,
+        rejectionReason: true,
+        createdAt: true,
+        approvedAt: true,
+        rejectedAt: true,
+      },
+    });
+
+    return NextResponse.json({ refund });
+  } catch (error) {
+    console.error("[v0] Org-admin create refund error:", error);
+
+    if (error instanceof z.ZodError) {
+      return NextResponse.json(
+        { error: "Invalid input", details: error.errors },
+        { status: 400 },
+      );
+    }
+
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : "Internal server error" },
+      { status: 500 },
+    );
+  }
 }

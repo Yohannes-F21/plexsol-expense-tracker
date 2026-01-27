@@ -207,14 +207,14 @@ export function StaffRefundsPage() {
       {
         accessorKey: "createdAt",
         header: "Created",
-        cell: ({ row }) => new Date(row.original.createdAt).toLocaleString(),
+        cell: ({ row }) => new Date(row.original.createdAt).toLocaleDateString(),
       },
       {
         id: "decisionDate",
         header: "Approved/Rejected",
         cell: ({ row }) => {
           const value = row.original.approvedAt || row.original.rejectedAt;
-          return value ? new Date(value).toLocaleString() : "-";
+          return value ? new Date(value).toLocaleDateString() : "-";
         },
       },
       {
@@ -222,8 +222,7 @@ export function StaffRefundsPage() {
         header: "From Account",
         cell: ({ row }) => (
           <div className="text-destructive">
-            {row.original.fromAccount.bankName} -{" "}
-            {row.original.fromAccount.accountNumber}
+            {row.original.fromAccount.bankName} - {row.original.fromAccount.accountNumber}
           </div>
         ),
       },
@@ -232,8 +231,7 @@ export function StaffRefundsPage() {
         header: "To Account",
         cell: ({ row }) => (
           <div className="text-emerald-600">
-            {row.original.toAccount.bankName} -{" "}
-            {row.original.toAccount.accountNumber}
+            {row.original.toAccount.bankName} - {row.original.toAccount.accountNumber}
           </div>
         ),
       },
