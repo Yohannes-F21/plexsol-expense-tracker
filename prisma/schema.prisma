@@ -49,6 +49,12 @@ enum ApprovalAction {
   REJECTED
 }
 
+enum RefundStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
 model User {
   id                String   @id @default(uuid())
   name              String
@@ -66,6 +72,7 @@ model User {
   
   expenses          Expense[] @relation("UserCreatedExpenses")
   invitationsSent   Invitation[] @relation("InvitationSender")
+  refundsRequested  Refund[] @relation("RefundRequester")
   approvalHistory   ApprovalHistory[]
   activityLogs      ActivityLog[]
   organizationsCreated Organization[] @relation("OrganizationCreator")
@@ -226,21 +233,30 @@ model BankAccount {
 }
 
 model Refund {
-  id             String   @id @default(uuid())
+  id             String        @id @default(uuid())
   organizationId String
+  requesterId    String
   fromAccountId  String
   toAccountId    String
-  amount         Decimal  @db.Decimal(14, 2)
-  createdAt      DateTime @default(now())
+  amount         Decimal       @db.Decimal(14, 2)
+  remark         String
+  rejectionReason String       @default("")
+  status         RefundStatus  @default(PENDING)
+  approvedAt     DateTime?
+  rejectedAt     DateTime?
+  createdAt      DateTime      @default(now())
 
   // Relations
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  requester    User         @relation("RefundRequester", fields: [requesterId], references: [id], onDelete: Cascade)
   fromAccount  BankAccount  @relation("RefundFromAccount", fields: [fromAccountId], references: [id], onDelete: Restrict)
   toAccount    BankAccount  @relation("RefundToAccount", fields: [toAccountId], references: [id], onDelete: Restrict)
 
   @@index([organizationId])
+  @@index([requesterId])
   @@index([fromAccountId])
   @@index([toAccountId])
+  @@index([status])
   @@index([createdAt])
 }
 

@@ -24,6 +24,11 @@ const navItems: NavItem[] = [
     href: "/policies",
     icon: "shield",
   },
+  {
+    title: "Refunds",
+    href: "/refunds",
+    icon: "arrow-left-right",
+  },
 ];
 
 export default async function StaffLayout({
@@ -47,7 +52,7 @@ export default async function StaffLayout({
     } catch (e) {
       console.warn(
         "[staff-layout] Failed to load organization:",
-        formatError(e)
+        formatError(e),
       );
       organization = null;
     }

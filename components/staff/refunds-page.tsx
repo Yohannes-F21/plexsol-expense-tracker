@@ -1,6 +1,9 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { useForm } from "react-hook-form";
+import { z } from "zod";
+import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   flexRender,
@@ -19,6 +22,15 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   Table,
@@ -28,6 +40,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
 import {
   Dialog,
   DialogContent,
@@ -35,10 +48,31 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Badge } from "@/components/ui/badge";
-import { Textarea } from "@/components/ui/textarea";
+
+const refundSchema = z
+  .object({
+    fromAccountId: z.string().min(1, "Select a source account"),
+    toAccountId: z.string().min(1, "Select a destination account"),
+    amount: z.coerce.number().positive("Amount must be greater than 0"),
+    remark: z.string().trim().min(1, "Remark is required"),
+  })
+  .refine((data) => data.fromAccountId !== data.toAccountId, {
+    message: "From and to accounts must differ",
+    path: ["toAccountId"],
+  });
+
+type RefundFormValues = z.infer<typeof refundSchema>;
 
 type RefundStatus = "PENDING" | "APPROVED" | "REJECTED";
+
+type BankAccount = {
+  id: string;
+  bankName: string;
+  accountHolderName: string;
+  accountNumber: string;
+  balance: string;
+  initialBalance: string;
+};
 
 type RefundRow = {
   id: string;
@@ -49,7 +83,6 @@ type RefundRow = {
   createdAt: string;
   approvedAt: string | null;
   rejectedAt: string | null;
-  requester?: { id: string; name: string | null; email: string };
   fromAccount: {
     id: string;
     bankName: string;
@@ -64,7 +97,8 @@ type RefundRow = {
   };
 };
 
-const REFUNDS_QUERY_KEY = ["org-admin-refunds"] as const;
+const BANK_ACCOUNTS_QUERY_KEY = ["staff-bank-accounts"] as const;
+const REFUNDS_QUERY_KEY = ["staff-refunds"] as const;
 
 function formatCurrency(value: string | number) {
   const num = typeof value === "number" ? value : Number(value);
@@ -85,67 +119,87 @@ function StatusBadge({ status }: { status: RefundStatus }) {
   return <Badge variant={variant as never}>{status}</Badge>;
 }
 
-export function RefundsPage() {
+export function StaffRefundsPage() {
   const queryClient = useQueryClient();
   const [sorting, setSorting] = useState<SortingState>([]);
-  const [dialogAction, setDialogAction] = useState<"approve" | "reject" | null>(
-    null,
-  );
-  const [activeRefund, setActiveRefund] = useState<RefundRow | null>(null);
-  const [rejectReason, setRejectReason] = useState("");
+  const [dialogOpen, setDialogOpen] = useState(false);
+
+  const form = useForm<RefundFormValues>({
+    resolver: zodResolver(refundSchema),
+    defaultValues: {
+      fromAccountId: "",
+      toAccountId: "",
+      amount: 0,
+      remark: "",
+    },
+  });
 
   const refundsQuery = useQuery<{ refunds: RefundRow[] }>({
     queryKey: REFUNDS_QUERY_KEY,
     queryFn: async () => {
-      const res = await fetch("/api/org-admin/refunds", { cache: "no-store" });
+      const res = await fetch("/api/staff/refunds", { cache: "no-store" });
       const payload = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(payload.error || "Failed to load refunds");
       return payload as { refunds: RefundRow[] };
     },
   });
 
+  const bankAccountsQuery = useQuery<{ bankAccounts: BankAccount[] }>({
+    queryKey: BANK_ACCOUNTS_QUERY_KEY,
+    queryFn: async () => {
+      const res = await fetch("/api/staff/bank-accounts", {
+        cache: "no-store",
+      });
+      const payload = await res.json().catch(() => ({}));
+      if (!res.ok)
+        throw new Error(payload.error || "Failed to load bank accounts");
+      return payload as { bankAccounts: BankAccount[] };
+    },
+  });
+
+  const bankAccounts = useMemo(
+    () => bankAccountsQuery.data?.bankAccounts ?? [],
+    [bankAccountsQuery.data],
+  );
   const refunds = useMemo(
     () => refundsQuery.data?.refunds ?? [],
     [refundsQuery.data],
   );
 
-  const approveMutation = useMutation({
-    mutationFn: async (id: string) => {
-      const res = await fetch(`/api/org-admin/refunds/${id}/approve`, {
+  const createMutation = useMutation({
+    mutationFn: async (values: RefundFormValues) => {
+      const res = await fetch("/api/staff/refunds", {
         method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(values),
       });
       const payload = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(payload.error || "Failed to approve refund");
+      if (!res.ok) throw new Error(payload.error || "Failed to submit refund");
       return payload;
     },
     onSuccess: () => {
-      toast.success("Refund approved");
+      toast.success("Refund request submitted");
       queryClient.invalidateQueries({ queryKey: REFUNDS_QUERY_KEY });
-      setDialogAction(null);
-      setActiveRefund(null);
+      form.reset({ fromAccountId: "", toAccountId: "", amount: 0, remark: "" });
+      setDialogOpen(false);
     },
     onError: (error: Error) => toast.error(error.message),
   });
 
-  const rejectMutation = useMutation({
-    mutationFn: async (args: { id: string; reason: string }) => {
-      const res = await fetch(`/api/org-admin/refunds/${args.id}/reject`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ rejectionReason: args.reason }),
-      });
-      const payload = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(payload.error || "Failed to reject refund");
-      return payload;
-    },
-    onSuccess: () => {
-      toast.success("Refund rejected");
-      queryClient.invalidateQueries({ queryKey: REFUNDS_QUERY_KEY });
-      setDialogAction(null);
-      setActiveRefund(null);
-      setRejectReason("");
-    },
-    onError: (error: Error) => toast.error(error.message),
+  const onSubmit = form.handleSubmit((values) => {
+    const fromAccount = bankAccounts.find(
+      (account) => account.id === values.fromAccountId,
+    );
+    const toAccount = bankAccounts.find(
+      (account) => account.id === values.toAccountId,
+    );
+
+    if (!fromAccount || !toAccount) {
+      toast.error("Select valid accounts");
+      return;
+    }
+
+    createMutation.mutate(values);
   });
 
   const columns = useMemo<ColumnDef<RefundRow>[]>(
@@ -226,42 +280,8 @@ export function RefundsPage() {
             ? row.original.rejectionReason
             : "-",
       },
-      {
-        id: "actions",
-        header: "Actions",
-        cell: ({ row }) => {
-          if (row.original.status !== "PENDING") return null;
-          return (
-            <div className="flex gap-2">
-              <Button
-                variant="default"
-                size="sm"
-                onClick={() => {
-                  setActiveRefund(row.original);
-                  setDialogAction("approve");
-                }}
-                disabled={approveMutation.isPending || rejectMutation.isPending}
-              >
-                Approve
-              </Button>
-              <Button
-                variant="destructive"
-                size="sm"
-                onClick={() => {
-                  setActiveRefund(row.original);
-                  setDialogAction("reject");
-                  setRejectReason("");
-                }}
-                disabled={approveMutation.isPending || rejectMutation.isPending}
-              >
-                Reject
-              </Button>
-            </div>
-          );
-        },
-      },
     ],
-    [approveMutation.isPending, rejectMutation.isPending],
+    [],
   );
 
   const table = useReactTable({
@@ -273,7 +293,7 @@ export function RefundsPage() {
     getSortedRowModel: getSortedRowModel(),
   });
 
-  const isLoading = refundsQuery.isLoading;
+  const isLoading = bankAccountsQuery.isLoading || refundsQuery.isLoading;
 
   if (isLoading) {
     return (
@@ -285,15 +305,15 @@ export function RefundsPage() {
     );
   }
 
-  if (refundsQuery.isError) {
+  if (bankAccountsQuery.isError || refundsQuery.isError) {
     return (
       <div className="rounded-md border border-destructive/50 bg-destructive/5 p-4 text-destructive">
-        Failed to load refunds.
+        Failed to load refunds or accounts.
       </div>
     );
   }
 
-  const isMutating = approveMutation.isPending || rejectMutation.isPending;
+  const isSubmitting = createMutation.isPending;
 
   return (
     <div className="space-y-6">
@@ -301,16 +321,17 @@ export function RefundsPage() {
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Refunds</h1>
           <p className="text-muted-foreground">
-            Review refund requests and approve or reject them.
+            Submit a refund request between bank accounts.
           </p>
         </div>
+        <Button onClick={() => setDialogOpen(true)}>New Refund</Button>
       </div>
 
       <Card>
         <CardHeader>
-          <CardTitle>Refund Requests</CardTitle>
+          <CardTitle>Your Refunds</CardTitle>
           <CardDescription>
-            Manage transfers between bank accounts.
+            Track your submitted refund requests.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -362,75 +383,124 @@ export function RefundsPage() {
         </CardContent>
       </Card>
 
-      <Dialog
-        open={Boolean(dialogAction && activeRefund)}
-        onOpenChange={(open) => {
-          if (!open) {
-            setDialogAction(null);
-            setActiveRefund(null);
-            setRejectReason("");
-          }
-        }}
-      >
+      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>
-              {dialogAction === "approve" ? "Approve refund" : "Reject refund"}
-            </DialogTitle>
+            <DialogTitle>New Refund</DialogTitle>
             <DialogDescription>
-              {dialogAction === "approve"
-                ? "Confirm approving this refund. Balances will be updated."
-                : "Provide a rejection reason. No balances will change."}
+              Submit a refund request. Balances change only after approval.
             </DialogDescription>
           </DialogHeader>
 
-          {dialogAction === "reject" ? (
-            <Textarea
-              value={rejectReason}
-              onChange={(e) => setRejectReason(e.target.value)}
-              placeholder="Add rejection reason"
-              disabled={isMutating}
-            />
-          ) : null}
+          <form onSubmit={onSubmit} className="space-y-5">
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor="fromAccount">From Account</Label>
+                <Select
+                  value={form.watch("fromAccountId")}
+                  onValueChange={(value) =>
+                    form.setValue("fromAccountId", value, {
+                      shouldValidate: true,
+                    })
+                  }
+                  disabled={isSubmitting}
+                >
+                  <SelectTrigger id="fromAccount">
+                    <SelectValue placeholder="Select source account" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {bankAccounts.map((account) => (
+                      <SelectItem key={account.id} value={account.id}>
+                        {account.bankName} - {account.accountNumber}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {form.formState.errors.fromAccountId?.message ? (
+                  <p className="text-sm text-destructive">
+                    {form.formState.errors.fromAccountId.message}
+                  </p>
+                ) : null}
+              </div>
 
-          <div className="flex justify-end gap-2">
-            <Button
-              variant="outline"
-              type="button"
-              onClick={() => {
-                setDialogAction(null);
-                setActiveRefund(null);
-                setRejectReason("");
-              }}
-              disabled={isMutating}
-            >
-              Cancel
-            </Button>
-            {dialogAction === "approve" ? (
+              <div className="space-y-2">
+                <Label htmlFor="toAccount">To Account</Label>
+                <Select
+                  value={form.watch("toAccountId")}
+                  onValueChange={(value) =>
+                    form.setValue("toAccountId", value, {
+                      shouldValidate: true,
+                    })
+                  }
+                  disabled={isSubmitting}
+                >
+                  <SelectTrigger id="toAccount">
+                    <SelectValue placeholder="Select destination account" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {bankAccounts.map((account) => (
+                      <SelectItem key={account.id} value={account.id}>
+                        {account.bankName} - {account.accountNumber}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {form.formState.errors.toAccountId?.message ? (
+                  <p className="text-sm text-destructive">
+                    {form.formState.errors.toAccountId.message}
+                  </p>
+                ) : null}
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="amount">Amount</Label>
+              <Input
+                id="amount"
+                type="number"
+                step="0.01"
+                min="0"
+                placeholder="0.00"
+                disabled={isSubmitting}
+                {...form.register("amount", { valueAsNumber: true })}
+              />
+              {form.formState.errors.amount?.message ? (
+                <p className="text-sm text-destructive">
+                  {form.formState.errors.amount.message}
+                </p>
+              ) : null}
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="remark">Remark</Label>
+              <Input
+                id="remark"
+                type="text"
+                placeholder="Reason for refund"
+                disabled={isSubmitting}
+                {...form.register("remark")}
+              />
+              {form.formState.errors.remark?.message ? (
+                <p className="text-sm text-destructive">
+                  {form.formState.errors.remark.message}
+                </p>
+              ) : null}
+            </div>
+
+            <div className="flex justify-end gap-2">
               <Button
-                onClick={() =>
-                  activeRefund && approveMutation.mutate(activeRefund.id)
-                }
-                disabled={!activeRefund || isMutating}
+                type="button"
+                variant="outline"
+                onClick={() => setDialogOpen(false)}
+                disabled={isSubmitting}
               >
-                {isMutating ? "Approving..." : "Approve"}
+                Cancel
               </Button>
-            ) : (
-              <Button
-                variant="destructive"
-                onClick={() =>
-                  activeRefund &&
-                  rejectMutation.mutate({
-                    id: activeRefund.id,
-                    reason: rejectReason,
-                  })
-                }
-                disabled={!activeRefund || !rejectReason.trim() || isMutating}
-              >
-                {isMutating ? "Rejecting..." : "Reject"}
+              <Button type="submit" disabled={isSubmitting}>
+                {isSubmitting ? "Submitting..." : "Submit Refund"}
               </Button>
-            )}
-          </div>
+            </div>
+          </form>
         </DialogContent>
       </Dialog>
     </div>
