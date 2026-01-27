@@ -4,11 +4,7 @@ import { useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
-import {
-  useMutation,
-  useQuery,
-  useQueryClient,
-} from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   flexRender,
   getCoreRowModel,
@@ -134,12 +130,12 @@ export function RefundsPage() {
 
   const bankAccounts = useMemo(
     () => bankAccountsQuery.data?.bankAccounts ?? [],
-    [bankAccountsQuery.data]
+    [bankAccountsQuery.data],
   );
 
   const refunds = useMemo(
     () => refundsQuery.data?.refunds ?? [],
-    [refundsQuery.data]
+    [refundsQuery.data],
   );
 
   const refundMutation = useMutation({
@@ -150,8 +146,7 @@ export function RefundsPage() {
         body: JSON.stringify(values),
       });
       const payload = await res.json().catch(() => ({}));
-      if (!res.ok)
-        throw new Error(payload.error || "Failed to submit refund");
+      if (!res.ok) throw new Error(payload.error || "Failed to submit refund");
       return payload as { success: boolean };
     },
     onSuccess: () => {
@@ -166,7 +161,7 @@ export function RefundsPage() {
 
   const onSubmit = form.handleSubmit((values) => {
     const fromAccount = bankAccounts.find(
-      (account) => account.id === values.fromAccountId
+      (account) => account.id === values.fromAccountId,
     );
 
     if (!fromAccount) {
@@ -200,7 +195,8 @@ export function RefundsPage() {
         header: "From",
         cell: ({ row }) => (
           <div className="text-destructive">
-            {row.original.fromAccount.bankName} - {row.original.fromAccount.accountNumber}
+            {row.original.fromAccount.bankName} -{" "}
+            {row.original.fromAccount.accountNumber}
           </div>
         ),
       },
@@ -209,7 +205,8 @@ export function RefundsPage() {
         header: "To",
         cell: ({ row }) => (
           <div className="text-emerald-600">
-            {row.original.toAccount.bankName} - {row.original.toAccount.accountNumber}
+            {row.original.toAccount.bankName} -{" "}
+            {row.original.toAccount.accountNumber}
           </div>
         ),
       },
@@ -230,10 +227,13 @@ export function RefundsPage() {
         header: "From Balance",
         cell: ({ row }) => (
           <div className="font-medium text-destructive">
-            {Number(row.original.fromAccount.balance).toLocaleString(undefined, {
-              minimumFractionDigits: 2,
-              maximumFractionDigits: 2,
-            })}
+            {Number(row.original.fromAccount.balance).toLocaleString(
+              undefined,
+              {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2,
+              },
+            )}
           </div>
         ),
       },
@@ -250,7 +250,7 @@ export function RefundsPage() {
         ),
       },
     ],
-    []
+    [],
   );
 
   const table = useReactTable({
@@ -321,7 +321,7 @@ export function RefundsPage() {
                           ? null
                           : flexRender(
                               header.column.columnDef.header,
-                              header.getContext()
+                              header.getContext(),
                             )}
                       </TableHead>
                     ))}
@@ -336,7 +336,7 @@ export function RefundsPage() {
                         <TableCell key={cell.id}>
                           {flexRender(
                             cell.column.columnDef.cell,
-                            cell.getContext()
+                            cell.getContext(),
                           )}
                         </TableCell>
                       ))}
@@ -344,7 +344,10 @@ export function RefundsPage() {
                   ))
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={columns.length} className="h-24 text-center">
+                    <TableCell
+                      colSpan={columns.length}
+                      className="h-24 text-center"
+                    >
                       No refunds yet.
                     </TableCell>
                   </TableRow>
@@ -371,7 +374,9 @@ export function RefundsPage() {
                 <Select
                   value={form.watch("fromAccountId")}
                   onValueChange={(value) =>
-                    form.setValue("fromAccountId", value, { shouldValidate: true })
+                    form.setValue("fromAccountId", value, {
+                      shouldValidate: true,
+                    })
                   }
                   disabled={isSubmitting}
                 >
@@ -381,12 +386,12 @@ export function RefundsPage() {
                   <SelectContent>
                     {bankAccounts.map((account) => (
                       <SelectItem key={account.id} value={account.id}>
-                        {account.bankName} - {account.accountNumber} (PHP {Number(
-                          account.balance
-                        ).toLocaleString(undefined, {
+                        {account.bankName} - {account.accountNumber} (PHP{" "}
+                        {Number(account.balance).toLocaleString(undefined, {
                           minimumFractionDigits: 2,
                           maximumFractionDigits: 2,
-                        })})
+                        })}
+                        )
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -403,7 +408,9 @@ export function RefundsPage() {
                 <Select
                   value={form.watch("toAccountId")}
                   onValueChange={(value) =>
-                    form.setValue("toAccountId", value, { shouldValidate: true })
+                    form.setValue("toAccountId", value, {
+                      shouldValidate: true,
+                    })
                   }
                   disabled={isSubmitting}
                 >
@@ -413,12 +420,12 @@ export function RefundsPage() {
                   <SelectContent>
                     {bankAccounts.map((account) => (
                       <SelectItem key={account.id} value={account.id}>
-                        {account.bankName} - {account.accountNumber} (PHP {Number(
-                          account.balance
-                        ).toLocaleString(undefined, {
+                        {account.bankName} - {account.accountNumber} (PHP{" "}
+                        {Number(account.balance).toLocaleString(undefined, {
                           minimumFractionDigits: 2,
                           maximumFractionDigits: 2,
-                        })})
+                        })}
+                        )
                       </SelectItem>
                     ))}
                   </SelectContent>

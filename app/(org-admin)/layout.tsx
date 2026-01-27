@@ -85,7 +85,7 @@ export default async function OrgAdminLayout({
     } catch (e) {
       console.warn(
         "[org-admin-layout] Failed to load organization:",
-        formatError(e)
+        formatError(e),
       );
       organization = null;
     }

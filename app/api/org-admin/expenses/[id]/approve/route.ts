@@ -5,7 +5,7 @@ import { Prisma } from "@prisma/client";
 
 export async function POST(
   request: Request,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: Promise<{ id: string }> },
 ) {
   try {
     const session = await requireRole(["ORG_ADMIN"]);
@@ -14,7 +14,7 @@ export async function POST(
     if (!session.organizationId) {
       return NextResponse.json(
         { error: "Organization ID missing" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -41,7 +41,7 @@ export async function POST(
     if (expense.status === "APPROVED" || expense.status === "REJECTED") {
       return NextResponse.json(
         { error: "Expense already finalized" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -111,7 +111,7 @@ export async function POST(
         isolationLevel: Prisma.TransactionIsolationLevel.ReadCommitted,
         maxWait: 5000,
         timeout: 15000,
-      }
+      },
     );
 
     return NextResponse.json({ expense: updatedExpense });
@@ -122,14 +122,14 @@ export async function POST(
       if (error.message === "bank_account_not_found") {
         return NextResponse.json(
           { error: "Bank account not found or inactive" },
-          { status: 404 }
+          { status: 404 },
         );
       }
 
       if (error.message === "insufficient_balance") {
         return NextResponse.json(
           { error: "Insufficient balance" },
-          { status: 400 }
+          { status: 400 },
         );
       }
     }
@@ -137,7 +137,7 @@ export async function POST(
       {
         error: error instanceof Error ? error.message : "Internal server error",
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

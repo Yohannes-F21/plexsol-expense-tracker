@@ -68,7 +68,10 @@ const bankAccountSchema = z.object({
 });
 
 type BankAccountFormValues = z.infer<typeof bankAccountSchema>;
-type UpdateBankAccountFormValues = Omit<BankAccountFormValues, "initialBalance">;
+type UpdateBankAccountFormValues = Omit<
+  BankAccountFormValues,
+  "initialBalance"
+>;
 
 const BANK_ACCOUNTS_QUERY_KEY = ["org-admin-bank-accounts"] as const;
 
@@ -138,7 +141,10 @@ export function BankAccountsManagement() {
   });
 
   const updateMutation = useMutation({
-    mutationFn: async (args: { id: string; values: UpdateBankAccountFormValues }) => {
+    mutationFn: async (args: {
+      id: string;
+      values: UpdateBankAccountFormValues;
+    }) => {
       const res = await fetch(`/api/org-admin/bank-accounts/${args.id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
@@ -167,7 +173,7 @@ export function BankAccountsManagement() {
       const payload = await res.json().catch(() => ({}));
       if (!res.ok)
         throw new Error(
-          payload.error || "Failed to update bank account status"
+          payload.error || "Failed to update bank account status",
         );
       return payload;
     },
@@ -314,7 +320,7 @@ export function BankAccountsManagement() {
         },
       },
     ],
-    [toggleMutation]
+    [toggleMutation],
   );
 
   const table = useReactTable({
@@ -371,7 +377,7 @@ export function BankAccountsManagement() {
                       ? null
                       : flexRender(
                           header.column.columnDef.header,
-                          header.getContext()
+                          header.getContext(),
                         )}
                   </TableHead>
                 ))}
@@ -386,7 +392,7 @@ export function BankAccountsManagement() {
                     <TableCell key={cell.id}>
                       {flexRender(
                         cell.column.columnDef.cell,
-                        cell.getContext()
+                        cell.getContext(),
                       )}
                     </TableCell>
                   ))}

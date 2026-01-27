@@ -60,7 +60,7 @@ export async function GET() {
       {
         error: error instanceof Error ? error.message : "Internal server error",
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
@@ -164,7 +164,7 @@ export async function POST(request: Request) {
         isolationLevel: Prisma.TransactionIsolationLevel.ReadCommitted,
         maxWait: 5000,
         timeout: 15000,
-      }
+      },
     );
 
     return NextResponse.json({ success: true, ...result });
@@ -174,19 +174,28 @@ export async function POST(request: Request) {
     if (error instanceof z.ZodError) {
       return NextResponse.json(
         { error: "Invalid input", details: error.errors },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
     if (error instanceof Error) {
       if (error.message === "from_account_not_found") {
-        return NextResponse.json({ error: ERRORS.FROM_NOT_FOUND }, { status: 404 });
+        return NextResponse.json(
+          { error: ERRORS.FROM_NOT_FOUND },
+          { status: 404 },
+        );
       }
       if (error.message === "to_account_not_found") {
-        return NextResponse.json({ error: ERRORS.TO_NOT_FOUND }, { status: 404 });
+        return NextResponse.json(
+          { error: ERRORS.TO_NOT_FOUND },
+          { status: 404 },
+        );
       }
       if (error.message === "insufficient_balance") {
-        return NextResponse.json({ error: ERRORS.INSUFFICIENT }, { status: 400 });
+        return NextResponse.json(
+          { error: ERRORS.INSUFFICIENT },
+          { status: 400 },
+        );
       }
     }
 
@@ -194,7 +203,7 @@ export async function POST(request: Request) {
       {
         error: error instanceof Error ? error.message : "Internal server error",
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
