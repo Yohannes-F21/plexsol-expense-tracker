@@ -50,6 +50,8 @@ type BankAccount = {
   bankName: string;
   accountHolderName: string;
   accountNumber: string;
+  initialBalance: string;
+  balance: string;
   isActive: boolean;
   createdAt: string;
   updatedAt: string;
@@ -59,9 +61,14 @@ const bankAccountSchema = z.object({
   bankName: z.string().min(1, "Bank name is required"),
   accountHolderName: z.string().min(1, "Account holder name is required"),
   accountNumber: z.string().min(1, "Account number is required"),
+  initialBalance: z.coerce
+    .number()
+    .min(0, "Initial balance cannot be negative")
+    .default(0),
 });
 
 type BankAccountFormValues = z.infer<typeof bankAccountSchema>;
+type UpdateBankAccountFormValues = Omit<BankAccountFormValues, "initialBalance">;
 
 const BANK_ACCOUNTS_QUERY_KEY = ["org-admin-bank-accounts"] as const;
 
@@ -96,6 +103,7 @@ export function BankAccountsManagement() {
       bankName: "",
       accountHolderName: "",
       accountNumber: "",
+      initialBalance: 0,
     },
   });
 
@@ -105,6 +113,7 @@ export function BankAccountsManagement() {
       bankName: selected?.bankName ?? "",
       accountHolderName: selected?.accountHolderName ?? "",
       accountNumber: selected?.accountNumber ?? "",
+      initialBalance: selected ? Number(selected.initialBalance) : 0,
     });
   }, [dialogOpen, selected, form]);
 
@@ -129,7 +138,7 @@ export function BankAccountsManagement() {
   });
 
   const updateMutation = useMutation({
-    mutationFn: async (args: { id: string; values: BankAccountFormValues }) => {
+    mutationFn: async (args: { id: string; values: UpdateBankAccountFormValues }) => {
       const res = await fetch(`/api/org-admin/bank-accounts/${args.id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
@@ -188,7 +197,9 @@ export function BankAccountsManagement() {
     }
 
     if (!selected) throw new Error("No bank account selected");
-    await updateMutation.mutateAsync({ id: selected.id, values });
+    // Initial balance is set only on creation; exclude on updates
+    const { initialBalance: _omit, ...rest } = values;
+    await updateMutation.mutateAsync({ id: selected.id, values: rest });
   }
 
   const columns = useMemo<ColumnDef<BankAccount>[]>(
@@ -212,6 +223,30 @@ export function BankAccountsManagement() {
         header: "Account Number",
         cell: ({ row }) => (
           <div className="font-medium">{row.original.accountNumber}</div>
+        ),
+      },
+      {
+        accessorKey: "initialBalance",
+        header: "Initial Balance",
+        cell: ({ row }) => (
+          <div>
+            {Number(row.original.initialBalance).toLocaleString(undefined, {
+              minimumFractionDigits: 2,
+              maximumFractionDigits: 2,
+            })}
+          </div>
+        ),
+      },
+      {
+        accessorKey: "balance",
+        header: "Balance",
+        cell: ({ row }) => (
+          <div className="font-medium">
+            {Number(row.original.balance).toLocaleString(undefined, {
+              minimumFractionDigits: 2,
+              maximumFractionDigits: 2,
+            })}
+          </div>
         ),
       },
       {
@@ -425,6 +460,24 @@ export function BankAccountsManagement() {
               {form.formState.errors.accountNumber ? (
                 <p className="text-sm text-destructive">
                   {form.formState.errors.accountNumber.message}
+                </p>
+              ) : null}
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="bankAccountInitialBalance">Initial Balance</Label>
+              <Input
+                id="bankAccountInitialBalance"
+                type="number"
+                step="0.01"
+                min="0"
+                placeholder="0.00"
+                disabled={dialogMode === "edit"}
+                {...form.register("initialBalance", { valueAsNumber: true })}
+              />
+              {form.formState.errors.initialBalance ? (
+                <p className="text-sm text-destructive">
+                  {form.formState.errors.initialBalance.message}
                 </p>
               ) : null}
             </div>

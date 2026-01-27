@@ -6,6 +6,7 @@ import { cn } from "@/lib/utils";
 import type { LucideIcon } from "lucide-react";
 import {
   Activity,
+  ArrowLeftRight,
   Building2,
   CheckSquare,
   LayoutDashboard,
@@ -25,6 +26,7 @@ export type NavIconId =
   | "users"
   | "receipt"
   | "activity"
+  | "arrow-left-right"
   | "layout-dashboard"
   | "check-square"
   | "shield"
@@ -47,6 +49,7 @@ const iconMap: Record<NavIconId, LucideIcon> = {
   users: Users,
   receipt: Receipt,
   activity: Activity,
+  "arrow-left-right": ArrowLeftRight,
   "layout-dashboard": LayoutDashboard,
   "check-square": CheckSquare,
   shield: Shield,

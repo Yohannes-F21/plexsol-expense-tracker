@@ -94,6 +94,7 @@ model Organization {
   purchaseTypes     PurchaseType[]
   bankAccounts      BankAccount[]
   expensePolicies   ExpensePolicy[]
+  refunds           Refund[]
   activityLogs      ActivityLog[]
   
   @@index([name])
@@ -203,6 +204,8 @@ model BankAccount {
   bankName          String
   accountHolderName String
   accountNumber     String
+  initialBalance    Decimal  @default(0) @db.Decimal(14, 2)
+  balance           Decimal  @default(0) @db.Decimal(14, 2)
 
   // Soft delete / status
   isActive          Boolean  @default(true)
@@ -214,10 +217,31 @@ model BankAccount {
   // Relations
   organization      Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   expenses          Expense[]
+  refundsFrom       Refund[]     @relation("RefundFromAccount")
+  refundsTo         Refund[]     @relation("RefundToAccount")
 
   @@unique([organizationId, accountNumber])
   @@index([organizationId])
   @@index([organizationId, isActive])
+}
+
+model Refund {
+  id             String   @id @default(uuid())
+  organizationId String
+  fromAccountId  String
+  toAccountId    String
+  amount         Decimal  @db.Decimal(14, 2)
+  createdAt      DateTime @default(now())
+
+  // Relations
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  fromAccount  BankAccount  @relation("RefundFromAccount", fields: [fromAccountId], references: [id], onDelete: Restrict)
+  toAccount    BankAccount  @relation("RefundToAccount", fields: [toAccountId], references: [id], onDelete: Restrict)
+
+  @@index([organizationId])
+  @@index([fromAccountId])
+  @@index([toAccountId])
+  @@index([createdAt])
 }
 
 model ExpenseItem {

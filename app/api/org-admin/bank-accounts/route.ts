@@ -8,6 +8,7 @@ const createBankAccountSchema = z.object({
   bankName: z.string().min(1),
   accountHolderName: z.string().min(1),
   accountNumber: z.string().min(1),
+  initialBalance: z.coerce.number().min(0).optional(),
 });
 
 export async function GET() {
@@ -35,6 +36,8 @@ export async function GET() {
         bankName: true,
         accountHolderName: true,
         accountNumber: true,
+        initialBalance: true,
+        balance: true,
         isActive: true,
         createdAt: true,
         updatedAt: true,
@@ -68,6 +71,8 @@ export async function POST(request: Request) {
     const body = await request.json();
     const data = createBankAccountSchema.parse(body);
 
+    const initialBalance = new Prisma.Decimal(data.initialBalance ?? 0);
+
     const accountNumberDuplicate = await prisma.bankAccount.findFirst({
       where: {
         organizationId: orgId,
@@ -100,12 +105,16 @@ export async function POST(request: Request) {
           bankName: data.bankName,
           accountHolderName: data.accountHolderName,
           accountNumber: data.accountNumber,
+          initialBalance,
+          balance: initialBalance,
         },
         select: {
           id: true,
           bankName: true,
           accountHolderName: true,
           accountNumber: true,
+          initialBalance: true,
+          balance: true,
           isActive: true,
           createdAt: true,
           updatedAt: true,

@@ -33,6 +33,11 @@ const navItems: NavItem[] = [
     icon: "check-square",
   },
   {
+    title: "Refund",
+    href: "/org-admin/refunds",
+    icon: "arrow-left-right",
+  },
+  {
     title: "Staff",
     href: "/org-admin/team",
     icon: "users",
