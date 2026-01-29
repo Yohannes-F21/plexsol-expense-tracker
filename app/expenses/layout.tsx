@@ -23,6 +23,11 @@ const staffNavItems: NavItem[] = [
     href: "/policies",
     icon: "shield",
   },
+  {
+    title: "Refund",
+    href: "/refunds",
+    icon: "arrow-left-right",
+  },
 ];
 
 const orgAdminNavItems: NavItem[] = [
@@ -42,6 +47,11 @@ const orgAdminNavItems: NavItem[] = [
     icon: "check-square",
   },
   {
+    title: "Refund",
+    href: "/org-admin/refunds",
+    icon: "arrow-left-right",
+  },
+  {
     title: "Staff",
     href: "/org-admin/team",
     icon: "users",
@@ -55,6 +65,11 @@ const orgAdminNavItems: NavItem[] = [
     title: "Policies",
     href: "/org-admin/policies",
     icon: "shield",
+  },
+  {
+    title: "Reports",
+    href: "/org-admin/reports",
+    icon: "activity",
   },
   {
     title: "Settings",
@@ -86,7 +101,7 @@ export default async function ExpensesLayout({
     } catch (e) {
       console.warn(
         "[expenses-layout] Failed to load organization:",
-        e instanceof Error ? e.message : String(e)
+        e instanceof Error ? e.message : String(e),
       );
       organization = null;
     }

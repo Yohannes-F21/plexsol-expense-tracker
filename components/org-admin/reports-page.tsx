@@ -28,6 +28,7 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { DataTablePagination } from "@/components/data-table-pagination";
+import { Loader } from "@/components/loader";
 
 const REPORT_HEADERS = [
   "VAT Category",
@@ -142,7 +143,7 @@ export function ReportsPage() {
           return <span className="whitespace-nowrap">{String(v ?? "")}</span>;
         },
       })),
-    []
+    [],
   );
 
   const table = useReactTable({
@@ -175,13 +176,13 @@ export function ReportsPage() {
     try {
       const params = new URLSearchParams({ from, to });
       const result = await apiClient<{ rows: ReportRow[] }>(
-        `/api/org-admin/reports?${params.toString()}`
+        `/api/org-admin/reports?${params.toString()}`,
       );
       const csv = toCsv(result.rows ?? []);
       downloadTextFile(
         `reports_${from}_to_${to}.csv`,
         csv,
-        "text/csv;charset=utf-8;"
+        "text/csv;charset=utf-8;",
       );
     } catch (e) {
       console.error("[v0] Download CSV error:", e);
@@ -239,7 +240,7 @@ export function ReportsPage() {
                           ? null
                           : flexRender(
                               header.column.columnDef.header,
-                              header.getContext()
+                              header.getContext(),
                             )}
                       </TableHead>
                     ))}
@@ -250,8 +251,12 @@ export function ReportsPage() {
                 {isLoading ? (
                   <TableRow>
                     <TableCell colSpan={REPORT_HEADERS.length}>
-                      <div className="py-6">
-                        <Skeleton className="h-6 w-full" />
+                      <div className="flex items-center justify-center py-8">
+                        <Loader
+                          size="md"
+                          ariaLabel="Loading reports"
+                          showLabel
+                        />
                       </div>
                     </TableCell>
                   </TableRow>
@@ -262,7 +267,7 @@ export function ReportsPage() {
                         <TableCell key={cell.id} className="whitespace-nowrap">
                           {flexRender(
                             cell.column.columnDef.cell,
-                            cell.getContext()
+                            cell.getContext(),
                           )}
                         </TableCell>
                       ))}

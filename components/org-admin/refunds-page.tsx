@@ -8,6 +8,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   flexRender,
   getCoreRowModel,
+  getPaginationRowModel,
   getSortedRowModel,
   useReactTable,
   type ColumnDef,
@@ -22,7 +23,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Skeleton } from "@/components/ui/skeleton";
+import { Loader } from "@/components/loader";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -49,6 +50,7 @@ import {
 } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
+import { DataTablePagination } from "@/components/data-table-pagination";
 
 const refundSchema = z
   .object({
@@ -124,6 +126,10 @@ function StatusBadge({ status }: { status: RefundStatus }) {
 export function RefundsPage() {
   const queryClient = useQueryClient();
   const [sorting, setSorting] = useState<SortingState>([]);
+  const [{ pageIndex, pageSize }, setPagination] = useState({
+    pageIndex: 0,
+    pageSize: 20,
+  });
   const [dialogAction, setDialogAction] = useState<"approve" | "reject" | null>(
     null,
   );
@@ -361,9 +367,11 @@ export function RefundsPage() {
   const table = useReactTable({
     data: refunds,
     columns,
-    state: { sorting },
+    state: { sorting, pagination: { pageIndex, pageSize } },
     onSortingChange: setSorting,
+    onPaginationChange: setPagination,
     getCoreRowModel: getCoreRowModel(),
+    getPaginationRowModel: getPaginationRowModel(),
     getSortedRowModel: getSortedRowModel(),
   });
 
@@ -371,16 +379,6 @@ export function RefundsPage() {
   const isSubmitting = approveMutation.isPending || rejectMutation.isPending;
   const isCreating = createMutation.isPending;
   const loadingAny = isLoading || bankAccountsQuery.isLoading;
-
-  if (loadingAny) {
-    return (
-      <div className="space-y-4">
-        <Skeleton className="h-10 w-48" />
-        <Skeleton className="h-10 w-32" />
-        <Skeleton className="h-80 w-full" />
-      </div>
-    );
-  }
 
   if (refundsQuery.isError || bankAccountsQuery.isError) {
     return (
@@ -431,7 +429,19 @@ export function RefundsPage() {
                 ))}
               </TableHeader>
               <TableBody>
-                {table.getRowModel().rows.length ? (
+                {loadingAny ? (
+                  <TableRow>
+                    <TableCell colSpan={columns.length}>
+                      <div className="flex items-center justify-center py-8">
+                        <Loader
+                          size="md"
+                          ariaLabel="Loading refunds"
+                          showLabel
+                        />
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ) : table.getRowModel().rows.length ? (
                   table.getRowModel().rows.map((row) => (
                     <TableRow key={row.id}>
                       {row.getVisibleCells().map((cell) => (
@@ -456,6 +466,12 @@ export function RefundsPage() {
                 )}
               </TableBody>
             </Table>
+          </div>
+          <div className="mt-4">
+            <DataTablePagination
+              table={table}
+              storageKey="org-admin-refunds-page-size"
+            />
           </div>
         </CardContent>
       </Card>

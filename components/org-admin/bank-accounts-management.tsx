@@ -27,7 +27,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Skeleton } from "@/components/ui/skeleton";
+import { Loader } from "@/components/loader";
 import {
   Dialog,
   DialogContent,
@@ -332,15 +332,6 @@ export function BankAccountsManagement() {
     state: { sorting },
   });
 
-  if (bankAccountsQuery.isLoading) {
-    return (
-      <div className="space-y-4">
-        <Skeleton className="h-10 w-full" />
-        <Skeleton className="h-64 w-full" />
-      </div>
-    );
-  }
-
   const submit = form.handleSubmit(async (values) => {
     await handleSubmit(values);
   });
@@ -384,7 +375,19 @@ export function BankAccountsManagement() {
             ))}
           </TableHeader>
           <TableBody>
-            {table.getRowModel().rows.length ? (
+            {bankAccountsQuery.isLoading ? (
+              <TableRow>
+                <TableCell colSpan={columns.length}>
+                  <div className="flex items-center justify-center py-8">
+                    <Loader
+                      size="md"
+                      ariaLabel="Loading bank accounts"
+                      showLabel
+                    />
+                  </div>
+                </TableCell>
+              </TableRow>
+            ) : table.getRowModel().rows.length ? (
               table.getRowModel().rows.map((row) => (
                 <TableRow key={row.id}>
                   {row.getVisibleCells().map((cell) => (

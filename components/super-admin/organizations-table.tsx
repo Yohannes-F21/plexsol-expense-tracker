@@ -45,7 +45,7 @@ import {
 import { CreateOrganizationDialog } from "@/components/create-organization-dialog";
 import { InviteOrgAdminDialog } from "@/components/invite-org-admin-dialog";
 import { toast } from "sonner";
-import { Skeleton } from "@/components/ui/skeleton";
+import { Loader } from "@/components/loader";
 import { Card, CardContent } from "@/components/ui/card";
 import { DataTablePagination } from "@/components/data-table-pagination";
 import { Switch } from "@/components/ui/switch";
@@ -233,15 +233,6 @@ export function OrganizationsTable() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sorting, searchTerm]);
 
-  if (isLoading) {
-    return (
-      <div className="space-y-4">
-        <Skeleton className="h-10 w-full" />
-        <Skeleton className="h-64 w-full" />
-      </div>
-    );
-  }
-
   return (
     <TooltipProvider>
       <Card>
@@ -281,7 +272,19 @@ export function OrganizationsTable() {
                 ))}
               </TableHeader>
               <TableBody>
-                {table.getRowModel().rows?.length ? (
+                {isLoading ? (
+                  <TableRow>
+                    <TableCell colSpan={columns.length}>
+                      <div className="flex items-center justify-center py-8">
+                        <Loader
+                          size="md"
+                          ariaLabel="Loading organizations"
+                          showLabel
+                        />
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ) : table.getRowModel().rows?.length ? (
                   table.getRowModel().rows.map((row) => (
                     <TableRow key={row.id}>
                       {row.getVisibleCells().map((cell) => (

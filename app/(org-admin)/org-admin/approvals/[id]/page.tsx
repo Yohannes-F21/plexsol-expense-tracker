@@ -59,6 +59,15 @@ type ExpenseDetail = {
   fsNumber: string;
   invoiceNumber: string | null;
   paymentMethod: string;
+  checkNumber: string | null;
+  bankAccountId: string | null;
+  bankAccount: {
+    id: string;
+    bankName: string;
+    accountHolderName: string;
+    accountNumber: string;
+    isActive: boolean;
+  } | null;
   subtotal: any;
   vat: any;
   total: any;
@@ -109,7 +118,7 @@ export default function OrgAdminApprovalDetailPage({
     queryKey: ["approval", id],
     queryFn: async () => {
       return apiClient<{ expense: ExpenseDetail }>(
-        `/api/org-admin/approvals/${id}`
+        `/api/org-admin/approvals/${id}`,
       );
     },
   });
@@ -202,10 +211,10 @@ export default function OrgAdminApprovalDetailPage({
                   expense.status === "WARNING"
                     ? "outline"
                     : expense.status === "APPROVED"
-                    ? "default"
-                    : expense.status === "REJECTED"
-                    ? "destructive"
-                    : "secondary"
+                      ? "default"
+                      : expense.status === "REJECTED"
+                        ? "destructive"
+                        : "secondary"
                 }
               >
                 {expense.status}
@@ -264,6 +273,27 @@ export default function OrgAdminApprovalDetailPage({
                       {String(expense.paymentMethod).replace(/_/g, " ")}
                     </span>
                   </div>
+                  {expense.paymentMethod === "CHECK" && expense.checkNumber ? (
+                    <div className="flex items-start justify-between gap-4">
+                      <span className="text-muted-foreground">Check No.</span>
+                      <span className="text-right font-mono text-xs">
+                        {expense.checkNumber}
+                      </span>
+                    </div>
+                  ) : null}
+                  {expense.paymentMethod === "BANK_TRANSFER" &&
+                  expense.bankAccountId ? (
+                    <div className="flex items-start justify-between gap-4">
+                      <span className="text-muted-foreground">
+                        Bank Account
+                      </span>
+                      <span className="text-right text-xs">
+                        {expense.bankAccount
+                          ? `${expense.bankAccount.bankName} — ${expense.bankAccount.accountHolderName} — ${expense.bankAccount.accountNumber}`
+                          : expense.bankAccountId}
+                      </span>
+                    </div>
+                  ) : null}
                   <div className="flex items-start justify-between gap-4">
                     <span className="text-muted-foreground">Created by</span>
                     <span className="text-right font-mono text-xs">

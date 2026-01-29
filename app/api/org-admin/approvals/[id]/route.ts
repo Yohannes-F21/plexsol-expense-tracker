@@ -12,7 +12,7 @@ export async function GET(request: Request, context: any) {
     if (!session.organizationId) {
       return NextResponse.json(
         { error: "Organization ID missing" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -26,6 +26,17 @@ export async function GET(request: Request, context: any) {
         fsNumber: true,
         invoiceNumber: true,
         paymentMethod: true,
+        checkNumber: true,
+        bankAccountId: true,
+        bankAccount: {
+          select: {
+            id: true,
+            bankName: true,
+            accountHolderName: true,
+            accountNumber: true,
+            isActive: true,
+          },
+        },
         subtotal: true,
         vat: true,
         total: true,
@@ -72,7 +83,7 @@ export async function GET(request: Request, context: any) {
       {
         error: error instanceof Error ? error.message : "Internal server error",
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

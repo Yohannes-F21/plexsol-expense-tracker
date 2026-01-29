@@ -266,14 +266,6 @@ export function ExpensesManagement() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sorting, statusFilter, searchTerm]);
 
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-[50vh]">
-        <Loader size="md" ariaLabel="Loading Expenses" showLabel />
-      </div>
-    );
-  }
-
   return (
     <div className="space-y-6">
       <div>
@@ -355,7 +347,19 @@ export function ExpensesManagement() {
                 ))}
               </TableHeader>
               <TableBody>
-                {table.getRowModel().rows?.length ? (
+                {isLoading ? (
+                  <TableRow>
+                    <TableCell colSpan={columns.length}>
+                      <div className="flex items-center justify-center py-8">
+                        <Loader
+                          size="md"
+                          ariaLabel="Loading expenses"
+                          showLabel
+                        />
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ) : table.getRowModel().rows?.length ? (
                   table.getRowModel().rows.map((row) => (
                     <TableRow key={row.id}>
                       {row.getVisibleCells().map((cell) => (

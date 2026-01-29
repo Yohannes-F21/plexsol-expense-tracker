@@ -77,14 +77,6 @@ export function ApprovalsManagement() {
     return approvals.slice(start, start + pageSize);
   }, [approvals, pageIndex, pageSize]);
 
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-[50vh]">
-        <Loader size="md" ariaLabel="Loading Approvals" showLabel />
-      </div>
-    );
-  }
-
   if (error) {
     return <div className="text-destructive">{(error as Error).message}</div>;
   }
@@ -119,7 +111,19 @@ export function ApprovalsManagement() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {paged.length === 0 ? (
+              {isLoading ? (
+                <TableRow>
+                  <TableCell colSpan={8}>
+                    <div className="flex items-center justify-center py-8">
+                      <Loader
+                        size="md"
+                        ariaLabel="Loading approvals"
+                        showLabel
+                      />
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ) : paged.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={8} className="h-24 text-center">
                     No expenses awaiting approval.

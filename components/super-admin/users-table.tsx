@@ -25,7 +25,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { ArrowUpDown } from "lucide-react";
 import { toast } from "sonner";
-import { Skeleton } from "@/components/ui/skeleton";
+import { Loader } from "@/components/loader";
 import {
   Select,
   SelectContent,
@@ -212,15 +212,6 @@ export function UsersTable() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sorting, organizationFilter, statusFilter, searchTerm]);
 
-  if (isLoading) {
-    return (
-      <div className="space-y-4">
-        <Skeleton className="h-10 w-full" />
-        <Skeleton className="h-64 w-full" />
-      </div>
-    );
-  }
-
   return (
     <Card>
       <CardContent className="space-y-4">
@@ -280,7 +271,15 @@ export function UsersTable() {
               ))}
             </TableHeader>
             <TableBody>
-              {table.getRowModel().rows?.length ? (
+              {isLoading ? (
+                <TableRow>
+                  <TableCell colSpan={columns.length}>
+                    <div className="flex items-center justify-center py-8">
+                      <Loader size="md" ariaLabel="Loading users" showLabel />
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ) : table.getRowModel().rows?.length ? (
                 table.getRowModel().rows.map((row) => (
                   <TableRow key={row.id}>
                     {row.getVisibleCells().map((cell) => (

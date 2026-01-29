@@ -101,7 +101,7 @@ function formatMoney(x: any) {
 
 export function ExpensesTable() {
   const [organizationId, setOrganizationId] = useState<string | undefined>(
-    undefined
+    undefined,
   );
   const [status, setStatus] = useState<string | undefined>(undefined);
   const [start, setStart] = useState<string | undefined>(undefined);
@@ -133,7 +133,7 @@ export function ExpensesTable() {
       params.set("pageSize", String(pageSize));
 
       const res = await apiClient<{ total: number; expenses: Expense[] }>(
-        `/api/super-admin/expenses?${params.toString()}`
+        `/api/super-admin/expenses?${params.toString()}`,
       );
       return res;
     },
@@ -182,67 +182,75 @@ export function ExpensesTable() {
           </Button>
         </div>
 
-        {isLoading ? (
-          <div className="flex items-center justify-center min-h-[50vh]">
-            <Loader size="md" ariaLabel="Loading expenses" showLabel />
-          </div>
-        ) : expenses.length === 0 ? (
-          <div className="text-center text-muted-foreground">
-            No expenses found
-          </div>
-        ) : (
-          <>
-            <div className="rounded-md border overflow-hidden">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Organization</TableHead>
-                    <TableHead>Created By</TableHead>
-                    <TableHead>Company</TableHead>
-                    <TableHead>Purchased Date</TableHead>
-                    <TableHead className="text-right">Total</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Created At</TableHead>
+        <div className="rounded-md border overflow-hidden">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Organization</TableHead>
+                <TableHead>Created By</TableHead>
+                <TableHead>Company</TableHead>
+                <TableHead>Purchased Date</TableHead>
+                <TableHead className="text-right">Total</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead>Created At</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {isLoading ? (
+                <TableRow>
+                  <TableCell colSpan={7}>
+                    <div className="flex items-center justify-center py-8">
+                      <Loader
+                        size="md"
+                        ariaLabel="Loading expenses"
+                        showLabel
+                      />
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ) : expenses.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={7} className="h-24 text-center">
+                    No expenses found
+                  </TableCell>
+                </TableRow>
+              ) : (
+                expenses.map((e) => (
+                  <TableRow key={e.id}>
+                    <TableCell>{e.organization?.name || "-"}</TableCell>
+                    <TableCell>
+                      {e.createdByUser?.name || e.createdByUser?.email || "-"}
+                    </TableCell>
+                    <TableCell>{e.companyName}</TableCell>
+                    <TableCell>
+                      {new Date(e.purchasedDate).toLocaleDateString()}
+                    </TableCell>
+                    <TableCell className="text-right  font-mono text-sm font-semibold ">
+                      {formatMoney(e.total)}
+                      <span className="ml-1">ETB</span>
+                    </TableCell>
+                    <TableCell>{renderStatusBadge(e.status)}</TableCell>
+                    <TableCell>
+                      {new Date(e.createdAt).toLocaleString()}
+                    </TableCell>
                   </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {expenses.map((e) => (
-                    <TableRow key={e.id}>
-                      <TableCell>{e.organization?.name || "-"}</TableCell>
-                      <TableCell>
-                        {e.createdByUser?.name || e.createdByUser?.email || "-"}
-                      </TableCell>
-                      <TableCell>{e.companyName}</TableCell>
-                      <TableCell>
-                        {new Date(e.purchasedDate).toLocaleDateString()}
-                      </TableCell>
-                      <TableCell className="text-right  font-mono text-sm font-semibold ">
-                        {formatMoney(e.total)}
-                        <span className="ml-1">ETB</span>
-                      </TableCell>
-                      <TableCell>{renderStatusBadge(e.status)}</TableCell>
-                      <TableCell>
-                        {new Date(e.createdAt).toLocaleString()}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
+                ))
+              )}
+            </TableBody>
+          </Table>
+        </div>
 
-            <ServerDataTablePagination
-              totalCount={total}
-              pageIndex={pageIndex}
-              pageSize={pageSize}
-              onPageIndexChange={setPageIndex}
-              onPageSizeChange={(size) => {
-                setPageSize(size);
-                setPageIndex(0);
-              }}
-              storageKey="super-admin-expenses-page-size"
-            />
-          </>
-        )}
+        <ServerDataTablePagination
+          totalCount={total}
+          pageIndex={pageIndex}
+          pageSize={pageSize}
+          onPageIndexChange={setPageIndex}
+          onPageSizeChange={(size) => {
+            setPageSize(size);
+            setPageIndex(0);
+          }}
+          storageKey="super-admin-expenses-page-size"
+        />
       </CardContent>
     </Card>
   );

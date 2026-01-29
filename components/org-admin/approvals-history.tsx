@@ -60,7 +60,7 @@ export function ApprovalsHistory() {
     queryKey: ["approvals-history"],
     queryFn: async () => {
       return apiClient<{ history: HistoryRow[] }>(
-        "/api/org-admin/approvals/history"
+        "/api/org-admin/approvals/history",
       );
     },
   });
@@ -75,14 +75,6 @@ export function ApprovalsHistory() {
     const start = pageIndex * pageSize;
     return history.slice(start, start + pageSize);
   }, [history, pageIndex, pageSize]);
-
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-[50vh]">
-        <Loader size="md" ariaLabel="Loading Approval History" showLabel />
-      </div>
-    );
-  }
 
   if (error) {
     return <div className="text-destructive">{(error as Error).message}</div>;
@@ -110,7 +102,19 @@ export function ApprovalsHistory() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {paged.length === 0 ? (
+              {isLoading ? (
+                <TableRow>
+                  <TableCell colSpan={6}>
+                    <div className="flex items-center justify-center py-8">
+                      <Loader
+                        size="md"
+                        ariaLabel="Loading approval history"
+                        showLabel
+                      />
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ) : paged.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={6} className="h-24 text-center">
                     No approval history yet.

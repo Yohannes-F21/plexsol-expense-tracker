@@ -24,7 +24,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Skeleton } from "@/components/ui/skeleton";
+import { Loader } from "@/components/loader";
 import {
   MasterDataDialog,
   type MasterDataFormValues,
@@ -251,15 +251,6 @@ export function PurchaseTypesManagement() {
     state: { sorting },
   });
 
-  if (purchaseTypesQuery.isLoading) {
-    return (
-      <div className="space-y-4">
-        <Skeleton className="h-10 w-full" />
-        <Skeleton className="h-64 w-full" />
-      </div>
-    );
-  }
-
   return (
     <div className="space-y-4">
       <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 justify-between">
@@ -304,7 +295,19 @@ export function PurchaseTypesManagement() {
               ))}
             </TableHeader>
             <TableBody>
-              {table.getRowModel().rows?.length ? (
+              {purchaseTypesQuery.isLoading ? (
+                <TableRow>
+                  <TableCell colSpan={columns.length}>
+                    <div className="flex items-center justify-center py-8">
+                      <Loader
+                        size="md"
+                        ariaLabel="Loading purchase types"
+                        showLabel
+                      />
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ) : table.getRowModel().rows?.length ? (
                 table.getRowModel().rows.map((row) => (
                   <TableRow key={row.id}>
                     {row.getVisibleCells().map((cell) => (

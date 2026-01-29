@@ -8,6 +8,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   flexRender,
   getCoreRowModel,
+  getPaginationRowModel,
   getSortedRowModel,
   useReactTable,
   type ColumnDef,
@@ -31,7 +32,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
-import { Skeleton } from "@/components/ui/skeleton";
+import { Loader } from "@/components/loader";
 import {
   Table,
   TableBody,
@@ -48,6 +49,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { DataTablePagination } from "@/components/data-table-pagination";
 
 const refundSchema = z
   .object({
@@ -122,6 +124,10 @@ function StatusBadge({ status }: { status: RefundStatus }) {
 export function StaffRefundsPage() {
   const queryClient = useQueryClient();
   const [sorting, setSorting] = useState<SortingState>([]);
+  const [{ pageIndex, pageSize }, setPagination] = useState({
+    pageIndex: 0,
+    pageSize: 20,
+  });
   const [dialogOpen, setDialogOpen] = useState(false);
 
   const form = useForm<RefundFormValues>({
@@ -288,23 +294,15 @@ export function StaffRefundsPage() {
   const table = useReactTable({
     data: refunds,
     columns,
-    state: { sorting },
+    state: { sorting, pagination: { pageIndex, pageSize } },
     onSortingChange: setSorting,
+    onPaginationChange: setPagination,
     getCoreRowModel: getCoreRowModel(),
+    getPaginationRowModel: getPaginationRowModel(),
     getSortedRowModel: getSortedRowModel(),
   });
 
   const isLoading = bankAccountsQuery.isLoading || refundsQuery.isLoading;
-
-  if (isLoading) {
-    return (
-      <div className="space-y-4">
-        <Skeleton className="h-10 w-48" />
-        <Skeleton className="h-10 w-32" />
-        <Skeleton className="h-80 w-full" />
-      </div>
-    );
-  }
 
   if (bankAccountsQuery.isError || refundsQuery.isError) {
     return (
@@ -355,7 +353,19 @@ export function StaffRefundsPage() {
                 ))}
               </TableHeader>
               <TableBody>
-                {table.getRowModel().rows.length ? (
+                {isLoading ? (
+                  <TableRow>
+                    <TableCell colSpan={columns.length}>
+                      <div className="flex items-center justify-center py-8">
+                        <Loader
+                          size="md"
+                          ariaLabel="Loading refunds"
+                          showLabel
+                        />
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ) : table.getRowModel().rows.length ? (
                   table.getRowModel().rows.map((row) => (
                     <TableRow key={row.id}>
                       {row.getVisibleCells().map((cell) => (
@@ -380,6 +390,12 @@ export function StaffRefundsPage() {
                 )}
               </TableBody>
             </Table>
+          </div>
+          <div className="mt-4">
+            <DataTablePagination
+              table={table}
+              storageKey="staff-refunds-page-size"
+            />
           </div>
         </CardContent>
       </Card>
