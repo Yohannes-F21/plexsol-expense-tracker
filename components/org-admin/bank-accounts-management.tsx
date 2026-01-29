@@ -14,7 +14,7 @@ import {
   type SortingState,
 } from "@tanstack/react-table";
 import { toast } from "sonner";
-import { MoreHorizontal, Pencil, Plus, Power, PowerOff } from "lucide-react";
+import { PencilLine, Plus, Power, Trash2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -27,12 +27,6 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   Dialog,
@@ -42,7 +36,6 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
-
 type BankAccount = {
   id: string;
   bankName: string;
@@ -279,48 +272,50 @@ export function BankAccountsManagement() {
       },
       {
         id: "actions",
+        header: "Actions",
         cell: ({ row }) => {
           const bankAccount = row.original;
           return (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" className="h-8 w-8 p-0">
-                  <MoreHorizontal className="h-4 w-4" />
+            <div className="flex items-center gap-2 justify-end">
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                onClick={() => openEditDialog(bankAccount)}
+                aria-label="Edit bank account"
+              >
+                <PencilLine className="h-4 w-4" />
+              </Button>
+              {bankAccount.isActive ? (
+                <Button
+                  variant="ghost"
+                  size="icon-sm"
+                  onClick={() =>
+                    toggleMutation.mutate({
+                      id: bankAccount.id,
+                      isActive: false,
+                    })
+                  }
+                  aria-label="Deactivate bank account"
+                  className="text-destructive"
+                >
+                  <Trash2 className="h-4 w-4" />
                 </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={() => openEditDialog(bankAccount)}>
-                  <Pencil className="mr-2 h-4 w-4" />
-                  Edit
-                </DropdownMenuItem>
-                {bankAccount.isActive ? (
-                  <DropdownMenuItem
-                    onClick={() =>
-                      toggleMutation.mutate({
-                        id: bankAccount.id,
-                        isActive: false,
-                      })
-                    }
-                    className="text-destructive"
-                  >
-                    <PowerOff className="mr-2 h-4 w-4" />
-                    Deactivate
-                  </DropdownMenuItem>
-                ) : (
-                  <DropdownMenuItem
-                    onClick={() =>
-                      toggleMutation.mutate({
-                        id: bankAccount.id,
-                        isActive: true,
-                      })
-                    }
-                  >
-                    <Power className="mr-2 h-4 w-4" />
-                    Activate
-                  </DropdownMenuItem>
-                )}
-              </DropdownMenuContent>
-            </DropdownMenu>
+              ) : (
+                <Button
+                  variant="ghost"
+                  size="icon-sm"
+                  onClick={() =>
+                    toggleMutation.mutate({
+                      id: bankAccount.id,
+                      isActive: true,
+                    })
+                  }
+                  aria-label="Activate bank account"
+                >
+                  <Power className="h-4 w-4" />
+                </Button>
+              )}
+            </div>
           );
         },
       },
@@ -371,7 +366,12 @@ export function BankAccountsManagement() {
             {table.getHeaderGroups().map((headerGroup) => (
               <TableRow key={headerGroup.id}>
                 {headerGroup.headers.map((header) => (
-                  <TableHead key={header.id}>
+                  <TableHead
+                    key={header.id}
+                    className={
+                      header.column.id === "actions" ? "text-right" : undefined
+                    }
+                  >
                     {header.isPlaceholder
                       ? null
                       : flexRender(
@@ -388,7 +388,12 @@ export function BankAccountsManagement() {
               table.getRowModel().rows.map((row) => (
                 <TableRow key={row.id}>
                   {row.getVisibleCells().map((cell) => (
-                    <TableCell key={cell.id}>
+                    <TableCell
+                      key={cell.id}
+                      className={
+                        cell.column.id === "actions" ? "text-right" : undefined
+                      }
+                    >
                       {flexRender(
                         cell.column.columnDef.cell,
                         cell.getContext(),

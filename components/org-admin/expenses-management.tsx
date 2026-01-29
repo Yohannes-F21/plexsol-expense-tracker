@@ -84,7 +84,9 @@ export function ExpensesManagement() {
       if (q) params.set("q", q);
       if (statusFilter !== "all") params.set("status", statusFilter);
       const qs = params.toString();
-      const url = qs ? `/api/org-admin/expenses?${qs}` : "/api/org-admin/expenses";
+      const url = qs
+        ? `/api/org-admin/expenses?${qs}`
+        : "/api/org-admin/expenses";
       const res = await fetch(url);
       if (!res.ok) throw new Error("Failed to fetch expenses");
       return res.json() as Promise<{ expenses: Expense[] }>;

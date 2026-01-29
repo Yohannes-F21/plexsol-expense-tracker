@@ -17,7 +17,7 @@ export async function GET(request: Request) {
     if (!orgId) {
       return NextResponse.json(
         { error: "Organization ID missing" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -56,7 +56,7 @@ export async function GET(request: Request) {
       {
         error: error instanceof Error ? error.message : "Internal server error",
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
@@ -69,7 +69,7 @@ export async function POST(request: Request) {
     if (!orgId) {
       return NextResponse.json(
         { error: "Organization ID missing" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -88,13 +88,13 @@ export async function POST(request: Request) {
       if (!labelDuplicate.isActive) {
         return NextResponse.json(
           { error: "A unit with this label already exists but is inactive." },
-          { status: 409 }
+          { status: 409 },
         );
       }
 
       return NextResponse.json(
         { error: "A unit with this label already exists." },
-        { status: 409 }
+        { status: 409 },
       );
     }
 
@@ -110,13 +110,13 @@ export async function POST(request: Request) {
       if (!codeDuplicate.isActive) {
         return NextResponse.json(
           { error: "A unit with this code already exists but is inactive." },
-          { status: 409 }
+          { status: 409 },
         );
       }
 
       return NextResponse.json(
         { error: "A unit with this code already exists." },
-        { status: 409 }
+        { status: 409 },
       );
     }
 
@@ -159,7 +159,7 @@ export async function POST(request: Request) {
     if (error instanceof z.ZodError) {
       return NextResponse.json(
         { error: "Invalid input", details: error.errors },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -171,7 +171,7 @@ export async function POST(request: Request) {
     ) {
       return NextResponse.json(
         { error: "A unit with this code already exists." },
-        { status: 409 }
+        { status: 409 },
       );
     }
 
@@ -179,7 +179,7 @@ export async function POST(request: Request) {
       {
         error: error instanceof Error ? error.message : "Internal server error",
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

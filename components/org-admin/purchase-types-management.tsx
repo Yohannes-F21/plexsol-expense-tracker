@@ -11,7 +11,7 @@ import {
   type SortingState,
 } from "@tanstack/react-table";
 import { toast } from "sonner";
-import { MoreHorizontal, Pencil, Plus, Power, PowerOff } from "lucide-react";
+import { PencilLine, Plus, Power, Trash2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -24,14 +24,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { Skeleton } from "@/components/ui/skeleton";
-
 import {
   MasterDataDialog,
   type MasterDataFormValues,
@@ -130,7 +123,7 @@ export function PurchaseTypesManagement() {
       const payload = await res.json().catch(() => ({}));
       if (!res.ok)
         throw new Error(
-          payload.error || "Failed to update purchase type status"
+          payload.error || "Failed to update purchase type status",
         );
       return payload;
     },
@@ -198,53 +191,55 @@ export function PurchaseTypesManagement() {
       },
       {
         id: "actions",
+        header: "Actions",
         cell: ({ row }) => {
           const purchaseType = row.original;
           return (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" className="h-8 w-8 p-0">
-                  <MoreHorizontal className="h-4 w-4" />
+            <div className="flex items-center gap-2 justify-end">
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                onClick={() => openEditDialog(purchaseType)}
+                aria-label="Edit purchase type"
+              >
+                <PencilLine className="h-4 w-4" />
+              </Button>
+              {purchaseType.isActive ? (
+                <Button
+                  variant="ghost"
+                  size="icon-sm"
+                  onClick={() =>
+                    toggleMutation.mutate({
+                      id: purchaseType.id,
+                      isActive: false,
+                    })
+                  }
+                  aria-label="Deactivate purchase type"
+                  className="text-destructive"
+                >
+                  <Trash2 className="h-4 w-4" />
                 </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={() => openEditDialog(purchaseType)}>
-                  <Pencil className="mr-2 h-4 w-4" />
-                  Edit
-                </DropdownMenuItem>
-                {purchaseType.isActive ? (
-                  <DropdownMenuItem
-                    onClick={() =>
-                      toggleMutation.mutate({
-                        id: purchaseType.id,
-                        isActive: false,
-                      })
-                    }
-                    className="text-destructive"
-                  >
-                    <PowerOff className="mr-2 h-4 w-4" />
-                    Deactivate
-                  </DropdownMenuItem>
-                ) : (
-                  <DropdownMenuItem
-                    onClick={() =>
-                      toggleMutation.mutate({
-                        id: purchaseType.id,
-                        isActive: true,
-                      })
-                    }
-                  >
-                    <Power className="mr-2 h-4 w-4" />
-                    Activate
-                  </DropdownMenuItem>
-                )}
-              </DropdownMenuContent>
-            </DropdownMenu>
+              ) : (
+                <Button
+                  variant="ghost"
+                  size="icon-sm"
+                  onClick={() =>
+                    toggleMutation.mutate({
+                      id: purchaseType.id,
+                      isActive: true,
+                    })
+                  }
+                  aria-label="Activate purchase type"
+                >
+                  <Power className="h-4 w-4" />
+                </Button>
+              )}
+            </div>
           );
         },
       },
     ],
-    [toggleMutation]
+    [toggleMutation],
   );
 
   const table = useReactTable({
@@ -253,9 +248,7 @@ export function PurchaseTypesManagement() {
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
     onSortingChange: setSorting,
-    state: {
-      sorting,
-    },
+    state: { sorting },
   });
 
   if (purchaseTypesQuery.isLoading) {
@@ -293,12 +286,17 @@ export function PurchaseTypesManagement() {
               {table.getHeaderGroups().map((headerGroup) => (
                 <TableRow key={headerGroup.id}>
                   {headerGroup.headers.map((header) => (
-                    <TableHead key={header.id} className="whitespace-nowrap">
+                    <TableHead
+                      key={header.id}
+                      className={`whitespace-nowrap ${
+                        header.column.id === "actions" ? "text-right" : ""
+                      }`}
+                    >
                       {header.isPlaceholder
                         ? null
                         : flexRender(
                             header.column.columnDef.header,
-                            header.getContext()
+                            header.getContext(),
                           )}
                     </TableHead>
                   ))}
@@ -310,10 +308,15 @@ export function PurchaseTypesManagement() {
                 table.getRowModel().rows.map((row) => (
                   <TableRow key={row.id}>
                     {row.getVisibleCells().map((cell) => (
-                      <TableCell key={cell.id} className="whitespace-nowrap">
+                      <TableCell
+                        key={cell.id}
+                        className={`whitespace-nowrap ${
+                          cell.column.id === "actions" ? "text-right" : ""
+                        }`}
+                      >
                         {flexRender(
                           cell.column.columnDef.cell,
-                          cell.getContext()
+                          cell.getContext(),
                         )}
                       </TableCell>
                     ))}

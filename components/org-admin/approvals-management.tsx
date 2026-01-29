@@ -59,7 +59,9 @@ export function ApprovalsManagement() {
       const q = query.trim();
       if (q) params.set("q", q);
       const qs = params.toString();
-      const url = qs ? `/api/org-admin/approvals?${qs}` : "/api/org-admin/approvals";
+      const url = qs
+        ? `/api/org-admin/approvals?${qs}`
+        : "/api/org-admin/approvals";
       return apiClient<{ approvals: ApprovalRow[] }>(url);
     },
   });

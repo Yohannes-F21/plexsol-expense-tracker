@@ -36,7 +36,7 @@ import {
   ChevronDown,
   Eye,
   Filter,
-  Pencil,
+  PencilLine,
   ShieldAlert,
   Trash2,
 } from "lucide-react";
@@ -102,7 +102,7 @@ function PolicyFormDialog({
     description: initial?.description ?? "",
     ruleDescription: initial?.description ? "" : "",
     categoryType: deriveTypeFromCategoryId(
-      initial?.allowedCategories?.[0] ?? ""
+      initial?.allowedCategories?.[0] ?? "",
     ),
     categoryId: initial?.allowedCategories?.[0] ?? "",
     maxAmount: initial?.maxAmount?.toString() ?? "",
@@ -162,7 +162,7 @@ function PolicyFormDialog({
     } catch (error) {
       console.error(error);
       toast.error(
-        error instanceof Error ? error.message : "Something went wrong"
+        error instanceof Error ? error.message : "Something went wrong",
       );
     } finally {
       setSubmitting(false);
@@ -339,8 +339,8 @@ function PolicyFormDialog({
               {submitting
                 ? "Saving..."
                 : mode === "edit"
-                ? "Save changes"
-                : "Create policy"}
+                  ? "Save changes"
+                  : "Create policy"}
             </Button>
           </DialogFooter>
         )}
@@ -426,7 +426,7 @@ function PolicyCard({
               aria-label="Edit"
               className="h-9 w-9"
             >
-              <Pencil className="h-4 w-4" />
+              <PencilLine className="h-4 w-4" />
             </Button>
             <Button
               size="icon"
@@ -482,14 +482,14 @@ function PolicyCard({
 export default function PoliciesPage() {
   const queryClient = useQueryClient();
   const [filterMode, setFilterMode] = useState<"all" | "active" | "inactive">(
-    "all"
+    "all",
   );
   const [dialogMode, setDialogMode] = useState<"create" | "edit" | "view">(
-    "create"
+    "create",
   );
   const [dialogOpen, setDialogOpen] = useState(false);
   const [activePolicy, setActivePolicy] = useState<ExpensePolicy | undefined>(
-    undefined
+    undefined,
   );
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<ExpensePolicy | null>(null);
@@ -613,7 +613,6 @@ export default function PoliciesPage() {
                   <Filter className="h-4 w-4" />
                   <SelectValue placeholder="All Policies" />
                 </div>
-                <ChevronDown className="h-4 w-4 opacity-50" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Policies</SelectItem>

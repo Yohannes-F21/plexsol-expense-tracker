@@ -114,7 +114,7 @@ export async function GET(request: Request) {
     if (!session.organizationId) {
       return NextResponse.json(
         { error: "Organization ID missing" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -190,7 +190,7 @@ export async function GET(request: Request) {
       {
         error: error instanceof Error ? error.message : "Internal server error",
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
@@ -202,7 +202,7 @@ export async function POST(request: Request) {
     if (!session.organizationId) {
       return NextResponse.json(
         { error: "Organization ID missing" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -222,10 +222,10 @@ export async function POST(request: Request) {
     }));
 
     const unitIds = Array.from(
-      new Set(normalizedItems.map((it) => it.unitOfMeasureId).filter(Boolean))
+      new Set(normalizedItems.map((it) => it.unitOfMeasureId).filter(Boolean)),
     ) as string[];
     const purchaseTypeIds = Array.from(
-      new Set(normalizedItems.map((it) => it.purchaseTypeId).filter(Boolean))
+      new Set(normalizedItems.map((it) => it.purchaseTypeId).filter(Boolean)),
     ) as string[];
 
     if (unitIds.length) {
@@ -240,7 +240,7 @@ export async function POST(request: Request) {
       if (found.length !== unitIds.length) {
         return NextResponse.json(
           { error: "Invalid unit of measure selection" },
-          { status: 400 }
+          { status: 400 },
         );
       }
     }
@@ -257,7 +257,7 @@ export async function POST(request: Request) {
       if (found.length !== purchaseTypeIds.length) {
         return NextResponse.json(
           { error: "Invalid purchase type selection" },
-          { status: 400 }
+          { status: 400 },
         );
       }
     }
@@ -274,7 +274,7 @@ export async function POST(request: Request) {
       if (!found) {
         return NextResponse.json(
           { error: "Invalid bank account selection" },
-          { status: 400 }
+          { status: 400 },
         );
       }
     }
@@ -294,7 +294,7 @@ export async function POST(request: Request) {
     });
 
     const subtotal = round2(
-      computedItems.reduce((sum, it) => sum + it.lineTotal, 0)
+      computedItems.reduce((sum, it) => sum + it.lineTotal, 0),
     );
     const vat = round2(subtotal * VAT_RATE);
     const total = round2(subtotal + vat);
@@ -320,10 +320,10 @@ export async function POST(request: Request) {
           invoiceNumber: data.invoiceNumber || null,
           paymentMethod: data.paymentMethod,
           checkNumber:
-            data.paymentMethod === "CHECK" ? checkNumber ?? null : null,
+            data.paymentMethod === "CHECK" ? (checkNumber ?? null) : null,
           bankAccountId:
             data.paymentMethod === "BANK_TRANSFER"
-              ? bankAccountId ?? null
+              ? (bankAccountId ?? null)
               : null,
           subtotal: new Prisma.Decimal(subtotal),
           vat: new Prisma.Decimal(vat),
@@ -386,14 +386,14 @@ export async function POST(request: Request) {
     if (error instanceof z.ZodError) {
       return NextResponse.json(
         { error: "Invalid input", details: error.errors },
-        { status: 400 }
+        { status: 400 },
       );
     }
     return NextResponse.json(
       {
         error: error instanceof Error ? error.message : "Internal server error",
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

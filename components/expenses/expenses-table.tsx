@@ -225,12 +225,12 @@ export function ExpensesTable(props: { role: "ORG_ADMIN" | "STAFF" }) {
             label === "PENDING"
               ? "text-yellow-600 bg-orange-100  text-xs"
               : label === "APPROVED"
-              ? "text-green-600 bg-green-100  text-xs"
-              : label === "REJECTED"
-              ? "text-red-600 bg-red-100  text-xs"
-              : label === "WARNING"
-              ? "text-orange-600 bg-orange-100  text-xs"
-              : "text-muted-foreground";
+                ? "text-green-600 bg-green-100  text-xs"
+                : label === "REJECTED"
+                  ? "text-red-600 bg-red-100  text-xs"
+                  : label === "WARNING"
+                    ? "text-orange-600 bg-orange-100  text-xs"
+                    : "text-muted-foreground";
 
           const tooltipText =
             label === "WARNING"
@@ -242,10 +242,10 @@ export function ExpensesTable(props: { role: "ORG_ADMIN" | "STAFF" }) {
                   }`
                 : "Violation: policy limit exceeded"
               : label === "REJECTED"
-              ? row.original.rejectionComment?.trim()
-                ? `Rejected: ${row.original.rejectionComment.trim()}`
-                : "Rejected: no comment provided"
-              : null;
+                ? row.original.rejectionComment?.trim()
+                  ? `Rejected: ${row.original.rejectionComment.trim()}`
+                  : "Rejected: no comment provided"
+                : null;
 
           const badge = (
             <Badge variant="outline" className={`${className} capitalize`}>
@@ -322,7 +322,7 @@ export function ExpensesTable(props: { role: "ORG_ADMIN" | "STAFF" }) {
             </div>
           );
         },
-      }
+      },
     );
 
     return cols;
@@ -396,7 +396,7 @@ export function ExpensesTable(props: { role: "ORG_ADMIN" | "STAFF" }) {
                           ? null
                           : flexRender(
                               header.column.columnDef.header,
-                              header.getContext()
+                              header.getContext(),
                             )}
                       </TableHead>
                     ))}
@@ -411,7 +411,7 @@ export function ExpensesTable(props: { role: "ORG_ADMIN" | "STAFF" }) {
                         <TableCell key={cell.id}>
                           {flexRender(
                             cell.column.columnDef.cell,
-                            cell.getContext()
+                            cell.getContext(),
                           )}
                         </TableCell>
                       ))}

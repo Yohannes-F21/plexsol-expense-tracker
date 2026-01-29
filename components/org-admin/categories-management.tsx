@@ -12,7 +12,7 @@ import {
   CategoryDialog,
   type CategoryFormValues,
 } from "@/components/org-admin/category-dialog";
-import { Layers, Pencil, Trash2 } from "lucide-react";
+import { Layers, PencilLine, Trash2 } from "lucide-react";
 
 type CategoryType = "operational" | "administrative";
 
@@ -85,7 +85,7 @@ export function CategoriesManagement() {
       if (response.status === 409) {
         const data = await response.json().catch(() => ({}));
         throw new Error(
-          data.error || "A category with that name already exists"
+          data.error || "A category with that name already exists",
         );
       }
 
@@ -119,7 +119,7 @@ export function CategoriesManagement() {
       if (response.status === 409) {
         const data = await response.json().catch(() => ({}));
         throw new Error(
-          data.error || "A category with that name already exists"
+          data.error || "A category with that name already exists",
         );
       }
 
@@ -182,7 +182,7 @@ export function CategoriesManagement() {
         (c) =>
           c.id !== selected?.id &&
           c.type === values.type &&
-          normalizeName(c.name) === normalizeName(values.name)
+          normalizeName(c.name) === normalizeName(values.name),
       );
     if (existing) {
       throw new Error("A category with that name already exists");
@@ -274,7 +274,7 @@ export function CategoriesManagement() {
                           onClick={() => openEditDialog(category)}
                           aria-label="Edit"
                         >
-                          <Pencil className="h-4 w-4" />
+                          <PencilLine className="h-4 w-4" />
                         </Button>
                         <Button
                           size="icon"
@@ -332,7 +332,7 @@ export function CategoriesManagement() {
                           onClick={() => openEditDialog(category)}
                           aria-label="Edit"
                         >
-                          <Pencil className="h-4 w-4" />
+                          <PencilLine className="h-4 w-4" />
                         </Button>
                         <Button
                           size="icon"
@@ -363,7 +363,7 @@ export function CategoriesManagement() {
             await handleSubmit(values);
           } catch (e) {
             toast.error(
-              e instanceof Error ? e.message : "Something went wrong"
+              e instanceof Error ? e.message : "Something went wrong",
             );
           }
         }}
