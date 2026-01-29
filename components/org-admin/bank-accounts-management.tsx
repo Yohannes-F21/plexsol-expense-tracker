@@ -8,11 +8,9 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import {
   flexRender,
   getCoreRowModel,
-  getFilteredRowModel,
   getSortedRowModel,
   useReactTable,
   type ColumnDef,
-  type ColumnFiltersState,
   type SortingState,
 } from "@tanstack/react-table";
 import { toast } from "sonner";
@@ -79,16 +77,23 @@ export function BankAccountsManagement() {
   const queryClient = useQueryClient();
 
   const [sorting, setSorting] = useState<SortingState>([]);
-  const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
+  const [searchTerm, setSearchTerm] = useState("");
 
   const [dialogOpen, setDialogOpen] = useState(false);
   const [dialogMode, setDialogMode] = useState<"create" | "edit">("create");
   const [selected, setSelected] = useState<BankAccount | null>(null);
 
   const bankAccountsQuery = useQuery<{ bankAccounts: BankAccount[] }>({
-    queryKey: BANK_ACCOUNTS_QUERY_KEY,
+    queryKey: [...BANK_ACCOUNTS_QUERY_KEY, searchTerm],
     queryFn: async () => {
-      const res = await fetch("/api/org-admin/bank-accounts", {
+      const params = new URLSearchParams();
+      const q = searchTerm.trim();
+      if (q) params.set("q", q);
+      const qs = params.toString();
+      const url = qs
+        ? `/api/org-admin/bank-accounts?${qs}`
+        : "/api/org-admin/bank-accounts";
+      const res = await fetch(url, {
         cache: "no-store",
       });
       const payload = await res.json().catch(() => ({}));
@@ -328,10 +333,8 @@ export function BankAccountsManagement() {
     columns,
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
-    getFilteredRowModel: getFilteredRowModel(),
     onSortingChange: setSorting,
-    onColumnFiltersChange: setColumnFilters,
-    state: { sorting, columnFilters },
+    state: { sorting },
   });
 
   if (bankAccountsQuery.isLoading) {
@@ -352,12 +355,8 @@ export function BankAccountsManagement() {
       <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 justify-between">
         <Input
           placeholder="Filter bank accounts..."
-          value={
-            (table.getColumn("accountNumber")?.getFilterValue() as string) ?? ""
-          }
-          onChange={(event) =>
-            table.getColumn("accountNumber")?.setFilterValue(event.target.value)
-          }
+          value={searchTerm}
+          onChange={(event) => setSearchTerm(event.target.value)}
           className="w-full sm:max-w-sm"
         />
         <Button onClick={openCreateDialog} className="w-full sm:w-auto">

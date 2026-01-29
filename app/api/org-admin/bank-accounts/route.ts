@@ -11,7 +11,7 @@ const createBankAccountSchema = z.object({
   initialBalance: z.coerce.number().min(0).optional(),
 });
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
     const session = await requireRole(["ORG_ADMIN", "STAFF"]);
 
@@ -23,8 +23,22 @@ export async function GET() {
       );
     }
 
+    const { searchParams } = new URL(request.url);
+    const q = searchParams.get("q")?.trim();
+
     const bankAccounts = await prisma.bankAccount.findMany({
-      where: { organizationId: orgId },
+      where: {
+        organizationId: orgId,
+        ...(q
+          ? {
+              OR: [
+                { bankName: { contains: q, mode: "insensitive" } },
+                { accountHolderName: { contains: q, mode: "insensitive" } },
+                { accountNumber: { contains: q, mode: "insensitive" } },
+              ],
+            }
+          : {}),
+      },
       orderBy: [
         { isActive: "desc" },
         { bankName: "asc" },

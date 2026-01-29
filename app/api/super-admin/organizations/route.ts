@@ -4,11 +4,26 @@ import { prisma } from "@/lib/prisma";
 import { Prisma } from "@prisma/client";
 import { z } from "zod";
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
     await requireRole(["SUPER_ADMIN"]);
 
+    const { searchParams } = new URL(request.url);
+    const q = searchParams.get("q")?.trim();
+
+    const where: Prisma.OrganizationWhereInput = q
+      ? {
+          OR: [
+            { name: { contains: q, mode: "insensitive" } },
+            { industry: { contains: q, mode: "insensitive" } },
+            { createdBy: { name: { contains: q, mode: "insensitive" } } },
+            { createdBy: { email: { contains: q, mode: "insensitive" } } },
+          ],
+        }
+      : {};
+
     const organizations = await prisma.organization.findMany({
+      where,
       include: {
         createdBy: {
           select: {

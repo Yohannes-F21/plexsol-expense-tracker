@@ -53,30 +53,18 @@ export function ApprovalsManagement() {
   const [pageSize, setPageSize] = useState(20);
 
   const { data, isLoading, error } = useQuery({
-    queryKey: ["approvals"],
+    queryKey: ["approvals", query],
     queryFn: async () => {
-      return apiClient<{ approvals: ApprovalRow[] }>(
-        "/api/org-admin/approvals"
-      );
+      const params = new URLSearchParams();
+      const q = query.trim();
+      if (q) params.set("q", q);
+      const qs = params.toString();
+      const url = qs ? `/api/org-admin/approvals?${qs}` : "/api/org-admin/approvals";
+      return apiClient<{ approvals: ApprovalRow[] }>(url);
     },
   });
 
   const approvals = data?.approvals ?? [];
-
-  const filtered = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    if (!q) return approvals;
-
-    return approvals.filter((a) => {
-      const employeeName = a.createdByUser?.name ?? "";
-      const employeeEmail = a.createdByUser?.email ?? "";
-      return (
-        a.companyName.toLowerCase().includes(q) ||
-        employeeName.toLowerCase().includes(q) ||
-        employeeEmail.toLowerCase().includes(q)
-      );
-    });
-  }, [approvals, query]);
 
   useEffect(() => {
     setPageIndex(0);
@@ -84,8 +72,8 @@ export function ApprovalsManagement() {
 
   const paged = useMemo(() => {
     const start = pageIndex * pageSize;
-    return filtered.slice(start, start + pageSize);
-  }, [filtered, pageIndex, pageSize]);
+    return approvals.slice(start, start + pageSize);
+  }, [approvals, pageIndex, pageSize]);
 
   if (isLoading) {
     return (
@@ -190,7 +178,7 @@ export function ApprovalsManagement() {
 
         <div className="mt-4">
           <ServerDataTablePagination
-            totalCount={filtered.length}
+            totalCount={approvals.length}
             pageIndex={pageIndex}
             pageSize={pageSize}
             onPageIndexChange={setPageIndex}

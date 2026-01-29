@@ -5,13 +5,11 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   flexRender,
   getCoreRowModel,
-  getFilteredRowModel,
   getPaginationRowModel,
   getSortedRowModel,
   useReactTable,
   type ColumnDef,
   type SortingState,
-  type ColumnFiltersState,
 } from "@tanstack/react-table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -68,7 +66,7 @@ type Expense = {
 export function ExpensesManagement() {
   const queryClient = useQueryClient();
   const [sorting, setSorting] = useState<SortingState>([]);
-  const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
+  const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
   const [deleteOpen, setDeleteOpen] = useState(false);
@@ -79,9 +77,15 @@ export function ExpensesManagement() {
   });
 
   const { data, isLoading } = useQuery({
-    queryKey: ["org-admin-expenses"],
+    queryKey: ["org-admin-expenses", searchTerm, statusFilter],
     queryFn: async () => {
-      const res = await fetch("/api/org-admin/expenses");
+      const params = new URLSearchParams();
+      const q = searchTerm.trim();
+      if (q) params.set("q", q);
+      if (statusFilter !== "all") params.set("status", statusFilter);
+      const qs = params.toString();
+      const url = qs ? `/api/org-admin/expenses?${qs}` : "/api/org-admin/expenses";
+      const res = await fetch(url);
       if (!res.ok) throw new Error("Failed to fetch expenses");
       return res.json() as Promise<{ expenses: Expense[] }>;
     },
@@ -241,25 +245,16 @@ export function ExpensesManagement() {
     [requestDelete],
   );
 
-  const filteredData = useMemo(() => {
-    return expenses.filter((expense) =>
-      statusFilter === "all" ? true : expense.status === statusFilter,
-    );
-  }, [expenses, statusFilter]);
-
   const table = useReactTable({
-    data: filteredData,
+    data: expenses,
     columns,
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
-    getFilteredRowModel: getFilteredRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
     onSortingChange: setSorting,
-    onColumnFiltersChange: setColumnFilters,
     onPaginationChange: setPagination,
     state: {
       sorting,
-      columnFilters,
       pagination: { pageIndex, pageSize },
     },
   });
@@ -267,7 +262,7 @@ export function ExpensesManagement() {
   useEffect(() => {
     table.setPageIndex(0);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [columnFilters, sorting, statusFilter]);
+  }, [sorting, statusFilter, searchTerm]);
 
   if (isLoading) {
     return (
@@ -291,8 +286,8 @@ export function ExpensesManagement() {
           <div>
             <CardTitle>Expense Requests</CardTitle>
             <CardDescription>
-              Total: {filteredData.length} expense
-              {filteredData.length !== 1 ? "s" : ""}
+              Total: {expenses.length} expense
+              {expenses.length !== 1 ? "s" : ""}
             </CardDescription>
           </div>
           <div className="flex justify-end">
@@ -320,14 +315,8 @@ export function ExpensesManagement() {
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
                 placeholder="Search by employee or description..."
-                value={
-                  (table
-                    .getColumn("description")
-                    ?.getFilterValue() as string) ?? ""
-                }
-                onChange={(e) =>
-                  table.getColumn("description")?.setFilterValue(e.target.value)
-                }
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
                 className="pl-9"
               />
             </div>

@@ -7,11 +7,9 @@ import {
   getCoreRowModel,
   useReactTable,
   getSortedRowModel,
-  getFilteredRowModel,
   getPaginationRowModel,
   type ColumnDef,
   type SortingState,
-  type ColumnFiltersState,
 } from "@tanstack/react-table";
 import { apiClient } from "@/lib/api-client";
 import { Button } from "@/components/ui/button";
@@ -57,7 +55,7 @@ interface User {
 
 export function UsersTable() {
   const [sorting, setSorting] = useState<SortingState>([]);
-  const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
+  const [searchTerm, setSearchTerm] = useState("");
   const [organizationFilter, setOrganizationFilter] = useState<string>("all");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [{ pageIndex, pageSize }, setPagination] = useState({
@@ -68,7 +66,12 @@ export function UsersTable() {
   const queryClient = useQueryClient();
 
   const { data: users = [], isLoading } = useQuery<User[]>({
-    queryKey: ["super-admin-users", organizationFilter, statusFilter],
+    queryKey: [
+      "super-admin-users",
+      organizationFilter,
+      statusFilter,
+      searchTerm,
+    ],
     queryFn: () => {
       const params = new URLSearchParams();
       if (organizationFilter !== "all") {
@@ -76,6 +79,8 @@ export function UsersTable() {
       }
       if (statusFilter === "active") params.set("isActive", "true");
       if (statusFilter === "banned") params.set("isActive", "false");
+      const q = searchTerm.trim();
+      if (q) params.set("q", q);
 
       const qs = params.toString();
       const url = qs
@@ -193,14 +198,11 @@ export function UsersTable() {
     columns,
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
-    getFilteredRowModel: getFilteredRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
     onSortingChange: setSorting,
-    onColumnFiltersChange: setColumnFilters,
     onPaginationChange: setPagination,
     state: {
       sorting,
-      columnFilters,
       pagination: { pageIndex, pageSize },
     },
   });
@@ -208,7 +210,7 @@ export function UsersTable() {
   useEffect(() => {
     table.setPageIndex(0);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [columnFilters, sorting, organizationFilter, statusFilter]);
+  }, [sorting, organizationFilter, statusFilter, searchTerm]);
 
   if (isLoading) {
     return (
@@ -225,10 +227,8 @@ export function UsersTable() {
         <div className="flex flex-col sm:flex-row sm:items-center gap-4 justify-between">
           <Input
             placeholder="Search..."
-            value={(table.getColumn("name")?.getFilterValue() as string) ?? ""}
-            onChange={(event) =>
-              table.getColumn("name")?.setFilterValue(event.target.value)
-            }
+            value={searchTerm}
+            onChange={(event) => setSearchTerm(event.target.value)}
             className="w-full sm:max-w-sm"
           />
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">

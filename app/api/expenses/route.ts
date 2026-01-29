@@ -107,7 +107,7 @@ async function evaluatePolicyViolations(args: {
   return { perItem, anyViolated };
 }
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
     const session = await requireRole(["ORG_ADMIN", "STAFF"]);
 
@@ -119,11 +119,30 @@ export async function GET() {
     }
 
     const organizationId = session.organizationId;
+    const { searchParams } = new URL(request.url);
+    const q = searchParams.get("q")?.trim();
+    const statusParam = searchParams.get("status");
+    const status =
+      statusParam &&
+      ["PENDING", "WARNING", "APPROVED", "REJECTED"].includes(statusParam)
+        ? (statusParam as ExpenseStatus)
+        : undefined;
 
     const where: Prisma.ExpenseWhereInput = {
       organizationId,
       isActive: true,
       ...(session.role === "STAFF" ? { createdByUserId: session.id } : {}),
+      ...(status ? { status } : {}),
+      ...(q
+        ? {
+            OR: [
+              { companyName: { contains: q, mode: "insensitive" } },
+              { fsNumber: { contains: q, mode: "insensitive" } },
+              { tinNumber: { contains: q, mode: "insensitive" } },
+              { mrcNumber: { contains: q, mode: "insensitive" } },
+            ],
+          }
+        : {}),
     };
 
     const rawExpenses = await prisma.expense.findMany({

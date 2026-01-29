@@ -7,11 +7,9 @@ import {
   getCoreRowModel,
   useReactTable,
   getSortedRowModel,
-  getFilteredRowModel,
   getPaginationRowModel,
   type ColumnDef,
   type SortingState,
-  type ColumnFiltersState,
 } from "@tanstack/react-table";
 import { apiClient } from "@/lib/api-client";
 import { Button } from "@/components/ui/button";
@@ -66,7 +64,7 @@ interface Organization {
 
 export function OrganizationsTable() {
   const [sorting, setSorting] = useState<SortingState>([]);
-  const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
+  const [searchTerm, setSearchTerm] = useState("");
   const [{ pageIndex, pageSize }, setPagination] = useState({
     pageIndex: 0,
     pageSize: 20,
@@ -78,11 +76,16 @@ export function OrganizationsTable() {
   const queryClient = useQueryClient();
 
   const { data: organizations = [], isLoading } = useQuery<Organization[]>({
-    queryKey: ["organizations"],
+    queryKey: ["organizations", searchTerm],
     queryFn: async () => {
-      const data = await apiClient<Organization[]>(
-        "/api/super-admin/organizations"
-      );
+      const params = new URLSearchParams();
+      const q = searchTerm.trim();
+      if (q) params.set("q", q);
+      const qs = params.toString();
+      const url = qs
+        ? `/api/super-admin/organizations?${qs}`
+        : "/api/super-admin/organizations";
+      const data = await apiClient<Organization[]>(url);
       console.log("Organizations fetched:", data.length);
       return data;
     },
@@ -216,14 +219,11 @@ export function OrganizationsTable() {
     columns,
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
-    getFilteredRowModel: getFilteredRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
     onSortingChange: setSorting,
-    onColumnFiltersChange: setColumnFilters,
     onPaginationChange: setPagination,
     state: {
       sorting,
-      columnFilters,
       pagination: { pageIndex, pageSize },
     },
   });
@@ -231,7 +231,7 @@ export function OrganizationsTable() {
   useEffect(() => {
     table.setPageIndex(0);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [columnFilters, sorting]);
+  }, [sorting, searchTerm]);
 
   if (isLoading) {
     return (
@@ -249,12 +249,8 @@ export function OrganizationsTable() {
           <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 justify-between">
             <Input
               placeholder="Search..."
-              value={
-                (table.getColumn("name")?.getFilterValue() as string) ?? ""
-              }
-              onChange={(event) =>
-                table.getColumn("name")?.setFilterValue(event.target.value)
-              }
+              value={searchTerm}
+              onChange={(event) => setSearchTerm(event.target.value)}
               className="w-full sm:max-w-sm"
             />
             <Button

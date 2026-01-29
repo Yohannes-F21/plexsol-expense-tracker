@@ -5,6 +5,7 @@
 import { NextResponse } from "next/server";
 import { requireRole } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { Prisma } from "@prisma/client";
 
 export async function GET(request: Request) {
   try {
@@ -14,16 +15,24 @@ export async function GET(request: Request) {
 
     const organizationId = searchParams.get("organizationId");
     const isActiveParam = searchParams.get("isActive");
+    const q = searchParams.get("q")?.trim();
 
     // UUID v4 validation regex
     // const uuidV4Regex =
     //   /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-    const whereClause: { organizationId?: string; isActive?: boolean } = {};
+    const whereClause: Prisma.UserWhereInput = {};
     if (organizationId) {
       whereClause.organizationId = organizationId;
     }
     if (isActiveParam === "true") whereClause.isActive = true;
     if (isActiveParam === "false") whereClause.isActive = false;
+    if (q) {
+      whereClause.OR = [
+        { name: { contains: q, mode: "insensitive" } },
+        { email: { contains: q, mode: "insensitive" } },
+        { organization: { name: { contains: q, mode: "insensitive" } } },
+      ];
+    }
 
     const users = await prisma.user.findMany({
       where: whereClause,

@@ -9,7 +9,7 @@ const createPurchaseTypeSchema = z.object({
   code: z.string().min(1),
 });
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
     const session = await requireRole(["ORG_ADMIN", "STAFF"]);
 
@@ -21,8 +21,23 @@ export async function GET() {
       );
     }
 
+    const { searchParams } = new URL(request.url);
+    const q = searchParams.get("q")?.trim();
+    const parsedLabel = q ? Number(q) : NaN;
+    const labelFilter = Number.isInteger(parsedLabel) ? parsedLabel : null;
+
     const purchaseTypes = await prisma.purchaseType.findMany({
-      where: { organizationId: orgId },
+      where: {
+        organizationId: orgId,
+        ...(q
+          ? {
+              OR: [
+                { code: { contains: q, mode: "insensitive" } },
+                ...(labelFilter !== null ? [{ label: labelFilter }] : []),
+              ],
+            }
+          : {}),
+      },
       orderBy: [{ isActive: "desc" }, { label: "asc" }, { code: "asc" }],
       select: {
         id: true,

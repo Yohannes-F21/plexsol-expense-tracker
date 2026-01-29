@@ -98,9 +98,16 @@ export function ExpensesTable(props: { role: "ORG_ADMIN" | "STAFF" }) {
   });
 
   const { data, isLoading } = useQuery({
-    queryKey: ["expenses"],
+    queryKey: ["expenses", searchTerm, statusFilter],
     queryFn: async () => {
-      const res = await fetch("/api/expenses");
+      const params = new URLSearchParams();
+      const q = searchTerm.trim();
+      if (q) params.set("q", q);
+      if (statusFilter !== "all") params.set("status", statusFilter);
+
+      const qs = params.toString();
+      const url = qs ? `/api/expenses?${qs}` : "/api/expenses";
+      const res = await fetch(url);
       const payload = await res.json();
       if (!res.ok) throw new Error(payload.error || "Failed to fetch expenses");
       return payload as { expenses: ExpenseRow[] };
@@ -321,31 +328,8 @@ export function ExpensesTable(props: { role: "ORG_ADMIN" | "STAFF" }) {
     return cols;
   }, [props.role]);
 
-  const filteredData = useMemo(() => {
-    const q = searchTerm.trim().toLowerCase();
-
-    return expenses.filter((e) => {
-      const matchesStatus =
-        statusFilter === "all" ? true : e.status === statusFilter;
-      if (!matchesStatus) return false;
-      if (!q) return true;
-
-      const companyName = (e.companyName ?? "").toLowerCase();
-      const fsNumber = (e.fsNumber ?? "").toLowerCase();
-      const tinNumber = (e.tinNumber ?? "").toLowerCase();
-      const mrcNumber = (e.mrcNumber ?? "").toLowerCase();
-
-      return (
-        companyName.includes(q) ||
-        fsNumber.includes(q) ||
-        tinNumber.includes(q) ||
-        mrcNumber.includes(q)
-      );
-    });
-  }, [expenses, statusFilter, searchTerm]);
-
   const table = useReactTable({
-    data: filteredData,
+    data: expenses,
     columns,
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
