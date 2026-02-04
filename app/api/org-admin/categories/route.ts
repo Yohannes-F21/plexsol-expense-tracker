@@ -19,7 +19,7 @@ export async function GET() {
     if (!session.organizationId) {
       return NextResponse.json(
         { error: "Organization ID missing" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -49,12 +49,12 @@ export async function GET() {
       })),
     });
   } catch (error) {
-    console.error("[v0] Get categories error:", error);
+    console.error(" Get categories error:", error);
     return NextResponse.json(
       {
         error: error instanceof Error ? error.message : "Internal server error",
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
@@ -72,7 +72,7 @@ export async function POST(request: Request) {
     if (!session.organizationId) {
       return NextResponse.json(
         { error: "Organization ID missing" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -98,7 +98,7 @@ export async function POST(request: Request) {
           error:
             "A category with this name already exists for the selected type.",
         },
-        { status: 409 }
+        { status: 409 },
       );
     }
 
@@ -142,11 +142,11 @@ export async function POST(request: Request) {
       },
     });
   } catch (error) {
-    console.error("[v0] Create category error:", error);
+    console.error(" Create category error:", error);
     if (error instanceof z.ZodError) {
       return NextResponse.json(
         { error: "Invalid input", details: error.errors },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -161,7 +161,7 @@ export async function POST(request: Request) {
           error:
             "A category with this name already exists for the selected type.",
         },
-        { status: 409 }
+        { status: 409 },
       );
     }
 
@@ -169,7 +169,7 @@ export async function POST(request: Request) {
       {
         error: error instanceof Error ? error.message : "Internal server error",
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

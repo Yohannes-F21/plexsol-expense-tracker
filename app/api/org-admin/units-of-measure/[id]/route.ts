@@ -24,7 +24,7 @@ export async function PUT(request: Request, context: any) {
     if (!orgId) {
       return NextResponse.json(
         { error: "Organization ID missing" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -43,7 +43,7 @@ export async function PUT(request: Request, context: any) {
     if (!existing.isActive) {
       return NextResponse.json(
         { error: "Cannot update an inactive unit" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -59,7 +59,7 @@ export async function PUT(request: Request, context: any) {
     if (labelDuplicate) {
       return NextResponse.json(
         { error: "A unit with this label already exists." },
-        { status: 409 }
+        { status: 409 },
       );
     }
 
@@ -75,7 +75,7 @@ export async function PUT(request: Request, context: any) {
     if (codeDuplicate) {
       return NextResponse.json(
         { error: "A unit with this code already exists." },
-        { status: 409 }
+        { status: 409 },
       );
     }
 
@@ -110,12 +110,12 @@ export async function PUT(request: Request, context: any) {
 
     return NextResponse.json({ success: true, unit });
   } catch (error) {
-    console.error("[v0] Update unit of measure error:", error);
+    console.error("Update unit of measure error:", error);
 
     if (error instanceof z.ZodError) {
       return NextResponse.json(
         { error: "Invalid input", details: error.errors },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -127,7 +127,7 @@ export async function PUT(request: Request, context: any) {
     ) {
       return NextResponse.json(
         { error: "A unit with this code already exists." },
-        { status: 409 }
+        { status: 409 },
       );
     }
 
@@ -135,7 +135,7 @@ export async function PUT(request: Request, context: any) {
       {
         error: error instanceof Error ? error.message : "Internal server error",
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
@@ -151,7 +151,7 @@ export async function DELETE(request: Request, context: any) {
     if (!orgId) {
       return NextResponse.json(
         { error: "Organization ID missing" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -189,12 +189,12 @@ export async function DELETE(request: Request, context: any) {
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error("[v0] Delete unit of measure error:", error);
+    console.error("Delete unit of measure error:", error);
     return NextResponse.json(
       {
         error: error instanceof Error ? error.message : "Internal server error",
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
@@ -210,7 +210,7 @@ export async function PATCH(request: Request, context: any) {
     if (!orgId) {
       return NextResponse.json(
         { error: "Organization ID missing" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -253,12 +253,12 @@ export async function PATCH(request: Request, context: any) {
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error("[v0] Set unit of measure active error:", error);
+    console.error("Set unit of measure active error:", error);
 
     if (error instanceof z.ZodError) {
       return NextResponse.json(
         { error: "Invalid input", details: error.errors },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -266,7 +266,7 @@ export async function PATCH(request: Request, context: any) {
       {
         error: error instanceof Error ? error.message : "Internal server error",
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

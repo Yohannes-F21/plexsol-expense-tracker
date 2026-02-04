@@ -51,7 +51,7 @@ export async function GET(request: Request) {
 
     return NextResponse.json({ success: true, purchaseTypes });
   } catch (error) {
-    console.error("[v0] List purchase types error:", error);
+    console.error("List purchase types error:", error);
     return NextResponse.json(
       {
         error: error instanceof Error ? error.message : "Internal server error",
@@ -160,7 +160,7 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ success: true, purchaseType });
   } catch (error) {
-    console.error("[v0] Create purchase type error:", error);
+    console.error("Create purchase type error:", error);
 
     if (error instanceof z.ZodError) {
       return NextResponse.json(

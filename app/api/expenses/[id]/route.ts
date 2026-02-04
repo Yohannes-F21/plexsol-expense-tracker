@@ -823,7 +823,7 @@ export async function PUT(request: Request, context: any) {
       },
     });
   } catch (error) {
-    console.error("[v0] Update expense error:", error);
+    console.error(" Update expense error:", error);
     if (error instanceof z.ZodError) {
       return NextResponse.json(
         { error: "Invalid input", details: error.errors },
@@ -1103,7 +1103,7 @@ export async function GET(request: Request, context: any) {
 
     return NextResponse.json({ error: "Expense not found" }, { status: 404 });
   } catch (error) {
-    console.error("[v0] Get expense detail error:", error);
+    console.error(" Get expense detail error:", error);
     return NextResponse.json(
       {
         error: error instanceof Error ? error.message : "Internal server error",
@@ -1185,7 +1185,7 @@ export async function DELETE(request: Request, context: any) {
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error("[v0] Delete expense error:", error);
+    console.error(" Delete expense error:", error);
     return NextResponse.json(
       {
         error: error instanceof Error ? error.message : "Internal server error",

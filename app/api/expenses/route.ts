@@ -352,7 +352,7 @@ export async function GET(request: Request) {
 
     return NextResponse.json({ expenses });
   } catch (error) {
-    console.error("[v0] Get expenses error:", error);
+    console.error(" Get expenses error:", error);
     return NextResponse.json(
       {
         error: error instanceof Error ? error.message : "Internal server error",
@@ -416,7 +416,7 @@ export async function POST(request: Request) {
         const found = await prisma.unitOfMeasure.findMany({
           where: {
             id: { in: unitIds },
-            organizationId: session.organizationId,
+            organizationId,
             isActive: true,
           },
           select: { id: true },
@@ -433,7 +433,7 @@ export async function POST(request: Request) {
         const found = await prisma.purchaseType.findMany({
           where: {
             id: { in: purchaseTypeIds },
-            organizationId: session.organizationId,
+            organizationId,
             isActive: true,
           },
           select: { id: true },
@@ -450,7 +450,7 @@ export async function POST(request: Request) {
         const found = await prisma.bankAccount.findFirst({
           where: {
             id: bankAccountId,
-            organizationId: session.organizationId,
+            organizationId,
             isActive: true,
           },
           select: { id: true },
@@ -603,7 +603,7 @@ export async function POST(request: Request) {
         const found = await prisma.bankAccount.findFirst({
           where: {
             id: bankAccountId,
-            organizationId: session.organizationId,
+            organizationId,
             isActive: true,
           },
           select: { id: true },
@@ -721,7 +721,7 @@ export async function POST(request: Request) {
         const found = await tx.bankAccount.findFirst({
           where: {
             id: bankAccountId,
-            organizationId: session.organizationId,
+            organizationId,
             isActive: true,
           },
           select: { id: true },
@@ -794,7 +794,7 @@ export async function POST(request: Request) {
       },
     });
   } catch (error) {
-    console.error("[v0] Create expense error:", error);
+    console.error(" Create expense error:", error);
     if (error instanceof z.ZodError) {
       return NextResponse.json(
         { error: "Invalid input", details: error.errors },

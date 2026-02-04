@@ -3,7 +3,7 @@
 ## Prerequisites
 
 - Node.js 18+ installed
-- A Neon database (already connected via v0)
+- A Neon database
 
 ## Quick Start
 

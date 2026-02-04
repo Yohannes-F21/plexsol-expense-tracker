@@ -53,7 +53,7 @@ export async function GET() {
 
     return NextResponse.json(chartData);
   } catch (error) {
-    console.error("[v0] Get expenses by org chart error:", error);
+    console.error("Get expenses by org chart error:", error);
     return NextResponse.json(
       {
         error: error instanceof Error ? error.message : "Internal server error",

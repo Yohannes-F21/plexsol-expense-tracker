@@ -123,7 +123,7 @@ export async function POST(
 
     return NextResponse.json(result);
   } catch (error) {
-    console.error("[v0] Approve refund error:", error);
+    console.error("Approve refund error:", error);
 
     if (error instanceof Error) {
       if (error.message === "from_account_not_found") {

@@ -18,6 +18,8 @@ export async function POST(
       );
     }
 
+    const organizationId: string = session.organizationId;
+
     const expense = await prisma.expenseBase.findUnique({
       where: { id },
       select: {
@@ -53,7 +55,7 @@ export async function POST(
 
     if (
       !expense ||
-      expense.organizationId !== session.organizationId ||
+      expense.organizationId !== organizationId ||
       !expense.isActive
     ) {
       return NextResponse.json({ error: "Expense not found" }, { status: 404 });
@@ -121,7 +123,7 @@ export async function POST(
         const approvalResult = await tx.expenseBase.updateMany({
           where: {
             id,
-            organizationId: session.organizationId,
+            organizationId,
             status: { in: ["PENDING", "WARNING"] },
             isActive: true,
           },
@@ -140,7 +142,7 @@ export async function POST(
           const bankAccount = await tx.bankAccount.findFirst({
             where: {
               id: bankAccountId,
-              organizationId: session.organizationId,
+              organizationId,
               isActive: true,
             },
             select: { id: true, balance: true },
@@ -173,7 +175,7 @@ export async function POST(
         await tx.activityLog.create({
           data: {
             userId: session.id,
-            organizationId: session.organizationId,
+            organizationId,
             actionType: "EXPENSE_APPROVED",
             entityType: "Expense",
             entityId: id,
@@ -197,7 +199,7 @@ export async function POST(
 
     return NextResponse.json({ expense: updatedExpense });
   } catch (error) {
-    console.error("[v0] Approve expense error:", error);
+    console.error(" Approve expense error:", error);
 
     if (error instanceof Error) {
       if (error.message === "expense_already_finalized") {

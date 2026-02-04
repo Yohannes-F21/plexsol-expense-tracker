@@ -60,7 +60,7 @@ export async function GET(request: Request) {
 
     return NextResponse.json({ success: true, bankAccounts });
   } catch (error) {
-    console.error("[v0] List bank accounts error:", error);
+    console.error(" List bank accounts error:", error);
     return NextResponse.json(
       {
         error: error instanceof Error ? error.message : "Internal server error",
@@ -152,7 +152,7 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ success: true, bankAccount });
   } catch (error) {
-    console.error("[v0] Create bank account error:", error);
+    console.error(" Create bank account error:", error);
 
     if (error instanceof z.ZodError) {
       return NextResponse.json(

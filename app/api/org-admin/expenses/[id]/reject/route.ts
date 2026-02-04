@@ -93,7 +93,7 @@ export async function POST(
 
     return NextResponse.json({ expense: updatedExpense });
   } catch (error) {
-    console.error("[v0] Reject expense error:", error);
+    console.error(" Reject expense error:", error);
     return NextResponse.json(
       {
         error: error instanceof Error ? error.message : "Internal server error",

@@ -64,7 +64,7 @@ export async function GET() {
       totalExpenseAmount: asNumber(totalExpenseAmount._sum.total) || 0,
     });
   } catch (error) {
-    console.error("[v0] Get stats error:", error);
+    console.error(" Get stats error:", error);
     return NextResponse.json(
       {
         error: error instanceof Error ? error.message : "Internal server error",

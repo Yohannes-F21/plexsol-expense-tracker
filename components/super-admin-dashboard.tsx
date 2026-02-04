@@ -83,7 +83,7 @@ export function SuperAdminDashboard() {
       setStats(statsData);
       setOrganizations(orgsData.organizations);
     } catch (error) {
-      console.error("[v0] Fetch data error:", error);
+      console.error("Fetch data error:", error);
       toast.error("An error occurred");
     } finally {
       setIsLoading(false);

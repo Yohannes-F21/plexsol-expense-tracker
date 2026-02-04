@@ -134,7 +134,7 @@ export function ExpensesTable(props: { role: "ORG_ADMIN" | "STAFF" }) {
       toast.success("Expense deleted");
       await queryClient.invalidateQueries({ queryKey: ["expenses"] });
     } catch (e) {
-      console.error("[v0] Delete expense error:", e);
+      console.error("Delete expense error:", e);
       toast.error("An error occurred while deleting");
     } finally {
       setIsDeleting(false);

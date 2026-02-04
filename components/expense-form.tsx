@@ -95,7 +95,7 @@ export function ExpenseForm({
 
   useEffect(() => {
     if (categoriesError) {
-      console.error("[v0] Categories load error:", categoriesError);
+      console.error("Categories load error:", categoriesError);
       toast.error("Unable to load categories. Please try again.");
     }
   }, [categoriesError]);
@@ -106,9 +106,9 @@ export function ExpenseForm({
     try {
       await onSubmit(values);
     } catch (error) {
-      console.error("[v0] Submit expense error:", error);
+      console.error("Submit expense error:", error);
       toast.error(
-        error instanceof Error ? error.message : "Failed to submit expense"
+        error instanceof Error ? error.message : "Failed to submit expense",
       );
     }
   });
@@ -116,7 +116,7 @@ export function ExpenseForm({
   const amountValue = form.watch("amount");
   const amountDisplay = useMemo(
     () => amountValue?.toString() ?? "0",
-    [amountValue]
+    [amountValue],
   );
 
   return (

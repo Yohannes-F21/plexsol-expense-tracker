@@ -51,7 +51,7 @@ export async function GET(request: Request) {
 
     return NextResponse.json({ success: true, units });
   } catch (error) {
-    console.error("[v0] List units of measure error:", error);
+    console.error("List units of measure error:", error);
     return NextResponse.json(
       {
         error: error instanceof Error ? error.message : "Internal server error",
@@ -154,7 +154,7 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ success: true, unit });
   } catch (error) {
-    console.error("[v0] Create unit of measure error:", error);
+    console.error("Create unit of measure error:", error);
 
     if (error instanceof z.ZodError) {
       return NextResponse.json(

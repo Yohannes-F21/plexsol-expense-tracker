@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireRole } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import type { ExpenseStatus } from "@prisma/client";
 
 export async function GET(request: Request) {
   try {
@@ -13,18 +14,27 @@ export async function GET(request: Request) {
       );
     }
 
+    const organizationId = session.organizationId;
+
     const { searchParams } = new URL(request.url);
     const q = searchParams.get("q")?.trim();
     const statusParam = searchParams.get("status");
-    const status =
+    const allowedStatuses = [
+      "PENDING",
+      "WARNING",
+      "APPROVED",
+      "REJECTED",
+    ] as const satisfies readonly ExpenseStatus[];
+
+    const status: ExpenseStatus | undefined =
       statusParam &&
-      ["PENDING", "WARNING", "APPROVED", "REJECTED"].includes(statusParam)
-        ? statusParam
+      (allowedStatuses as readonly string[]).includes(statusParam)
+        ? (statusParam as ExpenseStatus)
         : undefined;
 
     const expenses = await prisma.expenseBase.findMany({
       where: {
-        organizationId: session.organizationId,
+        organizationId,
         isActive: true,
         ...(status ? { status } : {}),
         ...(q
@@ -183,7 +193,7 @@ export async function GET(request: Request) {
 
     return NextResponse.json({ expenses: mapped });
   } catch (error) {
-    console.error("[v0] Get expenses error:", error);
+    console.error(" Get expenses error:", error);
     return NextResponse.json(
       {
         error: error instanceof Error ? error.message : "Internal server error",

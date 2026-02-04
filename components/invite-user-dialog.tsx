@@ -52,7 +52,7 @@ export function InviteUserDialog({
       if (onSuccess) onSuccess();
       handleClose();
     } catch (error) {
-      console.error("[v0] Send invitation error:", error);
+      console.error("Send invitation error:", error);
       toast.error("An error occurred");
     } finally {
       setIsLoading(false);

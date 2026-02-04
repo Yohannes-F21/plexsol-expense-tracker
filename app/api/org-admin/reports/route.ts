@@ -180,7 +180,7 @@ export async function GET(request: Request) {
 
     return NextResponse.json({ rows });
   } catch (error) {
-    console.error("[v0] Get reports error:", error);
+    console.error("Get reports error:", error);
     return NextResponse.json(
       {
         error: error instanceof Error ? error.message : "Internal server error",

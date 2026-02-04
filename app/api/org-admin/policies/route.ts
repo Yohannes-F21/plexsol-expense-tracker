@@ -12,7 +12,7 @@ export async function GET() {
     if (!session.organizationId) {
       return NextResponse.json(
         { error: "Organization ID missing" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -27,12 +27,12 @@ export async function GET() {
 
     return NextResponse.json({ policies });
   } catch (error) {
-    console.error("[v0] Get policies error:", formatError(error));
+    console.error("Get policies error:", formatError(error));
     return NextResponse.json(
       {
         error: error instanceof Error ? error.message : "Internal server error",
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
@@ -54,7 +54,7 @@ export async function POST(request: Request) {
     if (!session.organizationId) {
       return NextResponse.json(
         { error: "Organization ID missing" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -93,23 +93,23 @@ export async function POST(request: Request) {
         data: { entityId: policy.id },
       });
     } catch (e) {
-      console.warn("[v0] Failed to update activity log for policy", e);
+      console.warn("Failed to update activity log for policy", e);
     }
 
     return NextResponse.json({ success: true, policy });
   } catch (error) {
-    console.error("[v0] Create policy error:", error);
+    console.error("Create policy error:", error);
     if (error instanceof z.ZodError) {
       return NextResponse.json(
         { error: "Invalid input", details: error.errors },
-        { status: 400 }
+        { status: 400 },
       );
     }
     return NextResponse.json(
       {
         error: error instanceof Error ? error.message : "Internal server error",
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

@@ -9,7 +9,7 @@ export async function GET() {
     if (!session.organizationId) {
       return NextResponse.json(
         { error: "Organization ID missing" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -33,12 +33,12 @@ export async function GET() {
 
     return NextResponse.json({ invitations });
   } catch (error) {
-    console.error("[v0] Get invitations error:", error);
+    console.error("Get invitations error:", error);
     return NextResponse.json(
       {
         error: error instanceof Error ? error.message : "Internal server error",
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

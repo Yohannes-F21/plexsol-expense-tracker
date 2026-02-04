@@ -185,7 +185,7 @@ export function ReportsPage() {
         "text/csv;charset=utf-8;",
       );
     } catch (e) {
-      console.error("[v0] Download CSV error:", e);
+      console.error("Download CSV error:", e);
       toast.error("Failed to download CSV");
     }
   };

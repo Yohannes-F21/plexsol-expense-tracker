@@ -19,7 +19,7 @@ export async function PATCH(request: Request, context: any) {
     if (!uuidV4Regex.test(id)) {
       return NextResponse.json(
         { error: "Invalid user id format" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -51,12 +51,12 @@ export async function PATCH(request: Request, context: any) {
 
     return NextResponse.json(user);
   } catch (error) {
-    console.error("[v0] Update user error:", error);
+    console.error("Update user error:", error);
     return NextResponse.json(
       {
         error: error instanceof Error ? error.message : "Internal server error",
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
