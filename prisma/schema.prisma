@@ -3,7 +3,7 @@ datasource db {
 }
 
 generator client {
-  provider = "prisma-client-js"
+  provider   = "prisma-client-js"
   engineType = "binary"
 }
 
@@ -18,6 +18,12 @@ enum ExpenseStatus {
   WARNING
   APPROVED
   REJECTED
+}
+
+enum ExpenseType {
+  RECEIPT
+  PAYMENT_VOUCHER
+  GENERAL
 }
 
 enum PaymentMethod {
@@ -56,73 +62,75 @@ enum RefundStatus {
 }
 
 model User {
-  id                String   @id @default(uuid())
-  name              String
-  email             String   @unique
-  phoneNumber       String?
-  passwordHash      String
-  role              UserRole
-  organizationId    String?
-  isActive          Boolean  @default(true)
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
-  
+  id             String   @id @default(uuid())
+  name           String
+  email          String   @unique
+  phoneNumber    String?
+  passwordHash   String
+  role           UserRole
+  organizationId String?
+  isActive       Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
   // Relations
-  organization      Organization? @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  
-  expenses          Expense[] @relation("UserCreatedExpenses")
-  invitationsSent   Invitation[] @relation("InvitationSender")
-  refundsRequested  Refund[] @relation("RefundRequester")
-  approvalHistory   ApprovalHistory[]
-  activityLogs      ActivityLog[]
-  organizationsCreated Organization[] @relation("OrganizationCreator")
-  
+  organization Organization? @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  expenses             Expense[]         @relation("UserCreatedExpenses")
+  expenseBases         ExpenseBase[]     @relation("ExpenseBaseCreatedBy")
+  invitationsSent      Invitation[]      @relation("InvitationSender")
+  refundsRequested     Refund[]          @relation("RefundRequester")
+  approvalHistory      ApprovalHistory[]
+  activityLogs         ActivityLog[]
+  organizationsCreated Organization[]    @relation("OrganizationCreator")
+
   @@index([organizationId])
   @@index([email])
   @@index([role])
 }
 
 model Organization {
-  id                String   @id @default(uuid())
-  name              String
-  industry          String?
-  isActive          Boolean  @default(true)
-  createdById       String
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
-  
+  id          String   @id @default(uuid())
+  name        String
+  industry    String?
+  isActive    Boolean  @default(true)
+  createdById String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
   // Relations
-  createdBy         User @relation("OrganizationCreator", fields: [createdById], references: [id])
-  users             User[]
-  expenses          Expense[]
-  invitations       Invitation[]
-  categories        Category[]
-  unitsOfMeasure    UnitOfMeasure[]
-  purchaseTypes     PurchaseType[]
-  bankAccounts      BankAccount[]
-  expensePolicies   ExpensePolicy[]
-  refunds           Refund[]
-  activityLogs      ActivityLog[]
-  
+  createdBy       User            @relation("OrganizationCreator", fields: [createdById], references: [id])
+  users           User[]
+  expenses        Expense[]
+  expenseBases    ExpenseBase[]
+  invitations     Invitation[]
+  categories      Category[]
+  unitsOfMeasure  UnitOfMeasure[]
+  purchaseTypes   PurchaseType[]
+  bankAccounts    BankAccount[]
+  expensePolicies ExpensePolicy[]
+  refunds         Refund[]
+  activityLogs    ActivityLog[]
+
   @@index([name])
   @@index([createdById])
 }
 
 model Invitation {
-  id                String   @id @default(uuid())
-  organizationId    String
-  email             String
-  role              UserRole
-  token             String   @unique
-  status            InvitationStatus @default(PENDING)
-  expiresAt         DateTime
-  invitedById       String
-  invitedAt         DateTime @default(now())
-  
+  id             String           @id @default(uuid())
+  organizationId String
+  email          String
+  role           UserRole
+  token          String           @unique
+  status         InvitationStatus @default(PENDING)
+  expiresAt      DateTime
+  invitedById    String
+  invitedAt      DateTime         @default(now())
+
   // Relations
-  organization      Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  invitedBy         User @relation("InvitationSender", fields: [invitedById], references: [id], onDelete: Cascade)
-  
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  invitedBy    User         @relation("InvitationSender", fields: [invitedById], references: [id], onDelete: Cascade)
+
   @@index([email])
   @@index([token])
   @@index([organizationId])
@@ -130,17 +138,20 @@ model Invitation {
 }
 
 model Category {
-  id                String   @id @default(uuid())
-  organizationId    String
-  name              String
-  type              CategoryType @default(OPERATIONAL)
-  description       String?
-  isActive          Boolean  @default(true)
-  
+  id             String       @id @default(uuid())
+  organizationId String
+  name           String
+  type           CategoryType @default(OPERATIONAL)
+  description    String?
+  isActive       Boolean      @default(true)
+
   // Relations
-  organization      Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  expenseItems      ExpenseItem[]
-  
+  organization        Organization         @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  expenseItems        ExpenseItem[]
+  receiptExpenseItems ReceiptExpenseItem[]
+  paymentVoucherItems PaymentVoucherItem[]
+  generalExpenses     GeneralExpense[]
+
   @@unique([organizationId, type, name])
   @@index([organizationId])
   @@index([name])
@@ -152,47 +163,171 @@ model ExpensePolicy {
   policyName        String
   description       String?
   maxAmount         Float?
-  allowedCategories Json?    // Array of category IDs
+  allowedCategories Json? // Array of category IDs
   requiresReceipt   Boolean  @default(false)
   autoApprove       Boolean  @default(false)
   isActive          Boolean  @default(true)
   createdAt         DateTime @default(now())
-  
+
   // Relations
-  organization      Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
   @@index([organizationId])
 }
 
-model Expense {
-  id                String   @id @default(uuid())
-  purchasedDate     DateTime @default(now())
-  companyName       String   @default("")
-  tinNumber         String   @default("")
-  fsNumber          String   @default("")
-  mrcNumber         String?
-  invoiceNumber     String?
-  paymentMethod     PaymentMethod @default(OTHER)
-  checkNumber       String?
-  bankAccountId     String?
-  subtotal          Decimal  @default(0) @db.Decimal(12, 2)
-  vat               Decimal  @default(0) @db.Decimal(12, 2)
-  total             Decimal  @default(0) @db.Decimal(12, 2)
-  status            ExpenseStatus @default(PENDING)
-  approvedAt        DateTime?
-  createdByUserId   String
-  organizationId    String
-  isActive          Boolean  @default(true)
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
-  
+model ExpenseBase {
+  id              String        @id @default(uuid())
+  organizationId  String
+  createdByUserId String
+  expenseType     ExpenseType
+  status          ExpenseStatus @default(PENDING)
+  approvedAt      DateTime?
+  rejectedAt      DateTime?
+  isActive        Boolean       @default(true)
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
   // Relations
-  createdByUser     User @relation("UserCreatedExpenses", fields: [createdByUserId], references: [id], onDelete: Cascade)
-  organization      Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  bankAccount       BankAccount? @relation(fields: [bankAccountId], references: [id], onDelete: SetNull)
-  items             ExpenseItem[]
-  approvalHistory   ApprovalHistory[]
-  
+  organization          Organization           @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  createdBy             User                   @relation("ExpenseBaseCreatedBy", fields: [createdByUserId], references: [id], onDelete: Cascade)
+  approvalHistory       ApprovalHistory[]
+  receiptExpense        ReceiptExpense?
+  paymentVoucherExpense PaymentVoucherExpense?
+  generalExpense        GeneralExpense?
+
+  @@index([organizationId])
+  @@index([createdByUserId])
+  @@index([expenseType])
+  @@index([status])
+  @@index([createdAt])
+}
+
+model ReceiptExpense {
+  id            String @id @default(uuid())
+  expenseBaseId String @unique
+
+  purchasedDate DateTime
+  companyName   String
+  tinNumber     String?
+  fsNumber      String?
+  mrcNumber     String?
+  invoiceNumber String?
+  paymentMethod PaymentMethod
+  checkNumber   String?
+  bankAccountId String?
+
+  subtotal Decimal @db.Decimal(12, 2)
+  vat      Decimal @db.Decimal(12, 2)
+  total    Decimal @db.Decimal(12, 2)
+
+  // Relations
+  expenseBase ExpenseBase          @relation(fields: [expenseBaseId], references: [id], onDelete: Cascade)
+  bankAccount BankAccount?         @relation(fields: [bankAccountId], references: [id], onDelete: SetNull)
+  items       ReceiptExpenseItem[]
+
+  @@index([expenseBaseId])
+  @@index([purchasedDate])
+}
+
+model ReceiptExpenseItem {
+  id                 String      @id @default(uuid())
+  receiptExpenseId   String
+  itemName           String
+  categoryId         String
+  vatCategory        VatCategory @default(G)
+  quantity           Decimal     @db.Decimal(12, 2)
+  unitPrice          Decimal     @db.Decimal(12, 2)
+  lineTotal          Decimal     @db.Decimal(12, 2)
+  unitOfMeasureId    String?
+  purchaseTypeId     String?
+  hasPolicyViolation Boolean     @default(false)
+
+  // Relations
+  receiptExpense ReceiptExpense @relation(fields: [receiptExpenseId], references: [id], onDelete: Cascade)
+  category       Category       @relation(fields: [categoryId], references: [id])
+  unitOfMeasure  UnitOfMeasure? @relation(fields: [unitOfMeasureId], references: [id])
+  purchaseType   PurchaseType?  @relation(fields: [purchaseTypeId], references: [id])
+
+  @@index([receiptExpenseId])
+  @@index([categoryId])
+}
+
+model PaymentVoucherExpense {
+  id            String        @id @default(uuid())
+  expenseBaseId String        @unique
+  invoiceNumber String
+  purchasedDate DateTime
+  paidTo        String
+  tinNumber     String?
+  totalAmount   Decimal       @db.Decimal(12, 2)
+  paymentMethod PaymentMethod
+  checkNumber   String?
+  bankAccountId String?
+
+  expenseBase ExpenseBase          @relation(fields: [expenseBaseId], references: [id], onDelete: Cascade)
+  bankAccount BankAccount?         @relation(fields: [bankAccountId], references: [id], onDelete: SetNull)
+  items       PaymentVoucherItem[]
+}
+
+model PaymentVoucherItem {
+  id               String  @id @default(uuid())
+  paymentVoucherId String
+  itemName         String
+  quantity         Decimal @db.Decimal(12, 2)
+  unitPrice        Decimal @db.Decimal(12, 2)
+  lineTotal        Decimal @db.Decimal(12, 2)
+  categoryId       String
+
+  paymentVoucher PaymentVoucherExpense @relation(fields: [paymentVoucherId], references: [id], onDelete: Cascade)
+  category       Category              @relation(fields: [categoryId], references: [id])
+}
+
+model GeneralExpense {
+  id            String @id @default(uuid())
+  expenseBaseId String @unique
+
+  paymentDate   DateTime
+  paidTo        String
+  description   String
+  amount        Decimal       @db.Decimal(14, 2)
+  paymentMethod PaymentMethod
+  checkNumber   String?
+  bankAccountId String?
+  categoryId    String
+
+  expenseBase ExpenseBase  @relation(fields: [expenseBaseId], references: [id], onDelete: Cascade)
+  bankAccount BankAccount? @relation(fields: [bankAccountId], references: [id], onDelete: SetNull)
+  category    Category     @relation(fields: [categoryId], references: [id])
+}
+
+model Expense {
+  id              String        @id @default(uuid())
+  purchasedDate   DateTime      @default(now())
+  companyName     String        @default("")
+  tinNumber       String        @default("")
+  fsNumber        String        @default("")
+  mrcNumber       String?
+  invoiceNumber   String?
+  paymentMethod   PaymentMethod @default(OTHER)
+  checkNumber     String?
+  bankAccountId   String?
+  subtotal        Decimal       @default(0) @db.Decimal(12, 2)
+  vat             Decimal       @default(0) @db.Decimal(12, 2)
+  total           Decimal       @default(0) @db.Decimal(12, 2)
+  status          ExpenseStatus @default(PENDING)
+  approvedAt      DateTime?
+  createdByUserId String
+  organizationId  String
+  isActive        Boolean       @default(true)
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  // Relations
+  createdByUser User          @relation("UserCreatedExpenses", fields: [createdByUserId], references: [id], onDelete: Cascade)
+  organization  Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  bankAccount   BankAccount?  @relation(fields: [bankAccountId], references: [id], onDelete: SetNull)
+  items         ExpenseItem[]
+
   @@index([createdByUserId])
   @@index([organizationId])
   @@index([bankAccountId])
@@ -202,30 +337,33 @@ model Expense {
 }
 
 model BankAccount {
-  id                String   @id @default(uuid())
+  id String @id @default(uuid())
 
   // Multi-tenant support
-  organizationId    String
+  organizationId String
 
   // Bank details
   bankName          String
   accountHolderName String
   accountNumber     String
-  initialBalance    Decimal  @default(0) @db.Decimal(14, 2)
-  balance           Decimal  @default(0) @db.Decimal(14, 2)
+  initialBalance    Decimal @default(0) @db.Decimal(14, 2)
+  balance           Decimal @default(0) @db.Decimal(14, 2)
 
   // Soft delete / status
-  isActive          Boolean  @default(true)
+  isActive Boolean @default(true)
 
   // Audit
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   // Relations
-  organization      Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  expenses          Expense[]
-  refundsFrom       Refund[]     @relation("RefundFromAccount")
-  refundsTo         Refund[]     @relation("RefundToAccount")
+  organization           Organization            @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  expenses               Expense[]
+  receiptExpenses        ReceiptExpense[]
+  paymentVoucherExpenses PaymentVoucherExpense[]
+  generalExpenses        GeneralExpense[]
+  refundsFrom            Refund[]                @relation("RefundFromAccount")
+  refundsTo              Refund[]                @relation("RefundToAccount")
 
   @@unique([organizationId, accountNumber])
   @@index([organizationId])
@@ -233,18 +371,18 @@ model BankAccount {
 }
 
 model Refund {
-  id             String        @id @default(uuid())
-  organizationId String
-  requesterId    String
-  fromAccountId  String
-  toAccountId    String
-  amount         Decimal       @db.Decimal(14, 2)
-  remark         String
+  id              String       @id @default(uuid())
+  organizationId  String
+  requesterId     String
+  fromAccountId   String
+  toAccountId     String
+  amount          Decimal      @db.Decimal(14, 2)
+  remark          String
   rejectionReason String       @default("")
-  status         RefundStatus  @default(PENDING)
-  approvedAt     DateTime?
-  rejectedAt     DateTime?
-  createdAt      DateTime      @default(now())
+  status          RefundStatus @default(PENDING)
+  approvedAt      DateTime?
+  rejectedAt      DateTime?
+  createdAt       DateTime     @default(now())
 
   // Relations
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
@@ -261,23 +399,23 @@ model Refund {
 }
 
 model ExpenseItem {
-  id                String   @id @default(uuid())
-  expenseId         String
-  itemName          String
-  subcategoryId     String
-  vatCategory       VatCategory @default(G)
-  quantity          Decimal  @db.Decimal(12, 2)
-  unitPrice         Decimal  @db.Decimal(12, 2)
-  lineTotal         Decimal  @db.Decimal(12, 2)
-  unitOfMeasureId   String?
-  purchaseTypeId    String?
-  hasPolicyViolation Boolean @default(false)
+  id                 String      @id @default(uuid())
+  expenseId          String
+  itemName           String
+  subcategoryId      String
+  vatCategory        VatCategory @default(G)
+  quantity           Decimal     @db.Decimal(12, 2)
+  unitPrice          Decimal     @db.Decimal(12, 2)
+  lineTotal          Decimal     @db.Decimal(12, 2)
+  unitOfMeasureId    String?
+  purchaseTypeId     String?
+  hasPolicyViolation Boolean     @default(false)
 
   // Relations
-  expense           Expense  @relation(fields: [expenseId], references: [id], onDelete: Cascade)
-  subcategory       Category @relation(fields: [subcategoryId], references: [id])
-  unitOfMeasure     UnitOfMeasure? @relation(fields: [unitOfMeasureId], references: [id])
-  purchaseType      PurchaseType? @relation(fields: [purchaseTypeId], references: [id])
+  expense       Expense        @relation(fields: [expenseId], references: [id], onDelete: Cascade)
+  subcategory   Category       @relation(fields: [subcategoryId], references: [id])
+  unitOfMeasure UnitOfMeasure? @relation(fields: [unitOfMeasureId], references: [id])
+  purchaseType  PurchaseType?  @relation(fields: [purchaseTypeId], references: [id])
 
   @@index([expenseId])
   @@index([subcategoryId])
@@ -293,8 +431,9 @@ model UnitOfMeasure {
   updatedAt      DateTime @updatedAt
 
   // Relations
-  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  expenseItems   ExpenseItem[]
+  organization        Organization         @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  expenseItems        ExpenseItem[]
+  receiptExpenseItems ReceiptExpenseItem[]
 
   @@unique([organizationId, code])
   @@index([organizationId])
@@ -311,8 +450,9 @@ model PurchaseType {
   updatedAt      DateTime @updatedAt
 
   // Relations
-  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  expenseItems   ExpenseItem[]
+  organization        Organization         @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  expenseItems        ExpenseItem[]
+  receiptExpenseItems ReceiptExpenseItem[]
 
   @@unique([organizationId, code])
   @@index([organizationId])
@@ -321,37 +461,37 @@ model PurchaseType {
 
 model ApprovalHistory {
   id            String         @id @default(uuid())
-  expenseId     String
+  expenseBaseId String
   action        ApprovalAction
   comment       String?
   performedById String
   createdAt     DateTime       @default(now())
 
   // Relations
-  expense       Expense @relation(fields: [expenseId], references: [id], onDelete: Cascade)
-  performedBy   User    @relation(fields: [performedById], references: [id], onDelete: Cascade)
+  expenseBase ExpenseBase @relation(fields: [expenseBaseId], references: [id], onDelete: Cascade)
+  performedBy User        @relation(fields: [performedById], references: [id], onDelete: Cascade)
 
-  @@index([expenseId])
+  @@index([expenseBaseId])
   @@index([performedById])
   @@index([createdAt])
 }
 
 model ActivityLog {
-  id                String   @id @default(uuid())
-  userId            String
-  organizationId    String?
-  actionType        String
-  entityType        String
-  entityId          String
-  previousValue     Json?
-  newValue          Json?
-  ipAddress         String?
-  createdAt         DateTime @default(now())
-  
+  id             String   @id @default(uuid())
+  userId         String
+  organizationId String?
+  actionType     String
+  entityType     String
+  entityId       String
+  previousValue  Json?
+  newValue       Json?
+  ipAddress      String?
+  createdAt      DateTime @default(now())
+
   // Relations
-  user              User @relation(fields: [userId], references: [id], onDelete: Cascade)
-  organization      Organization? @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  organization Organization? @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
   @@index([userId])
   @@index([organizationId])
   @@index([entityType, entityId])

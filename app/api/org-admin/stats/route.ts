@@ -10,7 +10,7 @@ export async function GET() {
     if (!orgId) {
       return NextResponse.json(
         { error: "Organization ID missing" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -27,30 +27,57 @@ export async function GET() {
       prisma.user.count({
         where: { organizationId: orgId, role: "STAFF", isActive: true },
       }),
-      prisma.expense.count({
-        where: { organizationId: orgId, isActive: true },
+      prisma.expenseBase.count({
+        where: {
+          organizationId: orgId,
+          isActive: true,
+          expenseType: "RECEIPT",
+        },
       }),
-      prisma.expense.count({
-        where: { organizationId: orgId, isActive: true, status: "PENDING" },
+      prisma.expenseBase.count({
+        where: {
+          organizationId: orgId,
+          isActive: true,
+          expenseType: "RECEIPT",
+          status: "PENDING",
+        },
       }),
-      prisma.expense.count({
-        where: { organizationId: orgId, isActive: true, status: "APPROVED" },
+      prisma.expenseBase.count({
+        where: {
+          organizationId: orgId,
+          isActive: true,
+          expenseType: "RECEIPT",
+          status: "APPROVED",
+        },
       }),
-      prisma.expense.count({
-        where: { organizationId: orgId, isActive: true, status: "REJECTED" },
+      prisma.expenseBase.count({
+        where: {
+          organizationId: orgId,
+          isActive: true,
+          expenseType: "RECEIPT",
+          status: "REJECTED",
+        },
       }),
-      prisma.expense.count({
-        where: { organizationId: orgId, isActive: true, status: "WARNING" },
+      prisma.expenseBase.count({
+        where: {
+          organizationId: orgId,
+          isActive: true,
+          expenseType: "RECEIPT",
+          status: "WARNING",
+        },
       }),
     ]);
 
     const pendingApprovals = pendingExpenses + warningExpenses;
 
-    const totalExpenseAmount = await prisma.expense.aggregate({
+    const totalExpenseAmount = await prisma.receiptExpense.aggregate({
       where: {
-        organizationId: orgId,
-        isActive: true,
-        status: "APPROVED",
+        expenseBase: {
+          organizationId: orgId,
+          isActive: true,
+          expenseType: "RECEIPT",
+          status: "APPROVED",
+        },
       },
       _sum: {
         total: true,
@@ -78,7 +105,7 @@ export async function GET() {
       {
         error: error instanceof Error ? error.message : "Internal server error",
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

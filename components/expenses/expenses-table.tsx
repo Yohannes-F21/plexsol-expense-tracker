@@ -52,14 +52,12 @@ type MoneyLike =
 
 type ExpenseRow = {
   id: string;
-  purchasedDate: string;
-  companyName: string;
-  tinNumber: string;
-  fsNumber: string;
-  mrcNumber?: string | null;
+  expenseType: "RECEIPT" | "PAYMENT_VOUCHER" | "GENERAL";
+  date: string;
+  vendor: string;
+  reference?: string | null;
+  invoiceNumber?: string | null;
   paymentMethod: "CASH" | "CHECK" | "CREDIT_CARD" | "BANK_TRANSFER" | "OTHER";
-  subtotal: MoneyLike;
-  vat: MoneyLike;
   total: MoneyLike;
   status: "PENDING" | "WARNING" | "APPROVED" | "REJECTED";
   warningItems?: string[];
@@ -89,6 +87,9 @@ export function ExpensesTable(props: { role: "ORG_ADMIN" | "STAFF" }) {
   const [sorting, setSorting] = useState<SortingState>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [expenseTypeFilter, setExpenseTypeFilter] = useState<
+    "all" | "RECEIPT" | "PAYMENT_VOUCHER" | "GENERAL"
+  >("all");
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<ExpenseRow | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -98,12 +99,14 @@ export function ExpensesTable(props: { role: "ORG_ADMIN" | "STAFF" }) {
   });
 
   const { data, isLoading } = useQuery({
-    queryKey: ["expenses", searchTerm, statusFilter],
+    queryKey: ["expenses", searchTerm, statusFilter, expenseTypeFilter],
     queryFn: async () => {
       const params = new URLSearchParams();
       const q = searchTerm.trim();
       if (q) params.set("q", q);
       if (statusFilter !== "all") params.set("status", statusFilter);
+      if (expenseTypeFilter !== "all")
+        params.set("expenseType", expenseTypeFilter);
 
       const qs = params.toString();
       const url = qs ? `/api/expenses?${qs}` : "/api/expenses";
@@ -161,37 +164,50 @@ export function ExpensesTable(props: { role: "ORG_ADMIN" | "STAFF" }) {
 
     cols.push(
       {
-        accessorKey: "purchasedDate",
-        header: "Purchased",
-        cell: ({ row }) =>
-          new Date(row.original.purchasedDate).toLocaleDateString(),
+        accessorKey: "expenseType",
+        header: "Type",
+        cell: ({ row }) => {
+          const type = row.original.expenseType;
+          const label =
+            type === "RECEIPT"
+              ? "Receipt"
+              : type === "PAYMENT_VOUCHER"
+                ? "Payment Voucher"
+                : "General";
+          return <Badge variant="outline">{label}</Badge>;
+        },
       },
       {
-        accessorKey: "companyName",
-        header: "Company",
-        cell: ({ row }) => row.original.companyName,
+        accessorKey: "date",
+        header: "Date",
+        cell: ({ row }) => new Date(row.original.date).toLocaleDateString(),
       },
       {
-        accessorKey: "fsNumber",
-        header: "FS",
+        accessorKey: "vendor",
+        header: "Vendor/Payee",
+        cell: ({ row }) => row.original.vendor || "-",
+      },
+      {
+        accessorKey: "reference",
+        header: "Reference",
         cell: ({ row }) => (
-          <span className="font-mono text-xs">{row.original.fsNumber}</span>
-        ),
-      },
-      {
-        accessorKey: "tinNumber",
-        header: "TIN",
-        cell: ({ row }) => (
-          <span className="font-mono text-xs">{row.original.tinNumber}</span>
-        ),
-      },
-      {
-        accessorKey: "mrcNumber",
-        header: "MRC",
-        cell: ({ row }) => (
-          <span className="font-mono text-xs">
-            {row.original.mrcNumber || "-"}
-          </span>
+          <div className="font-mono text-xs">
+            {row.original.expenseType === "GENERAL" ? (
+              "-"
+            ) : row.original.reference ? (
+              <>
+                <div>{row.original.reference}</div>
+                {row.original.expenseType === "RECEIPT" &&
+                row.original.invoiceNumber ? (
+                  <div className="text-[10px] text-muted-foreground">
+                    INV: {row.original.invoiceNumber}
+                  </div>
+                ) : null}
+              </>
+            ) : (
+              "-"
+            )}
+          </div>
         ),
       },
       {
@@ -328,6 +344,14 @@ export function ExpensesTable(props: { role: "ORG_ADMIN" | "STAFF" }) {
     return cols;
   }, [props.role]);
 
+  const isExpenseTypeFilterValue = (
+    value: string,
+  ): value is "all" | "RECEIPT" | "PAYMENT_VOUCHER" | "GENERAL" =>
+    value === "all" ||
+    value === "RECEIPT" ||
+    value === "PAYMENT_VOUCHER" ||
+    value === "GENERAL";
+
   const table = useReactTable({
     data: expenses,
     columns,
@@ -345,15 +369,7 @@ export function ExpensesTable(props: { role: "ORG_ADMIN" | "STAFF" }) {
   useEffect(() => {
     table.setPageIndex(0);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sorting, statusFilter, searchTerm]);
-
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-[50vh]">
-        <Loader size="md" ariaLabel="Loading Expenses" showLabel />
-      </div>
-    );
-  }
+  }, [sorting, statusFilter, expenseTypeFilter, searchTerm]);
 
   return (
     <>
@@ -364,22 +380,39 @@ export function ExpensesTable(props: { role: "ORG_ADMIN" | "STAFF" }) {
             <div className="relative">
               <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
               <Input
-                placeholder="Search company / FS / TIN / MRC..."
-                className="pl-8 w-56"
+                placeholder="Search vendor, reference, invoice, description..."
+                className="pl-8 w-72"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
             </div>
             <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-40">
-                <SelectValue placeholder="Status" />
+              <SelectTrigger className="w-44">
+                <SelectValue placeholder="Filter: Status" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All</SelectItem>
+                <SelectItem value="all">All statuses</SelectItem>
                 <SelectItem value="PENDING">PENDING</SelectItem>
                 <SelectItem value="WARNING">WARNING</SelectItem>
                 <SelectItem value="APPROVED">APPROVED</SelectItem>
                 <SelectItem value="REJECTED">REJECTED</SelectItem>
+              </SelectContent>
+            </Select>
+
+            <Select
+              value={expenseTypeFilter}
+              onValueChange={(v) => {
+                if (isExpenseTypeFilterValue(v)) setExpenseTypeFilter(v);
+              }}
+            >
+              <SelectTrigger className="w-48">
+                <SelectValue placeholder="Filter: Type" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All types</SelectItem>
+                <SelectItem value="RECEIPT">Receipt</SelectItem>
+                <SelectItem value="PAYMENT_VOUCHER">Payment Voucher</SelectItem>
+                <SelectItem value="GENERAL">General</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -404,7 +437,19 @@ export function ExpensesTable(props: { role: "ORG_ADMIN" | "STAFF" }) {
                 ))}
               </TableHeader>
               <TableBody>
-                {table.getRowModel().rows?.length ? (
+                {isLoading ? (
+                  <TableRow>
+                    <TableCell colSpan={columns.length} className="py-10">
+                      <div className="flex items-center justify-center">
+                        <Loader
+                          size="md"
+                          ariaLabel="Loading Expenses"
+                          showLabel
+                        />
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ) : table.getRowModel().rows?.length ? (
                   table.getRowModel().rows.map((row) => (
                     <TableRow key={row.id}>
                       {row.getVisibleCells().map((cell) => (

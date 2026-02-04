@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import { useMutation } from "@tanstack/react-query";
+import { useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import {
   Dialog,
   DialogContent,
@@ -10,8 +10,14 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { ExpenseForm, type ExpenseFormValues } from "@/components/expense-form";
-import { toast } from "sonner";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Button } from "@/components/ui/button";
 
 type CreateExpenseDialogProps = {
   open?: boolean;
@@ -26,7 +32,11 @@ export function CreateExpenseDialog({
   onSuccess,
   trigger,
 }: CreateExpenseDialogProps) {
+  const router = useRouter();
   const [internalOpen, setInternalOpen] = useState(false);
+  const [expenseType, setExpenseType] = useState<
+    "RECEIPT" | "PAYMENT_VOUCHER" | "GENERAL"
+  >("RECEIPT");
 
   const isControlled = typeof open === "boolean";
   const actualOpen = isControlled ? (open as boolean) : internalOpen;
@@ -39,39 +49,6 @@ export function CreateExpenseDialog({
     };
   }, [isControlled, onOpenChange]);
 
-  const createMutation = useMutation({
-    mutationFn: async (values: ExpenseFormValues) => {
-      const res = await fetch("/api/expenses", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(values),
-      });
-
-      const data = await res.json();
-      if (!res.ok) {
-        throw new Error(data.error || "Failed to create expense");
-      }
-
-      return data;
-    },
-    onSuccess: () => {
-      toast.success("Expense created successfully");
-      setOpen(false);
-      onSuccess();
-    },
-    onError: (error) => {
-      toast.error(
-        error instanceof Error ? error.message : "Failed to create expense"
-      );
-    },
-  });
-
-  useEffect(() => {
-    if (!actualOpen) {
-      createMutation.reset();
-    }
-  }, [actualOpen, createMutation]);
-
   return (
     <Dialog open={actualOpen} onOpenChange={setOpen}>
       {trigger ? <DialogTrigger asChild>{trigger}</DialogTrigger> : null}
@@ -79,16 +56,42 @@ export function CreateExpenseDialog({
         <DialogHeader>
           <DialogTitle>Create Expense</DialogTitle>
           <DialogDescription>
-            Submit a new expense request with category and priority
+            Choose the expense type to continue
           </DialogDescription>
         </DialogHeader>
-        <ExpenseForm
-          categoriesEnabled={actualOpen}
-          submitLabel="Create Expense"
-          isSubmitting={createMutation.isPending}
-          onSubmit={(values) => createMutation.mutateAsync(values)}
-          onCancel={() => setOpen(false)}
-        />
+        <div className="space-y-4">
+          <Select
+            value={expenseType}
+            onValueChange={(value) =>
+              setExpenseType(value as "RECEIPT" | "PAYMENT_VOUCHER" | "GENERAL")
+            }
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Select expense type" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="RECEIPT">Receipt</SelectItem>
+              <SelectItem value="PAYMENT_VOUCHER">Payment Voucher</SelectItem>
+              <SelectItem value="GENERAL">General Expense</SelectItem>
+            </SelectContent>
+          </Select>
+
+          <div className="flex justify-end gap-2">
+            <Button variant="outline" onClick={() => setOpen(false)}>
+              Cancel
+            </Button>
+            <Button
+              onClick={() => {
+                const next = `/expenses/new?type=${expenseType}`;
+                setOpen(false);
+                onSuccess();
+                router.push(next);
+              }}
+            >
+              Continue
+            </Button>
+          </div>
+        </div>
       </DialogContent>
     </Dialog>
   );

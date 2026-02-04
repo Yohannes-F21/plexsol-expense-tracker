@@ -16,7 +16,7 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     const q = searchParams.get("q")?.trim();
 
-    const approvals = await prisma.expense.findMany({
+    const approvals = await prisma.expenseBase.findMany({
       where: {
         organizationId: session.organizationId,
         isActive: true,
@@ -24,15 +24,51 @@ export async function GET(request: Request) {
         ...(q
           ? {
               OR: [
-                { companyName: { contains: q, mode: "insensitive" } },
+                { createdBy: { name: { contains: q, mode: "insensitive" } } },
+                { createdBy: { email: { contains: q, mode: "insensitive" } } },
                 {
-                  createdByUser: {
-                    name: { contains: q, mode: "insensitive" },
+                  receiptExpense: {
+                    companyName: { contains: q, mode: "insensitive" },
                   },
                 },
                 {
-                  createdByUser: {
-                    email: { contains: q, mode: "insensitive" },
+                  receiptExpense: {
+                    fsNumber: { contains: q, mode: "insensitive" },
+                  },
+                },
+                {
+                  receiptExpense: {
+                    tinNumber: { contains: q, mode: "insensitive" },
+                  },
+                },
+                {
+                  receiptExpense: {
+                    mrcNumber: { contains: q, mode: "insensitive" },
+                  },
+                },
+                {
+                  paymentVoucherExpense: {
+                    paidTo: { contains: q, mode: "insensitive" },
+                  },
+                },
+                {
+                  paymentVoucherExpense: {
+                    invoiceNumber: { contains: q, mode: "insensitive" },
+                  },
+                },
+                {
+                  paymentVoucherExpense: {
+                    tinNumber: { contains: q, mode: "insensitive" },
+                  },
+                },
+                {
+                  generalExpense: {
+                    paidTo: { contains: q, mode: "insensitive" },
+                  },
+                },
+                {
+                  generalExpense: {
+                    description: { contains: q, mode: "insensitive" },
                   },
                 },
               ],
@@ -41,19 +77,92 @@ export async function GET(request: Request) {
       },
       select: {
         id: true,
-        purchasedDate: true,
-        companyName: true,
-        tinNumber: true,
-        fsNumber: true,
-        total: true,
+        expenseType: true,
         status: true,
         createdAt: true,
-        createdByUser: { select: { id: true, name: true, email: true } },
+        createdBy: { select: { id: true, name: true, email: true } },
+        receiptExpense: {
+          select: {
+            purchasedDate: true,
+            companyName: true,
+            tinNumber: true,
+            fsNumber: true,
+            total: true,
+          },
+        },
+        paymentVoucherExpense: {
+          select: {
+            purchasedDate: true,
+            paidTo: true,
+            invoiceNumber: true,
+            totalAmount: true,
+          },
+        },
+        generalExpense: {
+          select: {
+            paymentDate: true,
+            paidTo: true,
+            description: true,
+            amount: true,
+          },
+        },
       },
       orderBy: { createdAt: "desc" },
+      take: 200,
     });
 
-    return NextResponse.json({ approvals });
+    const mapped = approvals
+      .map((row) => {
+        if (row.expenseType === "RECEIPT" && row.receiptExpense) {
+          return {
+            id: row.id,
+            expenseType: row.expenseType,
+            date: row.receiptExpense.purchasedDate,
+            vendor: row.receiptExpense.companyName,
+            reference: row.receiptExpense.fsNumber,
+            total: row.receiptExpense.total,
+            status: row.status,
+            createdAt: row.createdAt,
+            createdByUser: row.createdBy,
+          };
+        }
+
+        if (
+          row.expenseType === "PAYMENT_VOUCHER" &&
+          row.paymentVoucherExpense
+        ) {
+          return {
+            id: row.id,
+            expenseType: row.expenseType,
+            date: row.paymentVoucherExpense.purchasedDate,
+            vendor: row.paymentVoucherExpense.paidTo,
+            reference: row.paymentVoucherExpense.invoiceNumber,
+            total: row.paymentVoucherExpense.totalAmount,
+            status: row.status,
+            createdAt: row.createdAt,
+            createdByUser: row.createdBy,
+          };
+        }
+
+        if (row.expenseType === "GENERAL" && row.generalExpense) {
+          return {
+            id: row.id,
+            expenseType: row.expenseType,
+            date: row.generalExpense.paymentDate,
+            vendor: row.generalExpense.paidTo,
+            reference: row.generalExpense.description,
+            total: row.generalExpense.amount,
+            status: row.status,
+            createdAt: row.createdAt,
+            createdByUser: row.createdBy,
+          };
+        }
+
+        return null;
+      })
+      .filter(Boolean);
+
+    return NextResponse.json({ approvals: mapped });
   } catch (error) {
     console.error("[org-admin] Get approvals error:", error);
     return NextResponse.json(

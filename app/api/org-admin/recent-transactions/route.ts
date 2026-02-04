@@ -18,33 +18,43 @@ export async function GET() {
     if (!orgId)
       return NextResponse.json({ error: "No organization" }, { status: 400 });
 
-    const transactions = await prisma.expense.findMany({
-      where: { organizationId: orgId, isActive: true },
-      orderBy: { createdAt: "desc" },
+    const transactions = await prisma.receiptExpense.findMany({
+      where: {
+        expenseBase: {
+          organizationId: orgId,
+          isActive: true,
+          expenseType: "RECEIPT",
+        },
+      },
+      orderBy: { expenseBase: { createdAt: "desc" } },
       take: 10,
       select: {
-        id: true,
         companyName: true,
         total: true,
-        status: true,
-        createdAt: true,
-        createdByUser: { select: { name: true } },
         items: {
           take: 1,
           orderBy: { id: "asc" },
-          select: { subcategory: { select: { name: true } } },
+          select: { category: { select: { name: true } } },
+        },
+        expenseBase: {
+          select: {
+            id: true,
+            status: true,
+            createdAt: true,
+            createdBy: { select: { name: true } },
+          },
         },
       },
     });
 
     const formatted = transactions.map((t) => ({
-      id: t.id,
+      id: t.expenseBase.id,
       amount: asNumber(t.total),
       description: t.companyName,
-      status: t.status,
-      createdAt: t.createdAt,
-      user: { name: t.createdByUser?.name ?? "-" },
-      category: { name: t.items[0]?.subcategory?.name ?? "N/A" },
+      status: t.expenseBase.status,
+      createdAt: t.expenseBase.createdAt,
+      user: { name: t.expenseBase.createdBy?.name ?? "-" },
+      category: { name: t.items[0]?.category?.name ?? "N/A" },
     }));
 
     return NextResponse.json(formatted);
@@ -54,7 +64,7 @@ export async function GET() {
       {
         error: error instanceof Error ? error.message : "Internal server error",
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

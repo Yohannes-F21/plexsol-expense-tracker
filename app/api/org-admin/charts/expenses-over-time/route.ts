@@ -22,22 +22,25 @@ export async function GET() {
     const sixMonthsAgo = new Date();
     sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
 
-    const expenses = await prisma.expense.findMany({
+    const expenses = await prisma.receiptExpense.findMany({
       where: {
-        organizationId: orgId,
-        createdAt: { gte: sixMonthsAgo },
-        isActive: true,
+        expenseBase: {
+          organizationId: orgId,
+          isActive: true,
+          expenseType: "RECEIPT",
+          createdAt: { gte: sixMonthsAgo },
+        },
       },
       select: {
         total: true,
-        createdAt: true,
+        expenseBase: { select: { createdAt: true } },
       },
     });
 
     const monthlyData = new Map<string, { total: number; count: number }>();
 
     expenses.forEach((expense) => {
-      const monthKey = expense.createdAt.toLocaleString("default", {
+      const monthKey = expense.expenseBase.createdAt.toLocaleString("default", {
         month: "short",
         year: "numeric",
       });
@@ -56,7 +59,7 @@ export async function GET() {
         count: data.count,
       }))
       .sort(
-        (a, b) => new Date(a.month).getTime() - new Date(b.month).getTime()
+        (a, b) => new Date(a.month).getTime() - new Date(b.month).getTime(),
       );
 
     return NextResponse.json(chartData);
@@ -66,7 +69,7 @@ export async function GET() {
       {
         error: error instanceof Error ? error.message : "Internal server error",
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

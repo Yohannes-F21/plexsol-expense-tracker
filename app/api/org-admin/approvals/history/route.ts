@@ -9,13 +9,16 @@ export async function GET() {
     if (!session.organizationId) {
       return NextResponse.json(
         { error: "Organization ID missing" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
     const history = await prisma.approvalHistory.findMany({
       where: {
-        expense: { organizationId: session.organizationId },
+        expenseBase: {
+          organizationId: session.organizationId,
+          isActive: true,
+        },
       },
       select: {
         id: true,
@@ -23,13 +26,17 @@ export async function GET() {
         comment: true,
         createdAt: true,
         performedBy: { select: { id: true, name: true, email: true } },
-        expense: {
+        expenseBase: {
           select: {
             id: true,
-            companyName: true,
-            total: true,
             createdAt: true,
-            createdByUser: { select: { id: true, name: true, email: true } },
+            createdBy: { select: { id: true, name: true, email: true } },
+            receiptExpense: {
+              select: {
+                companyName: true,
+                total: true,
+              },
+            },
           },
         },
       },
@@ -37,14 +44,29 @@ export async function GET() {
       take: 50,
     });
 
-    return NextResponse.json({ history });
+    const mapped = history.map((h) => ({
+      id: h.id,
+      action: h.action,
+      comment: h.comment,
+      createdAt: h.createdAt,
+      performedBy: h.performedBy,
+      expense: {
+        id: h.expenseBase.id,
+        companyName: h.expenseBase.receiptExpense?.companyName ?? "-",
+        total: h.expenseBase.receiptExpense?.total ?? 0,
+        createdAt: h.expenseBase.createdAt,
+        createdByUser: h.expenseBase.createdBy,
+      },
+    }));
+
+    return NextResponse.json({ history: mapped });
   } catch (error) {
     console.error("[org-admin] Get approvals history error:", error);
     return NextResponse.json(
       {
         error: error instanceof Error ? error.message : "Internal server error",
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

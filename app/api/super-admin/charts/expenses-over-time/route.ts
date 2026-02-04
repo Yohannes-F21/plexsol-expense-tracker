@@ -18,16 +18,19 @@ export async function GET() {
     const sixMonthsAgo = new Date();
     sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
 
-    const expenses = await prisma.expense.findMany({
+    const expenses = await prisma.receiptExpense.findMany({
       where: {
-        isActive: true,
-        createdAt: {
-          gte: sixMonthsAgo,
+        expenseBase: {
+          isActive: true,
+          expenseType: "RECEIPT",
+          createdAt: {
+            gte: sixMonthsAgo,
+          },
         },
       },
       select: {
         total: true,
-        createdAt: true,
+        expenseBase: { select: { createdAt: true } },
       },
     });
 
@@ -37,10 +40,10 @@ export async function GET() {
     >();
 
     for (const expense of expenses) {
-      const d = new Date(expense.createdAt);
+      const d = new Date(expense.expenseBase.createdAt);
       const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(
         2,
-        "0"
+        "0",
       )}`;
       const label = d.toLocaleString("default", {
         month: "short",
@@ -72,7 +75,7 @@ export async function GET() {
       {
         error: error instanceof Error ? error.message : "Internal server error",
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

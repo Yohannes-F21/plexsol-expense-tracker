@@ -14,9 +14,11 @@ export async function GET() {
         prisma.user.count({
           where: { isActive: true },
         }),
-        prisma.expense.count(),
-        prisma.expense.count({
-          where: { status: "PENDING" },
+        prisma.expenseBase.count({
+          where: { expenseType: "RECEIPT", isActive: true },
+        }),
+        prisma.expenseBase.count({
+          where: { status: "PENDING", expenseType: "RECEIPT", isActive: true },
         }),
       ]);
 
@@ -39,7 +41,7 @@ export async function GET() {
       {
         error: error instanceof Error ? error.message : "Internal server error",
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

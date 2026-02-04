@@ -18,15 +18,36 @@ export async function POST(
       );
     }
 
-    const expense = await prisma.expense.findUnique({
+    const expense = await prisma.expenseBase.findUnique({
       where: { id },
       select: {
         id: true,
         organizationId: true,
         isActive: true,
         status: true,
-        bankAccountId: true,
-        total: true,
+        expenseType: true,
+        receiptExpense: {
+          select: {
+            bankAccountId: true,
+            paymentMethod: true,
+            total: true,
+          },
+        },
+        paymentVoucherExpense: {
+          select: {
+            paymentMethod: true,
+            totalAmount: true,
+            bankAccountId: true,
+            items: { select: { lineTotal: true } },
+          },
+        },
+        generalExpense: {
+          select: {
+            paymentMethod: true,
+            amount: true,
+            bankAccountId: true,
+          },
+        },
       },
     });
 
@@ -45,14 +66,80 @@ export async function POST(
       );
     }
 
-    const amountToDeduct = new Prisma.Decimal(expense.total ?? 0);
+    let bankAccountId: string | null = null;
+    let paymentMethod: string | null = null;
+    let amountToDeduct = new Prisma.Decimal(0);
+
+    if (expense.expenseType === "RECEIPT") {
+      if (!expense.receiptExpense) {
+        return NextResponse.json(
+          { error: "Expense not found" },
+          { status: 404 },
+        );
+      }
+
+      bankAccountId = expense.receiptExpense.bankAccountId ?? null;
+      paymentMethod = expense.receiptExpense.paymentMethod;
+      amountToDeduct = new Prisma.Decimal(expense.receiptExpense.total ?? 0);
+    } else if (expense.expenseType === "PAYMENT_VOUCHER") {
+      if (!expense.paymentVoucherExpense) {
+        return NextResponse.json(
+          { error: "Expense not found" },
+          { status: 404 },
+        );
+      }
+
+      paymentMethod = expense.paymentVoucherExpense.paymentMethod;
+      bankAccountId = expense.paymentVoucherExpense.bankAccountId ?? null;
+      const itemTotal = expense.paymentVoucherExpense.items.reduce(
+        (sum, item) => sum.plus(item.lineTotal ?? 0),
+        new Prisma.Decimal(0),
+      );
+      amountToDeduct = itemTotal.gt(0)
+        ? itemTotal
+        : new Prisma.Decimal(expense.paymentVoucherExpense.totalAmount ?? 0);
+    } else if (expense.expenseType === "GENERAL") {
+      if (!expense.generalExpense) {
+        return NextResponse.json(
+          { error: "Expense not found" },
+          { status: 404 },
+        );
+      }
+
+      paymentMethod = expense.generalExpense.paymentMethod;
+      bankAccountId = expense.generalExpense.bankAccountId ?? null;
+      amountToDeduct = new Prisma.Decimal(expense.generalExpense.amount ?? 0);
+    } else {
+      return NextResponse.json({ error: "Expense not found" }, { status: 404 });
+    }
+
+    const shouldDeduct = paymentMethod === "BANK_TRANSFER";
 
     const updatedExpense = await prisma.$transaction(
       async (tx) => {
-        if (expense.bankAccountId) {
+        const approvedAt = new Date();
+        const approvalResult = await tx.expenseBase.updateMany({
+          where: {
+            id,
+            organizationId: session.organizationId,
+            status: { in: ["PENDING", "WARNING"] },
+            isActive: true,
+          },
+          data: { status: "APPROVED", approvedAt },
+        });
+
+        if (approvalResult.count === 0) {
+          throw new Error("expense_already_finalized");
+        }
+
+        if (shouldDeduct) {
+          if (!bankAccountId) {
+            throw new Error("bank_account_not_found");
+          }
+
           const bankAccount = await tx.bankAccount.findFirst({
             where: {
-              id: expense.bankAccountId,
+              id: bankAccountId,
               organizationId: session.organizationId,
               isActive: true,
             },
@@ -74,19 +161,9 @@ export async function POST(
           });
         }
 
-        const expenseUpdate = await tx.expense.update({
-          where: { id },
-          data: { status: "APPROVED", approvedAt: new Date() },
-          select: {
-            id: true,
-            status: true,
-            approvedAt: true,
-          },
-        });
-
         await tx.approvalHistory.create({
           data: {
-            expenseId: id,
+            expenseBaseId: id,
             action: "APPROVED",
             comment: null,
             performedById: session.id,
@@ -105,7 +182,11 @@ export async function POST(
           },
         });
 
-        return expenseUpdate;
+        return {
+          id,
+          status: "APPROVED",
+          approvedAt,
+        };
       },
       {
         isolationLevel: Prisma.TransactionIsolationLevel.ReadCommitted,
@@ -119,6 +200,13 @@ export async function POST(
     console.error("[v0] Approve expense error:", error);
 
     if (error instanceof Error) {
+      if (error.message === "expense_already_finalized") {
+        return NextResponse.json(
+          { error: "Expense already finalized" },
+          { status: 400 },
+        );
+      }
+
       if (error.message === "bank_account_not_found") {
         return NextResponse.json(
           { error: "Bank account not found or inactive" },

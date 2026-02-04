@@ -22,10 +22,10 @@ import { ServerDataTablePagination } from "@/components/data-table-pagination";
 
 type ApprovalRow = {
   id: string;
-  purchasedDate: string;
-  companyName: string;
-  tinNumber: string;
-  fsNumber: string;
+  expenseType: "RECEIPT" | "PAYMENT_VOUCHER" | "GENERAL";
+  date: string;
+  vendor: string;
+  reference?: string | null;
   total: any;
   status: "PENDING" | "WARNING";
   createdAt: string;
@@ -90,7 +90,7 @@ export function ApprovalsManagement() {
           <Input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search company or employee..."
+            placeholder="Search vendor, invoice, employee..."
             className="pl-8 w-72"
           />
         </div>
@@ -101,10 +101,10 @@ export function ApprovalsManagement() {
             <TableHeader>
               <TableRow>
                 <TableHead>Employee</TableHead>
-                <TableHead>Purchased</TableHead>
-                <TableHead>Company</TableHead>
-                <TableHead>FS</TableHead>
-                <TableHead>TIN</TableHead>
+                <TableHead>Type</TableHead>
+                <TableHead>Date</TableHead>
+                <TableHead>Vendor/Payee</TableHead>
+                <TableHead>Reference</TableHead>
                 <TableHead>Total</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Action</TableHead>
@@ -141,16 +141,24 @@ export function ApprovalsManagement() {
                       </div>
                     </TableCell>
                     <TableCell>
-                      {new Date(row.purchasedDate).toLocaleDateString()}
-                    </TableCell>
-                    <TableCell className="font-medium">
-                      {row.companyName}
+                      <Badge variant="outline">
+                        {row.expenseType === "RECEIPT"
+                          ? "Receipt"
+                          : row.expenseType === "PAYMENT_VOUCHER"
+                            ? "Payment Voucher"
+                            : "General"}
+                      </Badge>
                     </TableCell>
                     <TableCell>
-                      <span className="font-mono text-xs">{row.fsNumber}</span>
+                      {new Date(row.date).toLocaleDateString()}
                     </TableCell>
+                    <TableCell className="font-medium">{row.vendor}</TableCell>
                     <TableCell>
-                      <span className="font-mono text-xs">{row.tinNumber}</span>
+                      <span className="font-mono text-xs">
+                        {row.expenseType === "GENERAL"
+                          ? "-"
+                          : row.reference || "-"}
+                      </span>
                     </TableCell>
                     <TableCell className="font-semibold font-mono tabular-nums">
                       {formatMoney(row.total)}

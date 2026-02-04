@@ -25,6 +25,23 @@ const REPORT_HEADERS = [
 type ReportHeader = (typeof REPORT_HEADERS)[number];
 export type ReportRow = Record<ReportHeader, string | number>;
 
+type ReportItem = {
+  vatCategory: string;
+  quantity: unknown;
+  unitPrice: unknown;
+  lineTotal: unknown;
+  itemName: string;
+  receiptExpense: {
+    tinNumber: string | null;
+    companyName: string;
+    purchasedDate: Date;
+    mrcNumber: string | null;
+    fsNumber: string | null;
+  };
+  unitOfMeasure: { label: string } | null;
+  purchaseType: { label: string } | null;
+};
+
 function toNumber(x: unknown): number {
   if (typeof x === "number") return x;
   if (typeof x === "string") return Number(x);
@@ -80,7 +97,7 @@ export async function GET(request: Request) {
     if (!orgId) {
       return NextResponse.json(
         { error: "Organization ID missing" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -95,29 +112,32 @@ export async function GET(request: Request) {
       // Spec only defines behavior when both are provided; keep it simple.
       return NextResponse.json(
         { error: "Both from and to dates are required" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
     if (from && to && (!fromDate || !toDate)) {
       return NextResponse.json(
         { error: "Invalid date range" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
-    const items = await prisma.expenseItem.findMany({
+    const items = (await (prisma as any).receiptExpenseItem.findMany({
       where: {
-        expense: {
-          organizationId: orgId,
-          isActive: true,
+        receiptExpense: {
+          expenseBase: {
+            organizationId: orgId,
+            isActive: true,
+            expenseType: "RECEIPT",
+          },
           ...(fromDate && toDate
             ? { purchasedDate: { gte: fromDate, lte: toDate } }
             : {}),
         },
       },
       include: {
-        expense: {
+        receiptExpense: {
           select: {
             tinNumber: true,
             companyName: true,
@@ -129,8 +149,8 @@ export async function GET(request: Request) {
         unitOfMeasure: { select: { label: true } },
         purchaseType: { select: { label: true } },
       },
-      orderBy: { expense: { purchasedDate: "desc" } },
-    });
+      orderBy: { receiptExpense: { purchasedDate: "desc" } },
+    })) as ReportItem[];
 
     const rows: ReportRow[] = items.map((it) => {
       const qty = toNumber(it.quantity);
@@ -143,11 +163,11 @@ export async function GET(request: Request) {
         "VAT Category": String(it.vatCategory),
         "Calendar Type": "G",
         "Types of Purchase": it.purchaseType?.label ?? "",
-        TIN: it.expense.tinNumber,
-        Seller: it.expense.companyName,
-        "Date of Purchase": formatDateDMY(it.expense.purchasedDate),
-        "MRC Number": it.expense.mrcNumber ?? "",
-        "VAT Receipt Number": normalizeFsNumber(it.expense.fsNumber),
+        TIN: it.receiptExpense.tinNumber ?? "",
+        Seller: it.receiptExpense.companyName,
+        "Date of Purchase": formatDateDMY(it.receiptExpense.purchasedDate),
+        "MRC Number": it.receiptExpense.mrcNumber ?? "",
+        "VAT Receipt Number": normalizeFsNumber(it.receiptExpense.fsNumber),
         Description: it.itemName,
         "Unit of Measure": it.unitOfMeasure?.label ?? "",
         Quantity: formatQty(qty),
@@ -165,7 +185,7 @@ export async function GET(request: Request) {
       {
         error: error instanceof Error ? error.message : "Internal server error",
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

@@ -18,29 +18,32 @@ export async function GET() {
     if (!orgId)
       return NextResponse.json({ error: "No organization" }, { status: 400 });
 
-    const lines = await prisma.expenseItem.findMany({
+    const lines = await prisma.receiptExpenseItem.findMany({
       where: {
-        expense: {
-          organizationId: orgId,
-          isActive: true,
+        receiptExpense: {
+          expenseBase: {
+            organizationId: orgId,
+            isActive: true,
+            expenseType: "RECEIPT",
+          },
         },
       },
       select: {
         lineTotal: true,
-        subcategory: { select: { name: true } },
+        category: { select: { name: true } },
       },
     });
 
     const byCategory = new Map<string, { category: string; amount: number }>();
     for (const line of lines) {
-      const category = line.subcategory?.name ?? "Uncategorized";
+      const category = line.category?.name ?? "Uncategorized";
       const existing = byCategory.get(category) ?? { category, amount: 0 };
       existing.amount += asNumber(line.lineTotal);
       byCategory.set(category, existing);
     }
 
     const result = Array.from(byCategory.values()).sort(
-      (a, b) => b.amount - a.amount
+      (a, b) => b.amount - a.amount,
     );
 
     return NextResponse.json(result);
@@ -50,7 +53,7 @@ export async function GET() {
       {
         error: error instanceof Error ? error.message : "Internal server error",
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
