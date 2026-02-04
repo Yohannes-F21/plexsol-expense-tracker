@@ -294,7 +294,9 @@ export async function PUT(request: Request, context: any) {
               invoiceNumber: nextInvoiceNumber,
               paymentMethod: nextPaymentMethod,
               checkNumber:
-                nextPaymentMethod === "CHECK" ? (nextCheckNumber ?? null) : null,
+                nextPaymentMethod === "CHECK"
+                  ? (nextCheckNumber ?? null)
+                  : null,
               bankAccountId:
                 nextPaymentMethod === "BANK_TRANSFER"
                   ? (nextBankAccountId ?? null)

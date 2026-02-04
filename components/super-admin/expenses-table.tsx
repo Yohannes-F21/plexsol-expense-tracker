@@ -257,13 +257,17 @@ export function ExpensesTable() {
                       {e.createdByUser?.name || e.createdByUser?.email || "-"}
                     </TableCell>
                     <TableCell>
-                      <Badge variant="outline">{typeLabel(e.expenseType)}</Badge>
+                      <Badge variant="outline">
+                        {typeLabel(e.expenseType)}
+                      </Badge>
                     </TableCell>
                     <TableCell>{e.vendor || "-"}</TableCell>
                     <TableCell className="font-mono text-xs">
                       {e.expenseType === "GENERAL" ? "-" : e.reference || "-"}
                     </TableCell>
-                    <TableCell>{new Date(e.date).toLocaleDateString()}</TableCell>
+                    <TableCell>
+                      {new Date(e.date).toLocaleDateString()}
+                    </TableCell>
                     <TableCell className="capitalize">
                       {String(e.paymentMethod || "-")
                         .toLowerCase()

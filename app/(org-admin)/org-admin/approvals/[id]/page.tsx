@@ -542,7 +542,7 @@ export default function OrgAdminApprovalDetailPage({
                         <span className="text-right text-xs">
                           {expense.bankAccount
                             ? `${expense.bankAccount.bankName} — ${expense.bankAccount.accountHolderName} — ${expense.bankAccount.accountNumber}`
-                            : expense.bankAccountId ?? "-"}
+                            : (expense.bankAccountId ?? "-")}
                         </span>
                       </div>
                     ) : null}
@@ -700,7 +700,7 @@ export default function OrgAdminApprovalDetailPage({
                         <span className="text-right text-xs">
                           {expense.bankAccount
                             ? `${expense.bankAccount.bankName} — ${expense.bankAccount.accountHolderName} — ${expense.bankAccount.accountNumber}`
-                            : expense.bankAccountId ?? "-"}
+                            : (expense.bankAccountId ?? "-")}
                         </span>
                       </div>
                     ) : null}
