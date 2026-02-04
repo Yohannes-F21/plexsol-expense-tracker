@@ -75,7 +75,7 @@ export default async function DashboardPage() {
   } catch (e) {
     console.warn(
       "[staff-dashboard] Failed to load dashboard stats:",
-      formatError(e)
+      formatError(e),
     );
     grouped = null;
   }
@@ -96,7 +96,7 @@ export default async function DashboardPage() {
     const sumValue = row._sum.total;
     sumTotalByStatus.set(
       row.status,
-      typeof sumValue === "number" ? sumValue : sumValue ? Number(sumValue) : 0
+      typeof sumValue === "number" ? sumValue : sumValue ? Number(sumValue) : 0,
     );
   }
 
@@ -208,7 +208,7 @@ export default async function DashboardPage() {
               </CardTitle>
               <div
                 className={
-                  "h-11 w-11 rounded-full shadow-md flex items-center justify-center " +
+                  "h-11 w-11 rounded-xl shadow-md flex items-center justify-center " +
                   kpi.iconBg
                 }
               >

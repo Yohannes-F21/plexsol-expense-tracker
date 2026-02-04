@@ -21,10 +21,13 @@ export async function GET() {
       select: {
         id: true,
         name: true,
-        expenses: {
-          where: { isActive: true },
+        expenseBases: {
+          where: { isActive: true, status: "APPROVED" },
           select: {
-            total: true,
+            expenseType: true,
+            receiptExpense: { select: { total: true } },
+            paymentVoucherExpense: { select: { totalAmount: true } },
+            generalExpense: { select: { amount: true } },
           },
         },
       },
@@ -33,11 +36,16 @@ export async function GET() {
     const chartData = organizations
       .map((org) => ({
         name: org.name,
-        total: org.expenses.reduce(
-          (sum, expense) => sum + asNumber(expense.total),
-          0
-        ),
-        count: org.expenses.length,
+        total: org.expenseBases.reduce((sum, e) => {
+          const amount =
+            e.expenseType === "RECEIPT"
+              ? asNumber(e.receiptExpense?.total)
+              : e.expenseType === "PAYMENT_VOUCHER"
+                ? asNumber(e.paymentVoucherExpense?.totalAmount)
+                : asNumber(e.generalExpense?.amount);
+          return sum + amount;
+        }, 0),
+        count: org.expenseBases.length,
       }))
       .filter((org) => org.total > 0)
       .sort((a, b) => b.total - a.total)
@@ -50,7 +58,7 @@ export async function GET() {
       {
         error: error instanceof Error ? error.message : "Internal server error",
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

@@ -18,29 +18,63 @@ export async function GET() {
     if (!orgId)
       return NextResponse.json({ error: "No organization" }, { status: 400 });
 
-    const lines = await prisma.receiptExpenseItem.findMany({
-      where: {
-        receiptExpense: {
+    const [receiptLines, voucherLines, generalRows] = await Promise.all([
+      prisma.receiptExpenseItem.findMany({
+        where: {
+          receiptExpense: {
+            expenseBase: {
+              organizationId: orgId,
+              isActive: true,
+              status: "APPROVED",
+            },
+          },
+        },
+        select: {
+          lineTotal: true,
+          category: { select: { name: true } },
+        },
+      }),
+      prisma.paymentVoucherItem.findMany({
+        where: {
+          paymentVoucher: {
+            expenseBase: {
+              organizationId: orgId,
+              isActive: true,
+              status: "APPROVED",
+            },
+          },
+        },
+        select: {
+          lineTotal: true,
+          category: { select: { name: true } },
+        },
+      }),
+      prisma.generalExpense.findMany({
+        where: {
           expenseBase: {
             organizationId: orgId,
             isActive: true,
-            expenseType: "RECEIPT",
+            status: "APPROVED",
           },
         },
-      },
-      select: {
-        lineTotal: true,
-        category: { select: { name: true } },
-      },
-    });
+        select: {
+          amount: true,
+          category: { select: { name: true } },
+        },
+      }),
+    ]);
 
     const byCategory = new Map<string, { category: string; amount: number }>();
-    for (const line of lines) {
-      const category = line.category?.name ?? "Uncategorized";
+    const add = (categoryName: string | null | undefined, amount: any) => {
+      const category = categoryName?.trim() || "Uncategorized";
       const existing = byCategory.get(category) ?? { category, amount: 0 };
-      existing.amount += asNumber(line.lineTotal);
+      existing.amount += asNumber(amount);
       byCategory.set(category, existing);
-    }
+    };
+
+    for (const line of receiptLines) add(line.category?.name, line.lineTotal);
+    for (const line of voucherLines) add(line.category?.name, line.lineTotal);
+    for (const row of generalRows) add(row.category?.name, row.amount);
 
     const result = Array.from(byCategory.values()).sort(
       (a, b) => b.amount - a.amount,

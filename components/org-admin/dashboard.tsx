@@ -33,12 +33,12 @@ export function OrgAdminDashboard() {
       title: "Total Expense Amount",
       value: `${(stats?.totalExpenseAmount ?? 0).toLocaleString()} ETB`,
       icon: DollarSign,
-      titleColor: "text-violet-600",
-      cardBg: "bg-violet-50",
-      iconBg: "bg-violet-500",
+      titleColor: "text-primary",
+      cardBg: "bg-primary",
+      iconBg: "bg-primary",
       iconColor: "text-white",
       helperText: "Approved expenses total",
-      helperTextColor: "text-violet-600",
+      helperTextColor: "text-primary",
       interactive: true,
     },
     {
@@ -106,7 +106,7 @@ export function OrgAdminDashboard() {
               </CardTitle>
               <div
                 className={
-                  "h-11 w-11 rounded-full shadow-md flex items-center justify-center " +
+                  "h-11 w-11 rounded-xl shadow-md flex items-center justify-center " +
                   kpi.iconBg
                 }
               >

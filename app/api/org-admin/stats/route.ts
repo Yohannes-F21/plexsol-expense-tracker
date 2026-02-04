@@ -31,14 +31,12 @@ export async function GET() {
         where: {
           organizationId: orgId,
           isActive: true,
-          expenseType: "RECEIPT",
         },
       }),
       prisma.expenseBase.count({
         where: {
           organizationId: orgId,
           isActive: true,
-          expenseType: "RECEIPT",
           status: "PENDING",
         },
       }),
@@ -46,7 +44,6 @@ export async function GET() {
         where: {
           organizationId: orgId,
           isActive: true,
-          expenseType: "RECEIPT",
           status: "APPROVED",
         },
       }),
@@ -54,7 +51,6 @@ export async function GET() {
         where: {
           organizationId: orgId,
           isActive: true,
-          expenseType: "RECEIPT",
           status: "REJECTED",
         },
       }),
@@ -62,7 +58,6 @@ export async function GET() {
         where: {
           organizationId: orgId,
           isActive: true,
-          expenseType: "RECEIPT",
           status: "WARNING",
         },
       }),
@@ -70,23 +65,49 @@ export async function GET() {
 
     const pendingApprovals = pendingExpenses + warningExpenses;
 
-    const totalExpenseAmount = await prisma.receiptExpense.aggregate({
-      where: {
-        expenseBase: {
-          organizationId: orgId,
-          isActive: true,
-          expenseType: "RECEIPT",
-          status: "APPROVED",
+    const [receiptSum, voucherSum, generalSum] = await Promise.all([
+      prisma.receiptExpense.aggregate({
+        where: {
+          expenseBase: {
+            organizationId: orgId,
+            isActive: true,
+            status: "APPROVED",
+          },
         },
-      },
-      _sum: {
-        total: true,
-      },
-    });
+        _sum: { total: true },
+      }),
+      prisma.paymentVoucherExpense.aggregate({
+        where: {
+          expenseBase: {
+            organizationId: orgId,
+            isActive: true,
+            status: "APPROVED",
+          },
+        },
+        _sum: { totalAmount: true },
+      }),
+      prisma.generalExpense.aggregate({
+        where: {
+          expenseBase: {
+            organizationId: orgId,
+            isActive: true,
+            status: "APPROVED",
+          },
+        },
+        _sum: { amount: true },
+      }),
+    ]);
 
-    const totalExpenseAmountValue = totalExpenseAmount._sum.total
-      ? Number(totalExpenseAmount._sum.total)
+    const receiptTotal = receiptSum._sum.total
+      ? Number(receiptSum._sum.total)
       : 0;
+    const voucherTotal = voucherSum._sum.totalAmount
+      ? Number(voucherSum._sum.totalAmount)
+      : 0;
+    const generalTotal = generalSum._sum.amount
+      ? Number(generalSum._sum.amount)
+      : 0;
+    const totalExpenseAmountValue = receiptTotal + voucherTotal + generalTotal;
 
     return NextResponse.json({
       totalUsers,

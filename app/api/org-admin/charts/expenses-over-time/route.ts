@@ -22,32 +22,41 @@ export async function GET() {
     const sixMonthsAgo = new Date();
     sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
 
-    const expenses = await prisma.receiptExpense.findMany({
+    const expenses = await prisma.expenseBase.findMany({
       where: {
-        expenseBase: {
-          organizationId: orgId,
-          isActive: true,
-          expenseType: "RECEIPT",
-          createdAt: { gte: sixMonthsAgo },
-        },
+        organizationId: orgId,
+        isActive: true,
+        status: "APPROVED",
+        createdAt: { gte: sixMonthsAgo },
       },
       select: {
-        total: true,
-        expenseBase: { select: { createdAt: true } },
+        createdAt: true,
+        expenseType: true,
+        receiptExpense: { select: { total: true } },
+        paymentVoucherExpense: { select: { totalAmount: true } },
+        generalExpense: { select: { amount: true } },
       },
+      orderBy: { createdAt: "asc" },
     });
 
     const monthlyData = new Map<string, { total: number; count: number }>();
 
     expenses.forEach((expense) => {
-      const monthKey = expense.expenseBase.createdAt.toLocaleString("default", {
+      const monthKey = expense.createdAt.toLocaleString("default", {
         month: "short",
         year: "numeric",
       });
 
+      const amount =
+        expense.expenseType === "RECEIPT"
+          ? asNumber(expense.receiptExpense?.total)
+          : expense.expenseType === "PAYMENT_VOUCHER"
+            ? asNumber(expense.paymentVoucherExpense?.totalAmount)
+            : asNumber(expense.generalExpense?.amount);
+
       const existing = monthlyData.get(monthKey) || { total: 0, count: 0 };
       monthlyData.set(monthKey, {
-        total: existing.total + asNumber(expense.total),
+        total: existing.total + amount,
         count: existing.count + 1,
       });
     });

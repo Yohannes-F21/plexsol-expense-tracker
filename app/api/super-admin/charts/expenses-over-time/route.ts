@@ -18,20 +18,22 @@ export async function GET() {
     const sixMonthsAgo = new Date();
     sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
 
-    const expenses = await prisma.receiptExpense.findMany({
+    const expenses = await prisma.expenseBase.findMany({
       where: {
-        expenseBase: {
-          isActive: true,
-          expenseType: "RECEIPT",
-          createdAt: {
-            gte: sixMonthsAgo,
-          },
+        isActive: true,
+        status: "APPROVED",
+        createdAt: {
+          gte: sixMonthsAgo,
         },
       },
       select: {
-        total: true,
-        expenseBase: { select: { createdAt: true } },
+        createdAt: true,
+        expenseType: true,
+        receiptExpense: { select: { total: true } },
+        paymentVoucherExpense: { select: { totalAmount: true } },
+        generalExpense: { select: { amount: true } },
       },
+      orderBy: { createdAt: "asc" },
     });
 
     const monthlyData = new Map<
@@ -40,7 +42,7 @@ export async function GET() {
     >();
 
     for (const expense of expenses) {
-      const d = new Date(expense.expenseBase.createdAt);
+      const d = new Date(expense.createdAt);
       const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(
         2,
         "0",
@@ -49,6 +51,13 @@ export async function GET() {
         month: "short",
         year: "numeric",
       });
+
+      const amount =
+        expense.expenseType === "RECEIPT"
+          ? asNumber(expense.receiptExpense?.total)
+          : expense.expenseType === "PAYMENT_VOUCHER"
+            ? asNumber(expense.paymentVoucherExpense?.totalAmount)
+            : asNumber(expense.generalExpense?.amount);
 
       const existing = monthlyData.get(key) || {
         key,
@@ -59,7 +68,7 @@ export async function GET() {
       monthlyData.set(key, {
         key,
         label,
-        total: existing.total + asNumber((expense as any).total),
+        total: existing.total + amount,
         count: existing.count + 1,
       });
     }
