@@ -65,7 +65,18 @@ export async function GET() {
 
     const pendingApprovals = pendingExpenses + warningExpenses;
 
-    const [receiptSum, voucherSum, generalSum] = await Promise.all([
+    const now = new Date();
+    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+    const nextMonthStart = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+
+    const [
+      receiptSum,
+      voucherSum,
+      generalSum,
+      receiptMonthSum,
+      voucherMonthSum,
+      generalMonthSum,
+    ] = await Promise.all([
       prisma.receiptExpense.aggregate({
         where: {
           expenseBase: {
@@ -96,6 +107,40 @@ export async function GET() {
         },
         _sum: { amount: true },
       }),
+
+      prisma.receiptExpense.aggregate({
+        where: {
+          purchasedDate: { gte: monthStart, lt: nextMonthStart },
+          expenseBase: {
+            organizationId: orgId,
+            isActive: true,
+            status: "APPROVED",
+          },
+        },
+        _sum: { total: true },
+      }),
+      prisma.paymentVoucherExpense.aggregate({
+        where: {
+          purchasedDate: { gte: monthStart, lt: nextMonthStart },
+          expenseBase: {
+            organizationId: orgId,
+            isActive: true,
+            status: "APPROVED",
+          },
+        },
+        _sum: { totalAmount: true },
+      }),
+      prisma.generalExpense.aggregate({
+        where: {
+          paymentDate: { gte: monthStart, lt: nextMonthStart },
+          expenseBase: {
+            organizationId: orgId,
+            isActive: true,
+            status: "APPROVED",
+          },
+        },
+        _sum: { amount: true },
+      }),
     ]);
 
     const receiptTotal = receiptSum._sum.total
@@ -109,6 +154,19 @@ export async function GET() {
       : 0;
     const totalExpenseAmountValue = receiptTotal + voucherTotal + generalTotal;
 
+    const receiptMonthTotal = receiptMonthSum._sum.total
+      ? Number(receiptMonthSum._sum.total)
+      : 0;
+    const voucherMonthTotal = voucherMonthSum._sum.totalAmount
+      ? Number(voucherMonthSum._sum.totalAmount)
+      : 0;
+    const generalMonthTotal = generalMonthSum._sum.amount
+      ? Number(generalMonthSum._sum.amount)
+      : 0;
+
+    const monthlyApprovedExpenseAmount =
+      receiptMonthTotal + voucherMonthTotal + generalMonthTotal;
+
     return NextResponse.json({
       totalUsers,
       totalStaffs,
@@ -119,6 +177,7 @@ export async function GET() {
       warningExpenses,
       pendingApprovals,
       totalExpenseAmount: totalExpenseAmountValue,
+      monthlyApprovedExpenseAmount,
     });
   } catch (error) {
     console.error("Get stats error:", error);

@@ -17,6 +17,12 @@ interface ChartData {
   amount: number;
 }
 
+function formatTooltipNumber(value: unknown) {
+  if (typeof value === "number") return value.toLocaleString();
+  const n = Number(value);
+  return Number.isFinite(n) ? n.toLocaleString() : String(value ?? "");
+}
+
 const COLORS = [
   "var(--chart-1)",
   "var(--chart-2)",
@@ -68,7 +74,7 @@ export function ExpensesByCategoryChart() {
               />
             ))}
           </Pie>
-          <Tooltip />
+          <Tooltip formatter={(value) => formatTooltipNumber(value)} />
         </PieChart>
       </ResponsiveContainer>
 

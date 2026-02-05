@@ -19,6 +19,12 @@ interface ExpenseData {
   count: number;
 }
 
+function formatTooltipNumber(value: unknown) {
+  if (typeof value === "number") return value.toLocaleString();
+  const n = Number(value);
+  return Number.isFinite(n) ? n.toLocaleString() : String(value ?? "");
+}
+
 export function ExpensesChart() {
   const { data, isLoading } = useQuery<ExpenseData[]>({
     queryKey: ["expenses-chart"],
@@ -44,7 +50,7 @@ export function ExpensesChart() {
         <CartesianGrid strokeDasharray="3 3" />
         <XAxis dataKey="month" />
         <YAxis />
-        <Tooltip />
+        <Tooltip formatter={(value) => formatTooltipNumber(value)} />
         <Bar dataKey="total" fill="var(--primary)" radius={[4, 4, 0, 0]} />
       </BarChart>
     </ResponsiveContainer>

@@ -15,6 +15,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 
 interface Expense {
   id: string;
+  expenseType: "RECEIPT" | "PAYMENT_VOUCHER" | "GENERAL";
   amount: number;
   description: string;
   status: string;
@@ -25,6 +26,19 @@ interface Expense {
   category?: {
     name: string;
   };
+}
+
+function formatExpenseType(expenseType: Expense["expenseType"]): string {
+  switch (expenseType) {
+    case "RECEIPT":
+      return "Receipt";
+    case "PAYMENT_VOUCHER":
+      return "Voucher";
+    case "GENERAL":
+      return "General";
+    default:
+      return expenseType;
+  }
 }
 
 export function RecentTransactionsTable() {
@@ -62,6 +76,7 @@ export function RecentTransactionsTable() {
           <TableRow>
             <TableHead className="whitespace-nowrap">Date</TableHead>
             <TableHead className="whitespace-nowrap">Staff</TableHead>
+            <TableHead className="whitespace-nowrap">Type</TableHead>
             <TableHead className="whitespace-nowrap">Category</TableHead>
             <TableHead className="whitespace-nowrap">Amount</TableHead>
             <TableHead className="whitespace-nowrap">Status</TableHead>
@@ -75,6 +90,9 @@ export function RecentTransactionsTable() {
               </TableCell>
               <TableCell className="whitespace-nowrap">
                 {expense.user.name}
+              </TableCell>
+              <TableCell className="whitespace-nowrap">
+                {formatExpenseType(expense.expenseType)}
               </TableCell>
               <TableCell className="whitespace-nowrap">
                 {expense.category?.name || "N/A"}
