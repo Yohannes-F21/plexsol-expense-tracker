@@ -35,6 +35,27 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Plus, Trash2 } from "lucide-react";
 
+function todayDateInputValue() {
+  const now = new Date();
+  const yyyy = now.getFullYear();
+  const mm = String(now.getMonth() + 1).padStart(2, "0");
+  const dd = String(now.getDate()).padStart(2, "0");
+  return `${yyyy}-${mm}-${dd}`;
+}
+
+function toDateInputValue(value: string | Date | null | undefined) {
+  if (!value) return "";
+  if (typeof value === "string" && /^\d{4}-\d{2}-\d{2}$/.test(value)) {
+    return value;
+  }
+  const d = typeof value === "string" ? new Date(value) : value;
+  if (Number.isNaN(d.getTime())) return "";
+  const yyyy = d.getUTCFullYear();
+  const mm = String(d.getUTCMonth() + 1).padStart(2, "0");
+  const dd = String(d.getUTCDate()).padStart(2, "0");
+  return `${yyyy}-${mm}-${dd}`;
+}
+
 const paymentMethodSchema = z.enum([
   "CASH",
   "CHECK",
@@ -135,7 +156,8 @@ export function PaymentVoucherForm({
   const form = useForm<z.infer<typeof paymentVoucherSchema>>({
     resolver: zodResolver(paymentVoucherSchema),
     defaultValues: {
-      purchasedDate: initial?.purchasedDate ?? "",
+      purchasedDate:
+        toDateInputValue(initial?.purchasedDate) || todayDateInputValue(),
       paidTo: initial?.paidTo ?? "",
       tinNumber: initial?.tinNumber ?? "",
       invoiceNumber: initial?.invoiceNumber ?? "",
@@ -165,7 +187,8 @@ export function PaymentVoucherForm({
   useEffect(() => {
     if (!initial) return;
     form.reset({
-      purchasedDate: initial.purchasedDate ?? "",
+      purchasedDate:
+        toDateInputValue(initial.purchasedDate) || todayDateInputValue(),
       paidTo: initial.paidTo ?? "",
       tinNumber: initial.tinNumber ?? "",
       invoiceNumber: initial.invoiceNumber ?? "",
@@ -255,7 +278,8 @@ export function PaymentVoucherForm({
     if (changed) {
       form.setValue("items", next, { shouldDirty: false, shouldTouch: false });
     }
-  }, [categories, form]);
+    // Re-run when `initial` arrives after categories.
+  }, [categories, initial?.id, form]);
   const bankAccounts = bankAccountsPayload?.bankAccounts ?? [];
   const activeBankAccounts = useMemo(
     () => bankAccounts.filter((b) => b.isActive),

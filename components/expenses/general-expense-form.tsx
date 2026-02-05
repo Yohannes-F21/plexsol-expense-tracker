@@ -27,6 +27,27 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 
+function todayDateInputValue() {
+  const now = new Date();
+  const yyyy = now.getFullYear();
+  const mm = String(now.getMonth() + 1).padStart(2, "0");
+  const dd = String(now.getDate()).padStart(2, "0");
+  return `${yyyy}-${mm}-${dd}`;
+}
+
+function toDateInputValue(value: string | Date | null | undefined) {
+  if (!value) return "";
+  if (typeof value === "string" && /^\d{4}-\d{2}-\d{2}$/.test(value)) {
+    return value;
+  }
+  const d = typeof value === "string" ? new Date(value) : value;
+  if (Number.isNaN(d.getTime())) return "";
+  const yyyy = d.getUTCFullYear();
+  const mm = String(d.getUTCMonth() + 1).padStart(2, "0");
+  const dd = String(d.getUTCDate()).padStart(2, "0");
+  return `${yyyy}-${mm}-${dd}`;
+}
+
 const paymentMethodSchema = z.enum([
   "CASH",
   "CHECK",
@@ -114,7 +135,8 @@ export function GeneralExpenseForm({
   const form = useForm<z.infer<typeof generalExpenseSchema>>({
     resolver: zodResolver(generalExpenseSchema),
     defaultValues: {
-      paymentDate: initial?.paymentDate ?? "",
+      paymentDate:
+        toDateInputValue(initial?.paymentDate) || todayDateInputValue(),
       paidTo: initial?.paidTo ?? "",
       description: initial?.description ?? "",
       amount: initial?.amount ?? 0,
@@ -127,11 +149,13 @@ export function GeneralExpenseForm({
   });
 
   const watchedCategoryType = form.watch("categoryType");
+  const watchedCategoryId = form.watch("categoryId");
 
   useEffect(() => {
     if (!initial) return;
     form.reset({
-      paymentDate: initial.paymentDate ?? "",
+      paymentDate:
+        toDateInputValue(initial.paymentDate) || todayDateInputValue(),
       paidTo: initial.paidTo ?? "",
       description: initial.description ?? "",
       amount: initial.amount ?? 0,
@@ -185,14 +209,16 @@ export function GeneralExpenseForm({
 
   useEffect(() => {
     if (!categories.length) return;
-    const currentCategoryId = form.getValues("categoryId");
-    if (!currentCategoryId) return;
-    const cat = categories.find((c) => c.id === currentCategoryId);
+    if (!watchedCategoryId) return;
+    const cat = categories.find((c) => c.id === watchedCategoryId);
     if (!cat) return;
     const inferred = normalizeCategoryType(cat.type);
     if (form.getValues("categoryType") === inferred) return;
-    form.setValue("categoryType", inferred, { shouldDirty: false });
-  }, [categories, form]);
+    form.setValue("categoryType", inferred, {
+      shouldDirty: false,
+      shouldTouch: false,
+    });
+  }, [categories, watchedCategoryId, form]);
   const bankAccounts = bankAccountsPayload?.bankAccounts ?? [];
   const activeBankAccounts = bankAccounts.filter((b) => b.isActive);
 
