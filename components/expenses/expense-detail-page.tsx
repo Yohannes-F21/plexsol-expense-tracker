@@ -20,7 +20,10 @@ import { Loader } from "@/components/loader";
 
 function asNumber(x: any): number {
   if (typeof x === "number") return x;
-  if (typeof x === "string") return Number(x);
+  if (typeof x === "string") {
+    const normalized = x.replace(/,/g, "").replace(/\s+/g, "");
+    return Number(normalized);
+  }
   if (x && typeof x === "object" && typeof x.toNumber === "function")
     return x.toNumber();
   return Number(x);
@@ -29,7 +32,10 @@ function asNumber(x: any): number {
 function formatMoney(x: any) {
   const n = asNumber(x);
   if (!Number.isFinite(n)) return "-";
-  return n.toFixed(2);
+  return n.toLocaleString("en-US", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
 }
 
 export function ExpenseDetailPage(props: {

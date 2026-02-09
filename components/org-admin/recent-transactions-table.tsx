@@ -41,6 +41,14 @@ function formatExpenseType(expenseType: Expense["expenseType"]): string {
   }
 }
 
+function formatMoney(amount: number): string {
+  if (!Number.isFinite(amount)) return "-";
+  return amount.toLocaleString("en-US", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
+}
+
 export function RecentTransactionsTable() {
   const { data: expenses = [], isLoading } = useQuery<Expense[]>({
     queryKey: ["org-admin-recent-transactions"],
@@ -98,7 +106,7 @@ export function RecentTransactionsTable() {
                 {expense.category?.name || "N/A"}
               </TableCell>
               <TableCell className="whitespace-nowrap font-mono font-semibold">
-                {expense.amount.toFixed(2)}
+                {formatMoney(expense.amount)}
                 <span className="ml-1 ">ETB</span>
               </TableCell>
               <TableCell className="whitespace-nowrap">

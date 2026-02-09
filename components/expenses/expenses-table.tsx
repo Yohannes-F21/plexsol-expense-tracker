@@ -38,6 +38,11 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { Search, SquarePen, Trash2, Eye } from "lucide-react";
 import { DataTablePagination } from "@/components/data-table-pagination";
 import { canDeleteExpense, canEditExpense } from "@/lib/expense-permissions";
@@ -79,7 +84,43 @@ function asNumber(x: MoneyLike): number {
 function formatMoney(x: MoneyLike) {
   const n = asNumber(x);
   if (!Number.isFinite(n)) return "-";
-  return n.toFixed(2);
+  return n.toLocaleString("en-US", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
+}
+
+function RejectionReasonPopover({ reason }: { reason: string }) {
+  const [open, setOpen] = useState(false);
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <button
+          type="button"
+          className="text-xs text-destructive underline underline-offset-2"
+          onMouseEnter={() => setOpen(true)}
+          onMouseLeave={() => setOpen(false)}
+        >
+          View reason
+        </button>
+      </PopoverTrigger>
+      <PopoverContent
+        align="start"
+        side="right"
+        className="w-80"
+        onMouseEnter={() => setOpen(true)}
+        onMouseLeave={() => setOpen(false)}
+      >
+        <div className="space-y-1">
+          <div className="text-sm font-medium">Rejection reason</div>
+          <div className="text-sm text-muted-foreground whitespace-pre-wrap">
+            {reason}
+          </div>
+        </div>
+      </PopoverContent>
+    </Popover>
+  );
 }
 
 export function ExpensesTable(props: { role: "ORG_ADMIN" | "STAFF" }) {
@@ -248,7 +289,7 @@ export function ExpensesTable(props: { role: "ORG_ADMIN" | "STAFF" }) {
                     ? "text-orange-600 bg-orange-100  text-xs"
                     : "text-muted-foreground";
 
-          const tooltipText =
+          const warningTooltipText =
             label === "WARNING"
               ? (row.original.warningItems ?? []).length
                 ? `Violation: ${(row.original.warningItems ?? [])
@@ -257,11 +298,7 @@ export function ExpensesTable(props: { role: "ORG_ADMIN" | "STAFF" }) {
                     (row.original.warningItems ?? []).length > 5 ? "…" : ""
                   }`
                 : "Violation: policy limit exceeded"
-              : label === "REJECTED"
-                ? row.original.rejectionComment?.trim()
-                  ? `Rejected: ${row.original.rejectionComment.trim()}`
-                  : "Rejected: no comment provided"
-                : null;
+              : null;
 
           const badge = (
             <Badge variant="outline" className={`${className} capitalize`}>
@@ -269,13 +306,34 @@ export function ExpensesTable(props: { role: "ORG_ADMIN" | "STAFF" }) {
             </Badge>
           );
 
-          if (!tooltipText) return badge;
+          if (label === "REJECTED") {
+            const reason = String(row.original.rejectionComment ?? "")
+              .trim()
+              .replace(/^Rejected:\s*/i, "");
+
+            return (
+              <div className="space-y-1">
+                {badge}
+                <div>
+                  {reason ? (
+                    <RejectionReasonPopover reason={reason} />
+                  ) : (
+                    <span className="text-xs text-muted-foreground">
+                      No reason provided
+                    </span>
+                  )}
+                </div>
+              </div>
+            );
+          }
+
+          if (!warningTooltipText) return badge;
 
           return (
             <Tooltip>
               <TooltipTrigger asChild>{badge}</TooltipTrigger>
               <TooltipContent className="max-w-xs">
-                {tooltipText}
+                {warningTooltipText}
               </TooltipContent>
             </Tooltip>
           );

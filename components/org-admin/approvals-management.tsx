@@ -44,7 +44,10 @@ function asNumber(x: any): number {
 function formatMoney(x: any) {
   const n = asNumber(x);
   if (!Number.isFinite(n)) return "-";
-  return n.toFixed(2);
+  return n.toLocaleString("en-US", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
 }
 
 export function ApprovalsManagement() {

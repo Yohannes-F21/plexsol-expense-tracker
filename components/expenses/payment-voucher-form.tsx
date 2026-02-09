@@ -405,6 +405,20 @@ export function PaymentVoucherForm({
                   )}
                 />
 
+                <FormField
+                  control={form.control}
+                  name="tinNumber"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>TIN Number (Optional)</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Enter TIN number" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
                 {/* <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <FormField
                     control={form.control}

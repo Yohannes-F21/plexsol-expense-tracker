@@ -15,6 +15,11 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { ServerDataTablePagination } from "@/components/data-table-pagination";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 
 type HistoryRow = {
   id: string;
@@ -24,7 +29,8 @@ type HistoryRow = {
   performedBy: { id: string; name: string | null; email: string };
   expense: {
     id: string;
-    companyName: string;
+    expenseType: "RECEIPT" | "PAYMENT_VOUCHER" | "GENERAL";
+    vendorPayee: string;
     total: any;
     createdAt: string;
     createdByUser: { id: string; name: string | null; email: string } | null;
@@ -43,13 +49,49 @@ function asNumber(x: any): number {
 function formatMoney(x: any) {
   const n = asNumber(x);
   if (!Number.isFinite(n)) return "-";
-  return n.toFixed(2);
+  return n.toLocaleString("en-US", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
 }
 
 function formatIsoDate(value: string) {
   const d = new Date(value);
   if (Number.isNaN(d.getTime())) return "-";
   return d.toISOString().slice(0, 10);
+}
+
+function RejectionReasonPopover({ reason }: { reason: string }) {
+  const [open, setOpen] = useState(false);
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <button
+          type="button"
+          className="text-xs text-destructive underline underline-offset-2"
+          onMouseEnter={() => setOpen(true)}
+          onMouseLeave={() => setOpen(false)}
+        >
+          View reason
+        </button>
+      </PopoverTrigger>
+      <PopoverContent
+        align="start"
+        side="right"
+        className="w-80"
+        onMouseEnter={() => setOpen(true)}
+        onMouseLeave={() => setOpen(false)}
+      >
+        <div className="space-y-1">
+          <div className="text-sm font-medium">Rejection reason</div>
+          <div className="text-sm text-muted-foreground whitespace-pre-wrap">
+            {reason}
+          </div>
+        </div>
+      </PopoverContent>
+    </Popover>
+  );
 }
 
 export function ApprovalsHistory() {
@@ -94,7 +136,8 @@ export function ApprovalsHistory() {
             <TableHeader>
               <TableRow>
                 <TableHead>Employee</TableHead>
-                <TableHead>Description</TableHead>
+                <TableHead>Type</TableHead>
+                <TableHead>Vendor/Payee</TableHead>
                 <TableHead>Amount</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Processed By</TableHead>
@@ -104,7 +147,7 @@ export function ApprovalsHistory() {
             <TableBody>
               {isLoading ? (
                 <TableRow>
-                  <TableCell colSpan={6}>
+                  <TableCell colSpan={7}>
                     <div className="flex items-center justify-center py-8">
                       <Loader
                         size="md"
@@ -116,7 +159,7 @@ export function ApprovalsHistory() {
                 </TableRow>
               ) : paged.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={6} className="h-24 text-center">
+                  <TableCell colSpan={7} className="h-24 text-center">
                     No approval history yet.
                   </TableCell>
                 </TableRow>
@@ -131,15 +174,24 @@ export function ApprovalsHistory() {
                         {h.expense.createdByUser?.email || "-"}
                       </div>
                     </TableCell>
+                    <TableCell>
+                      <Badge variant="outline">
+                        {h.expense.expenseType === "PAYMENT_VOUCHER"
+                          ? "Payment Voucher"
+                          : h.expense.expenseType === "GENERAL"
+                            ? "General"
+                            : "Receipt"}
+                      </Badge>
+                    </TableCell>
                     <TableCell className="font-medium">
-                      {h.expense.companyName || "-"}
+                      {h.expense.vendorPayee || "-"}
                     </TableCell>
                     <TableCell className="font-semibold font-mono tabular-nums">
                       {formatMoney(h.expense.total)}
                       <span className="ml-1">ETB</span>
                     </TableCell>
                     <TableCell>
-                      <div className="space-y-1">
+                      <div className="space-y-1 ">
                         <Badge
                           variant="outline"
                           className={
@@ -150,11 +202,11 @@ export function ApprovalsHistory() {
                         >
                           {h.action === "APPROVED" ? "Approved" : "Rejected"}
                         </Badge>
-                        {h.action === "REJECTED" && h.comment ? (
-                          <div className="text-xs text-destructive">
-                            {h.comment}
-                          </div>
-                        ) : null}
+                        <div>
+                          {h.action === "REJECTED" && h.comment ? (
+                            <RejectionReasonPopover reason={h.comment} />
+                          ) : null}
+                        </div>
                       </div>
                     </TableCell>
                     <TableCell>

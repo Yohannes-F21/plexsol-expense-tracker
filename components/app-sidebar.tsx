@@ -111,6 +111,11 @@ function SidebarContent({
           })}
         </nav>
       </div>
+
+      <div className="border-t border-sidebar-border px-6 py-4 text-xs text-muted-foreground">
+        © 2026 Plexsol Technologies.
+        <div>All rights reserved.</div>
+      </div>
     </>
   );
 }

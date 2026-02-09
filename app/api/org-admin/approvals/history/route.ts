@@ -29,12 +29,25 @@ export async function GET() {
         expenseBase: {
           select: {
             id: true,
+            expenseType: true,
             createdAt: true,
             createdBy: { select: { id: true, name: true, email: true } },
             receiptExpense: {
               select: {
                 companyName: true,
                 total: true,
+              },
+            },
+            paymentVoucherExpense: {
+              select: {
+                paidTo: true,
+                totalAmount: true,
+              },
+            },
+            generalExpense: {
+              select: {
+                paidTo: true,
+                amount: true,
               },
             },
           },
@@ -52,8 +65,19 @@ export async function GET() {
       performedBy: h.performedBy,
       expense: {
         id: h.expenseBase.id,
-        companyName: h.expenseBase.receiptExpense?.companyName ?? "-",
-        total: h.expenseBase.receiptExpense?.total ?? 0,
+        expenseType: h.expenseBase.expenseType,
+        vendorPayee:
+          h.expenseBase.expenseType === "PAYMENT_VOUCHER"
+            ? (h.expenseBase.paymentVoucherExpense?.paidTo ?? "-")
+            : h.expenseBase.expenseType === "GENERAL"
+              ? (h.expenseBase.generalExpense?.paidTo ?? "-")
+              : (h.expenseBase.receiptExpense?.companyName ?? "-"),
+        total:
+          h.expenseBase.expenseType === "PAYMENT_VOUCHER"
+            ? (h.expenseBase.paymentVoucherExpense?.totalAmount ?? 0)
+            : h.expenseBase.expenseType === "GENERAL"
+              ? (h.expenseBase.generalExpense?.amount ?? 0)
+              : (h.expenseBase.receiptExpense?.total ?? 0),
         createdAt: h.expenseBase.createdAt,
         createdByUser: h.expenseBase.createdBy,
       },
