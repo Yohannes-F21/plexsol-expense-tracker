@@ -87,7 +87,10 @@ const paymentVoucherSchema = z
   .object({
     purchasedDate: z.string().min(1, "Date is required"),
     paidTo: z.string().min(1, "Paid to is required"),
-    tinNumber: z.string().optional(),
+    tinNumber: z
+      .string()
+      .min(10, "TIN is required and must be at least 10 characters")
+      .optional(),
     invoiceNumber: z.string().min(1, "Invoice number is required"),
     paymentMethod: paymentMethodSchema,
     checkNumber: z.string().trim().optional(),

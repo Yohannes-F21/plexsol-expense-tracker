@@ -48,7 +48,7 @@ interface User {
     name: string;
   } | null;
   _count: {
-    expenses: number;
+    expenseBases: number;
   };
   createdAt: string;
 }
@@ -170,9 +170,9 @@ export function UsersTable() {
       },
     },
     {
-      accessorKey: "_count.expenses",
+      accessorKey: "_count.expenseBases",
       header: "Expenses",
-      cell: ({ row }) => <div>{row.original._count.expenses}</div>,
+      cell: ({ row }) => <div>{row.original._count.expenseBases}</div>,
     },
     {
       accessorKey: "isActive",

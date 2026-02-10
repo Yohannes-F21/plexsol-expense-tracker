@@ -45,7 +45,7 @@ export async function GET(request: Request) {
         },
         _count: {
           select: {
-            expenses: true,
+            expenseBases: true,
           },
         },
       },

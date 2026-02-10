@@ -35,7 +35,7 @@ export async function GET(request: Request) {
         _count: {
           select: {
             users: true,
-            expenses: true,
+            expenseBases: true,
           },
         },
         users: {
@@ -54,9 +54,32 @@ export async function GET(request: Request) {
       },
     });
 
+    const orgIds = organizations.map((o) => o.id);
+    const activeExpenseCounts = orgIds.length
+      ? await prisma.expenseBase.groupBy({
+          by: ["organizationId"],
+          where: {
+            organizationId: { in: orgIds },
+            isActive: true,
+          },
+          _count: { _all: true },
+        })
+      : [];
+
+    const activeExpenseCountByOrgId = new Map(
+      activeExpenseCounts.map(
+        (g) => [g.organizationId, g._count._all] as const,
+      ),
+    );
+
     console.log("Fetched organizations:", organizations.length);
 
-    return NextResponse.json(organizations);
+    return NextResponse.json(
+      organizations.map((org) => ({
+        ...org,
+        activeExpenseBasesCount: activeExpenseCountByOrgId.get(org.id) ?? 0,
+      })),
+    );
   } catch (error) {
     console.error("Get organizations error:", error);
     return NextResponse.json(
@@ -99,7 +122,7 @@ export async function POST(request: Request) {
         _count: {
           select: {
             users: true,
-            expenses: true,
+            expenseBases: true,
           },
         },
       },
@@ -122,7 +145,10 @@ export async function POST(request: Request) {
         console.warn("Failed to write organization activity log", e);
       });
 
-    return NextResponse.json(organization);
+    return NextResponse.json({
+      ...organization,
+      activeExpenseBasesCount: 0,
+    });
   } catch (error) {
     console.error("Create organization error:", error);
     if (error instanceof z.ZodError) {

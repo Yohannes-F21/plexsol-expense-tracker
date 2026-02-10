@@ -67,7 +67,9 @@ const receiptSchema = z
   .object({
     purchasedDate: z.string().min(1, "Purchased date is required"),
     companyName: z.string().min(1, "Company name is required"),
-    tinNumber: z.string().min(1, "TIN is required"),
+    tinNumber: z
+      .string()
+      .min(10, "TIN is required and must be at least 10 characters"),
     fsNumber: z.string().min(1, "FS number is required"),
     mrcNumber: z.string().trim().min(1, "MRC number is required"),
     invoiceNumber: z.string().optional(),

@@ -10,7 +10,7 @@ const patchSchema = z.object({
 
 export async function PATCH(
   request: Request,
-  ctx: { params: Promise<{ id: string }> }
+  ctx: { params: Promise<{ id: string }> },
 ) {
   try {
     const session = await requireRole(["SUPER_ADMIN"]);
@@ -33,9 +33,16 @@ export async function PATCH(
         _count: {
           select: {
             users: true,
-            expenses: true,
+            expenseBases: true,
           },
         },
+      },
+    });
+
+    const activeExpenseBasesCount = await prisma.expenseBase.count({
+      where: {
+        organizationId: organization.id,
+        isActive: true,
       },
     });
 
@@ -58,12 +65,15 @@ export async function PATCH(
       // ignore
     }
 
-    return NextResponse.json(organization);
+    return NextResponse.json({
+      ...organization,
+      activeExpenseBasesCount,
+    });
   } catch (error) {
     if (error instanceof z.ZodError) {
       return NextResponse.json(
         { error: "Invalid input", details: error.errors },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -71,7 +81,7 @@ export async function PATCH(
       {
         error: error instanceof Error ? error.message : "Internal server error",
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

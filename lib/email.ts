@@ -14,6 +14,16 @@ function getRequiredEnv(name: string): string {
   return value;
 }
 
+function getOptionalNumberEnv(name: string, fallback: number): number {
+  const raw = process.env[name];
+  if (!raw) return fallback;
+  const n = Number(raw);
+  if (!Number.isFinite(n)) {
+    throw new Error(`Invalid ${name}: ${raw}`);
+  }
+  return n;
+}
+
 function getSmtpConfig() {
   const host = getRequiredEnv("EMAIL_HOST");
   const portRaw = process.env.EMAIL_PORT ?? "587";
@@ -37,6 +47,18 @@ function getTransport() {
 
   const { host, port, secure, user, pass } = getSmtpConfig();
 
+  // Fail fast on network issues (common in office networks blocking outbound SMTP).
+  // Defaults are intentionally small to avoid long-hanging API requests.
+  const connectionTimeout = getOptionalNumberEnv(
+    "EMAIL_CONNECTION_TIMEOUT_MS",
+    7_000,
+  );
+  const greetingTimeout = getOptionalNumberEnv(
+    "EMAIL_GREETING_TIMEOUT_MS",
+    7_000,
+  );
+  const socketTimeout = getOptionalNumberEnv("EMAIL_SOCKET_TIMEOUT_MS", 12_000);
+
   cachedTransport = nodemailer.createTransport({
     host,
     port,
@@ -45,6 +67,9 @@ function getTransport() {
       user,
       pass,
     },
+    connectionTimeout,
+    greetingTimeout,
+    socketTimeout,
   });
 
   return cachedTransport;
@@ -83,7 +108,7 @@ export async function sendInviteEmail({
     "",
     `You have been invited to join ${organizationName} as ${role.replace(
       "_",
-      " "
+      " ",
     )}.`,
     "",
     "To accept the invitation, use the link below:",
@@ -99,7 +124,7 @@ export async function sendInviteEmail({
     "If you were not expecting this invitation, you can safely ignore this email.",
     "",
     "Regards,",
-    "Plexsol Technologies"
+    "Plexsol Technologies",
   );
 
   const text = textLines.join("\n");
@@ -109,7 +134,7 @@ export async function sendInviteEmail({
       <p>Hello,</p>
       <p>
         You have been invited to join <strong>${escapeHtml(
-          organizationName
+          organizationName,
         )}</strong> as <strong>${escapeHtml(role.replace("_", " "))}</strong>.
       </p>
       <p>To accept the invitation, click the link below:</p>
@@ -117,7 +142,7 @@ export async function sendInviteEmail({
       ${
         expiryText
           ? `<p style="color: #6b7280;">This link expires on ${escapeHtml(
-              expiryText
+              expiryText,
             )}.</p>`
           : ""
       }
@@ -136,6 +161,30 @@ export async function sendInviteEmail({
     text,
     html,
   });
+}
+
+export function getEmailErrorSummary(err: unknown) {
+  if (!(err instanceof Error)) return "Failed to send email";
+  const anyErr = err as any;
+  const code = typeof anyErr?.code === "string" ? anyErr.code : undefined;
+  const address =
+    typeof anyErr?.address === "string" ? anyErr.address : undefined;
+  const port =
+    typeof anyErr?.port === "number" || typeof anyErr?.port === "string"
+      ? String(anyErr.port)
+      : undefined;
+
+  const location = address
+    ? port
+      ? ` (${address}:${port})`
+      : ` (${address})`
+    : "";
+
+  if (code === "ETIMEDOUT" || code === "ESOCKET") {
+    return `SMTP connection timed out${location}. Check EMAIL_HOST/EMAIL_PORT and ensure outbound SMTP is allowed from this machine/network.`;
+  }
+
+  return err.message;
 }
 
 function escapeHtml(value: string) {

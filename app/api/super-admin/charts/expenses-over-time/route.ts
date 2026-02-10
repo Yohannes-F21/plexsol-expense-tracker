@@ -15,67 +15,86 @@ export async function GET() {
   try {
     await requireRole(["SUPER_ADMIN"]);
 
-    const sixMonthsAgo = new Date();
-    sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
+    const now = new Date();
+    const start = new Date(
+      Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1),
+    );
+    start.setUTCMonth(start.getUTCMonth() - 5);
+    const end = new Date(
+      Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 1),
+    );
 
-    const expenses = await prisma.expenseBase.findMany({
-      where: {
-        isActive: true,
-        status: "APPROVED",
-        createdAt: {
-          gte: sixMonthsAgo,
+    const [receipts, vouchers, generals] = await Promise.all([
+      prisma.receiptExpense.findMany({
+        where: {
+          purchasedDate: { gte: start, lt: end },
+          expenseBase: {
+            is: {
+              isActive: true,
+              status: "APPROVED",
+            },
+          },
         },
-      },
-      select: {
-        createdAt: true,
-        expenseType: true,
-        receiptExpense: { select: { total: true } },
-        paymentVoucherExpense: { select: { totalAmount: true } },
-        generalExpense: { select: { amount: true } },
-      },
-      orderBy: { createdAt: "asc" },
+        select: { purchasedDate: true, total: true },
+      }),
+      prisma.paymentVoucherExpense.findMany({
+        where: {
+          purchasedDate: { gte: start, lt: end },
+          expenseBase: {
+            is: {
+              isActive: true,
+              status: "APPROVED",
+            },
+          },
+        },
+        select: { purchasedDate: true, totalAmount: true },
+      }),
+      prisma.generalExpense.findMany({
+        where: {
+          paymentDate: { gte: start, lt: end },
+          expenseBase: {
+            is: {
+              isActive: true,
+              status: "APPROVED",
+            },
+          },
+        },
+        select: { paymentDate: true, amount: true },
+      }),
+    ]);
+
+    const buckets = new Map<string, { total: number; count: number }>();
+    const monthFormatter = new Intl.DateTimeFormat("en-US", {
+      month: "short",
+      year: "numeric",
     });
 
-    const monthlyData = new Map<
-      string,
-      { key: string; label: string; total: number; count: number }
-    >();
-
-    for (const expense of expenses) {
-      const d = new Date(expense.createdAt);
-      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(
-        2,
-        "0",
-      )}`;
-      const label = d.toLocaleString("default", {
-        month: "short",
-        year: "numeric",
-      });
-
-      const amount =
-        expense.expenseType === "RECEIPT"
-          ? asNumber(expense.receiptExpense?.total)
-          : expense.expenseType === "PAYMENT_VOUCHER"
-            ? asNumber(expense.paymentVoucherExpense?.totalAmount)
-            : asNumber(expense.generalExpense?.amount);
-
-      const existing = monthlyData.get(key) || {
-        key,
-        label,
-        total: 0,
-        count: 0,
-      };
-      monthlyData.set(key, {
-        key,
-        label,
+    function addToBucket(date: Date, amount: number) {
+      const key = `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, "0")}`;
+      const existing = buckets.get(key) ?? { total: 0, count: 0 };
+      buckets.set(key, {
         total: existing.total + amount,
         count: existing.count + 1,
       });
     }
 
-    const chartData = Array.from(monthlyData.values())
-      .sort((a, b) => (a.key < b.key ? -1 : a.key > b.key ? 1 : 0))
-      .map((x) => ({ month: x.label, total: x.total, count: x.count }));
+    for (const r of receipts) addToBucket(r.purchasedDate, asNumber(r.total));
+    for (const v of vouchers)
+      addToBucket(v.purchasedDate, asNumber(v.totalAmount));
+    for (const g of generals) addToBucket(g.paymentDate, asNumber(g.amount));
+
+    const chartData = Array.from({ length: 6 }, (_, idx) => {
+      const d = new Date(start);
+      d.setUTCMonth(start.getUTCMonth() + idx);
+      const key = `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}`;
+      const label = monthFormatter.format(d);
+      const bucket = buckets.get(key) ?? { total: 0, count: 0 };
+      return {
+        month: label,
+        total: bucket.total,
+        count: bucket.count,
+      };
+    });
 
     return NextResponse.json(chartData);
   } catch (error) {
