@@ -49,7 +49,7 @@ export function CreateOrganizationDialog({
       onSuccess?.();
     },
     onError: (error: any) => {
-      console.error("[v0] Create organization error:", error);
+      console.error("Create organization error:", error);
       toast.error(error.error || "Failed to create organization");
     },
   });

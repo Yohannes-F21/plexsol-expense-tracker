@@ -93,7 +93,7 @@ export function OrgAdminDashboard() {
       setExpenses(expensesData.expenses);
       setUsers(usersData.users);
     } catch (error) {
-      console.error("[v0] Fetch data error:", error);
+      console.error("Fetch data error:", error);
       toast.error("An error occurred");
     } finally {
       setIsLoading(false);
@@ -106,7 +106,7 @@ export function OrgAdminDashboard() {
         `/api/org-admin/expenses/${expenseId}/approve`,
         {
           method: "POST",
-        }
+        },
       );
 
       if (!response.ok) {
@@ -117,7 +117,7 @@ export function OrgAdminDashboard() {
       toast.success("Expense approved");
       fetchData();
     } catch (error) {
-      console.error("[v0] Approve expense error:", error);
+      console.error("Approve expense error:", error);
       toast.error("An error occurred");
     }
   };
@@ -128,7 +128,7 @@ export function OrgAdminDashboard() {
         `/api/org-admin/expenses/${expenseId}/reject`,
         {
           method: "POST",
-        }
+        },
       );
 
       if (!response.ok) {
@@ -139,7 +139,7 @@ export function OrgAdminDashboard() {
       toast.success("Expense rejected");
       fetchData();
     } catch (error) {
-      console.error("[v0] Reject expense error:", error);
+      console.error("Reject expense error:", error);
       toast.error("An error occurred");
     }
   };
@@ -271,10 +271,10 @@ export function OrgAdminDashboard() {
                                 expense.status === "APPROVED"
                                   ? "default"
                                   : expense.status === "REJECTED"
-                                  ? "destructive"
-                                  : expense.status === "WARNING"
-                                  ? "outline"
-                                  : "secondary"
+                                    ? "destructive"
+                                    : expense.status === "WARNING"
+                                      ? "outline"
+                                      : "secondary"
                               }
                             >
                               {expense.status}
@@ -307,7 +307,7 @@ export function OrgAdminDashboard() {
                             <span>
                               {format(
                                 new Date(expense.createdAt),
-                                "MMM dd, yyyy"
+                                "MMM dd, yyyy",
                               )}
                             </span>
                           </div>

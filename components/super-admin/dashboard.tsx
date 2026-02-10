@@ -9,7 +9,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Building2, Users, Receipt, Clock } from "lucide-react";
+import { Building2, Users, Receipt, DollarSign } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ExpensesChart } from "./expenses-chart";
 import { ExpensesByOrgChart } from "./expenses-by-org-chart";
@@ -18,7 +18,7 @@ interface Stats {
   totalOrganizations: number;
   totalUsers: number;
   totalExpenses: number;
-  pendingApprovals: number;
+  totalExpenseAmount: number;
 }
 
 export function SuperAdminDashboard() {
@@ -43,18 +43,18 @@ export function SuperAdminDashboard() {
       bgColor: "bg-green-50",
     },
     {
+      title: "Total Expense Amount",
+      value: `${(stats?.totalExpenseAmount ?? 0).toLocaleString()} ETB`,
+      icon: DollarSign,
+      color: "text-orange-600",
+      bgColor: "bg-orange-50",
+    },
+    {
       title: "Total Expenses",
       value: stats?.totalExpenses ?? 0,
       icon: Receipt,
       color: "text-purple-600",
       bgColor: "bg-purple-50",
-    },
-    {
-      title: "Pending Approvals",
-      value: stats?.pendingApprovals ?? 0,
-      icon: Clock,
-      color: "text-orange-600",
-      bgColor: "bg-orange-50",
     },
   ];
 

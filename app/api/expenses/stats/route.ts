@@ -18,53 +18,38 @@ export async function GET() {
     if (!session.organizationId) {
       return NextResponse.json(
         { error: "Organization ID missing" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
     const organizationId = session.organizationId;
 
+    const baseWhere = {
+      organizationId,
+      createdByUserId: session.id,
+      expenseType: "RECEIPT",
+      isActive: true,
+    } as const;
+
     const [totalExpenses, pendingExpenses, approvedExpenses, rejectedExpenses] =
       await Promise.all([
-        prisma.expense.count({
-          where: {
-            organizationId,
-            createdByUserId: session.id,
-            isActive: true,
-          },
+        prisma.expenseBase.count({
+          where: baseWhere,
         }),
-        prisma.expense.count({
-          where: {
-            organizationId,
-            createdByUserId: session.id,
-            isActive: true,
-            status: "PENDING",
-          },
+        prisma.expenseBase.count({
+          where: { ...baseWhere, status: "PENDING" },
         }),
-        prisma.expense.count({
-          where: {
-            organizationId,
-            createdByUserId: session.id,
-            isActive: true,
-            status: "APPROVED",
-          },
+        prisma.expenseBase.count({
+          where: { ...baseWhere, status: "APPROVED" },
         }),
-        prisma.expense.count({
-          where: {
-            organizationId,
-            createdByUserId: session.id,
-            isActive: true,
-            status: "REJECTED",
-          },
+        prisma.expenseBase.count({
+          where: { ...baseWhere, status: "REJECTED" },
         }),
       ]);
 
-    const totalExpenseAmount = await prisma.expense.aggregate({
+    const totalExpenseAmount = await prisma.receiptExpense.aggregate({
       where: {
-        organizationId,
-        createdByUserId: session.id,
-        isActive: true,
-        status: "APPROVED",
+        expenseBase: { ...baseWhere, status: "APPROVED" },
       },
       _sum: {
         total: true,
@@ -79,12 +64,12 @@ export async function GET() {
       totalExpenseAmount: asNumber(totalExpenseAmount._sum.total) || 0,
     });
   } catch (error) {
-    console.error("[v0] Get stats error:", error);
+    console.error(" Get stats error:", error);
     return NextResponse.json(
       {
         error: error instanceof Error ? error.message : "Internal server error",
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

@@ -9,13 +9,16 @@ export async function GET() {
     if (!session.organizationId) {
       return NextResponse.json(
         { error: "Organization ID missing" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
     const history = await prisma.approvalHistory.findMany({
       where: {
-        expense: { organizationId: session.organizationId },
+        expenseBase: {
+          organizationId: session.organizationId,
+          isActive: true,
+        },
       },
       select: {
         id: true,
@@ -23,13 +26,30 @@ export async function GET() {
         comment: true,
         createdAt: true,
         performedBy: { select: { id: true, name: true, email: true } },
-        expense: {
+        expenseBase: {
           select: {
             id: true,
-            companyName: true,
-            total: true,
+            expenseType: true,
             createdAt: true,
-            createdByUser: { select: { id: true, name: true, email: true } },
+            createdBy: { select: { id: true, name: true, email: true } },
+            receiptExpense: {
+              select: {
+                companyName: true,
+                total: true,
+              },
+            },
+            paymentVoucherExpense: {
+              select: {
+                paidTo: true,
+                totalAmount: true,
+              },
+            },
+            generalExpense: {
+              select: {
+                paidTo: true,
+                amount: true,
+              },
+            },
           },
         },
       },
@@ -37,14 +57,40 @@ export async function GET() {
       take: 50,
     });
 
-    return NextResponse.json({ history });
+    const mapped = history.map((h) => ({
+      id: h.id,
+      action: h.action,
+      comment: h.comment,
+      createdAt: h.createdAt,
+      performedBy: h.performedBy,
+      expense: {
+        id: h.expenseBase.id,
+        expenseType: h.expenseBase.expenseType,
+        vendorPayee:
+          h.expenseBase.expenseType === "PAYMENT_VOUCHER"
+            ? (h.expenseBase.paymentVoucherExpense?.paidTo ?? "-")
+            : h.expenseBase.expenseType === "GENERAL"
+              ? (h.expenseBase.generalExpense?.paidTo ?? "-")
+              : (h.expenseBase.receiptExpense?.companyName ?? "-"),
+        total:
+          h.expenseBase.expenseType === "PAYMENT_VOUCHER"
+            ? (h.expenseBase.paymentVoucherExpense?.totalAmount ?? 0)
+            : h.expenseBase.expenseType === "GENERAL"
+              ? (h.expenseBase.generalExpense?.amount ?? 0)
+              : (h.expenseBase.receiptExpense?.total ?? 0),
+        createdAt: h.expenseBase.createdAt,
+        createdByUser: h.expenseBase.createdBy,
+      },
+    }));
+
+    return NextResponse.json({ history: mapped });
   } catch (error) {
     console.error("[org-admin] Get approvals history error:", error);
     return NextResponse.json(
       {
         error: error instanceof Error ? error.message : "Internal server error",
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

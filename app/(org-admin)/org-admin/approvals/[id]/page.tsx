@@ -51,8 +51,18 @@ type ApprovalHistoryRow = {
   performedBy: { id: string; name: string | null; email: string };
 };
 
-type ExpenseDetail = {
+type BaseExpenseDetail = {
   id: string;
+  expenseType: "RECEIPT" | "PAYMENT_VOUCHER" | "GENERAL";
+  status: "PENDING" | "WARNING" | "APPROVED" | "REJECTED";
+  approvedAt: string | null;
+  createdAt: string;
+  createdByUser: { id: string; name: string | null; email: string } | null;
+  approvalHistory: ApprovalHistoryRow[];
+};
+
+type ReceiptExpenseDetail = BaseExpenseDetail & {
+  expenseType: "RECEIPT";
   purchasedDate: string;
   companyName: string;
   tinNumber: string;
@@ -71,10 +81,6 @@ type ExpenseDetail = {
   subtotal: any;
   vat: any;
   total: any;
-  status: "PENDING" | "WARNING" | "APPROVED" | "REJECTED";
-  approvedAt: string | null;
-  createdAt: string;
-  createdByUser: { id: string; name: string | null; email: string } | null;
   items: Array<{
     id: string;
     itemName: string;
@@ -84,12 +90,65 @@ type ExpenseDetail = {
     hasPolicyViolation: boolean;
     subcategory: { id: string; name: string; type: string } | null;
   }>;
-  approvalHistory: ApprovalHistoryRow[];
 };
+
+type PaymentVoucherDetail = BaseExpenseDetail & {
+  expenseType: "PAYMENT_VOUCHER";
+  purchasedDate: string;
+  paidTo: string;
+  tinNumber: string | null;
+  invoiceNumber: string;
+  paymentMethod: string;
+  checkNumber: string | null;
+  bankAccountId: string | null;
+  bankAccount: {
+    id: string;
+    bankName: string;
+    accountHolderName: string;
+    accountNumber: string;
+    isActive: boolean;
+  } | null;
+  totalAmount: any;
+  items: Array<{
+    id: string;
+    itemName: string;
+    quantity: any;
+    unitPrice: any;
+    lineTotal: any;
+    category?: { id: string; name: string } | null;
+  }>;
+};
+
+type GeneralExpenseDetail = BaseExpenseDetail & {
+  expenseType: "GENERAL";
+  paymentDate: string;
+  paidTo: string;
+  description: string;
+  amount: any;
+  paymentMethod: string;
+  checkNumber: string | null;
+  bankAccountId: string | null;
+  bankAccount: {
+    id: string;
+    bankName: string;
+    accountHolderName: string;
+    accountNumber: string;
+    isActive: boolean;
+  } | null;
+  category?: { id: string; name: string; type?: string } | null;
+};
+
+type ExpenseDetail =
+  | ReceiptExpenseDetail
+  | PaymentVoucherDetail
+  | GeneralExpenseDetail;
 
 function asNumber(x: any): number {
   if (typeof x === "number") return x;
-  if (typeof x === "string") return Number(x);
+  if (typeof x === "string") {
+    const normalized = x.replace(/,/g, "").replace(/\s+/g, "");
+    return Number(normalized);
+  }
   if (x && typeof x === "object" && typeof x.toNumber === "function") {
     return x.toNumber();
   }
@@ -99,7 +158,10 @@ function asNumber(x: any): number {
 function formatMoney(x: any) {
   const n = asNumber(x);
   if (!Number.isFinite(n)) return "-";
-  return n.toFixed(2);
+  return n.toLocaleString("en-US", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
 }
 
 export default function OrgAdminApprovalDetailPage({
@@ -189,209 +251,502 @@ export default function OrgAdminApprovalDetailPage({
         <div className="pt-0.5">
           <h1 className="text-2xl font-semibold">Approval</h1>
           <p className="text-sm text-muted-foreground">
-            Review receipt details and take action.
+            Review expense details and take action.
           </p>
         </div>
       </div>
 
       <div className="grid gap-6 lg:grid-cols-[1fr_360px]">
-        <Card>
-          <CardHeader className="space-y-1">
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                <CardTitle className="text-center md:text-left">
-                  Cash Sales Attachment
-                </CardTitle>
-                <div className="text-sm text-muted-foreground">
-                  Receipt #{expense.id.slice(0, 8)}
+        {expense.expenseType === "RECEIPT" ? (
+          <Card>
+            <CardHeader className="space-y-1">
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <CardTitle className="text-center md:text-left">
+                    Cash Sales Attachment
+                  </CardTitle>
+                  <div className="text-sm text-muted-foreground">
+                    Receipt #{expense.id.slice(0, 8)}
+                  </div>
+                </div>
+                <Badge
+                  variant={
+                    expense.status === "WARNING"
+                      ? "outline"
+                      : expense.status === "APPROVED"
+                        ? "default"
+                        : expense.status === "REJECTED"
+                          ? "destructive"
+                          : "secondary"
+                  }
+                >
+                  {expense.status}
+                </Badge>
+              </div>
+            </CardHeader>
+
+            <CardContent className="space-y-6">
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="rounded-lg border bg-background p-4">
+                  <div className="text-sm font-medium">From</div>
+                  <Separator className="my-3" />
+                  <div className="grid gap-2 text-sm">
+                    <div className="flex items-start justify-between gap-4">
+                      <span className="text-muted-foreground">Company</span>
+                      <span className="text-right font-medium">
+                        {expense.companyName}
+                      </span>
+                    </div>
+                    <div className="flex items-start justify-between gap-4">
+                      <span className="text-muted-foreground">
+                        Supplier TIN
+                      </span>
+                      <span className="text-right font-mono text-xs">
+                        {expense.tinNumber}
+                      </span>
+                    </div>
+                    <div className="flex items-start justify-between gap-4">
+                      <span className="text-muted-foreground">FS No.</span>
+                      <span className="text-right font-mono text-xs">
+                        {expense.fsNumber}
+                      </span>
+                    </div>
+                    {expense.invoiceNumber ? (
+                      <div className="flex items-start justify-between gap-4">
+                        <span className="text-muted-foreground">
+                          Invoice No.
+                        </span>
+                        <span className="text-right font-mono text-xs">
+                          {expense.invoiceNumber}
+                        </span>
+                      </div>
+                    ) : null}
+                  </div>
+                </div>
+
+                <div className="rounded-lg border bg-background p-4">
+                  <div className="text-sm font-medium">Details</div>
+                  <Separator className="my-3" />
+                  <div className="grid gap-2 text-sm">
+                    <div className="flex items-start justify-between gap-4">
+                      <span className="text-muted-foreground">Date</span>
+                      <span className="text-right">
+                        {new Date(expense.purchasedDate).toLocaleDateString()}
+                      </span>
+                    </div>
+                    <div className="flex items-start justify-between gap-4">
+                      <span className="text-muted-foreground">Payment</span>
+                      <span className="text-right">
+                        {String(expense.paymentMethod).replace(/_/g, " ")}
+                      </span>
+                    </div>
+                    {expense.paymentMethod === "CHECK" &&
+                    expense.checkNumber ? (
+                      <div className="flex items-start justify-between gap-4">
+                        <span className="text-muted-foreground">Check No.</span>
+                        <span className="text-right font-mono text-xs">
+                          {expense.checkNumber}
+                        </span>
+                      </div>
+                    ) : null}
+                    {expense.paymentMethod === "BANK_TRANSFER" &&
+                    expense.bankAccountId ? (
+                      <div className="flex items-start justify-between gap-4">
+                        <span className="text-muted-foreground">
+                          Bank Account
+                        </span>
+                        <span className="text-right text-xs">
+                          {expense.bankAccount
+                            ? `${expense.bankAccount.bankName} — ${expense.bankAccount.accountHolderName} — ${expense.bankAccount.accountNumber}`
+                            : expense.bankAccountId}
+                        </span>
+                      </div>
+                    ) : null}
+                    <div className="flex items-start justify-between gap-4">
+                      <span className="text-muted-foreground">Created by</span>
+                      <span className="text-right font-mono text-xs">
+                        {expense.createdByUser?.email ?? "-"}
+                      </span>
+                    </div>
+                  </div>
                 </div>
               </div>
-              <Badge
-                variant={
-                  expense.status === "WARNING"
-                    ? "outline"
-                    : expense.status === "APPROVED"
-                      ? "default"
-                      : expense.status === "REJECTED"
-                        ? "destructive"
-                        : "secondary"
-                }
-              >
-                {expense.status}
-              </Badge>
-            </div>
-          </CardHeader>
 
-          <CardContent className="space-y-6">
-            <div className="grid gap-4 md:grid-cols-2">
-              <div className="rounded-lg border bg-background p-4">
-                <div className="text-sm font-medium">From</div>
-                <Separator className="my-3" />
-                <div className="grid gap-2 text-sm">
-                  <div className="flex items-start justify-between gap-4">
-                    <span className="text-muted-foreground">Company</span>
-                    <span className="text-right font-medium">
-                      {expense.companyName}
-                    </span>
+              <div className="rounded-lg border">
+                <Table className="table-fixed">
+                  <TableHeader>
+                    <TableRow className="bg-muted/70">
+                      <TableHead className="w-14">No</TableHead>
+                      <TableHead className="w-[40%]">Description</TableHead>
+                      <TableHead className="w-[12%] text-right">
+                        Quantity
+                      </TableHead>
+                      <TableHead className="w-[16%] text-right">
+                        Unit Price
+                      </TableHead>
+                      <TableHead className="w-[16%] text-right">
+                        Total Price
+                      </TableHead>
+                      <TableHead className="w-[16%]">Policy</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {expense.items.map((it, index) => (
+                      <TableRow key={it.id} className="bg-muted/10">
+                        <TableCell className="text-muted-foreground">
+                          {index + 1}
+                        </TableCell>
+                        <TableCell className="overflow-hidden">
+                          <div className="font-medium truncate">
+                            {it.itemName}
+                          </div>
+                          <div className="text-xs text-muted-foreground truncate">
+                            {it.subcategory?.name ?? "-"}
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-right tabular-nums whitespace-nowrap">
+                          {formatMoney(it.quantity)}
+                        </TableCell>
+                        <TableCell className="text-right tabular-nums whitespace-nowrap">
+                          {formatMoney(it.unitPrice)}
+                        </TableCell>
+                        <TableCell className="text-right tabular-nums whitespace-nowrap">
+                          {formatMoney(it.lineTotal)}
+                        </TableCell>
+                        <TableCell>
+                          {it.hasPolicyViolation ? (
+                            <Badge variant="outline">Warning</Badge>
+                          ) : (
+                            <span className="text-muted-foreground">OK</span>
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+
+              <div className="flex justify-end">
+                <div className="w-full max-w-sm rounded-lg border bg-background">
+                  <Table>
+                    <TableBody>
+                      <TableRow>
+                        <TableCell className="text-sm text-muted-foreground">
+                          SubTotal
+                        </TableCell>
+                        <TableCell className="text-right tabular-nums">
+                          {formatMoney(expense.subtotal)}
+                        </TableCell>
+                      </TableRow>
+                      <TableRow>
+                        <TableCell className="text-sm text-muted-foreground">
+                          VAT
+                        </TableCell>
+                        <TableCell className="text-right tabular-nums">
+                          {formatMoney(expense.vat)}
+                        </TableCell>
+                      </TableRow>
+                      <TableRow className="bg-muted/70">
+                        <TableCell className="text-sm font-medium">
+                          Grand Total
+                        </TableCell>
+                        <TableCell className="text-right tabular-nums font-medium">
+                          {formatMoney(expense.total)}
+                        </TableCell>
+                      </TableRow>
+                    </TableBody>
+                  </Table>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        ) : expense.expenseType === "PAYMENT_VOUCHER" ? (
+          <Card>
+            <CardHeader className="space-y-1">
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <CardTitle className="text-center md:text-left">
+                    Payment Voucher
+                  </CardTitle>
+                  <div className="text-sm text-muted-foreground">
+                    Voucher #{expense.id.slice(0, 8)}
                   </div>
-                  <div className="flex items-start justify-between gap-4">
-                    <span className="text-muted-foreground">Supplier TIN</span>
-                    <span className="text-right font-mono text-xs">
-                      {expense.tinNumber}
-                    </span>
-                  </div>
-                  <div className="flex items-start justify-between gap-4">
-                    <span className="text-muted-foreground">FS No.</span>
-                    <span className="text-right font-mono text-xs">
-                      {expense.fsNumber}
-                    </span>
-                  </div>
-                  {expense.invoiceNumber ? (
+                </div>
+                <Badge
+                  variant={
+                    expense.status === "WARNING"
+                      ? "outline"
+                      : expense.status === "APPROVED"
+                        ? "default"
+                        : expense.status === "REJECTED"
+                          ? "destructive"
+                          : "secondary"
+                  }
+                >
+                  {expense.status}
+                </Badge>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="rounded-lg border bg-background p-4">
+                  <div className="text-sm font-medium">Payee</div>
+                  <Separator className="my-3" />
+                  <div className="grid gap-2 text-sm">
                     <div className="flex items-start justify-between gap-4">
-                      <span className="text-muted-foreground">Invoice No.</span>
+                      <span className="text-muted-foreground">Paid to</span>
+                      <span className="text-right font-medium">
+                        {expense.paidTo}
+                      </span>
+                    </div>
+                    {expense.tinNumber ? (
+                      <div className="flex items-start justify-between gap-4">
+                        <span className="text-muted-foreground">TIN</span>
+                        <span className="text-right font-mono text-xs">
+                          {expense.tinNumber}
+                        </span>
+                      </div>
+                    ) : null}
+                    <div className="flex items-start justify-between gap-4">
+                      <span className="text-muted-foreground">Invoice</span>
                       <span className="text-right font-mono text-xs">
                         {expense.invoiceNumber}
                       </span>
                     </div>
-                  ) : null}
+                  </div>
+                </div>
+
+                <div className="rounded-lg border bg-background p-4">
+                  <div className="text-sm font-medium">Details</div>
+                  <Separator className="my-3" />
+                  <div className="grid gap-2 text-sm">
+                    <div className="flex items-start justify-between gap-4">
+                      <span className="text-muted-foreground">Date</span>
+                      <span className="text-right">
+                        {new Date(expense.purchasedDate).toLocaleDateString()}
+                      </span>
+                    </div>
+                    <div className="flex items-start justify-between gap-4">
+                      <span className="text-muted-foreground">Payment</span>
+                      <span className="text-right">
+                        {String(expense.paymentMethod).replace(/_/g, " ")}
+                      </span>
+                    </div>
+                    {expense.paymentMethod === "CHECK" ? (
+                      <div className="flex items-start justify-between gap-4">
+                        <span className="text-muted-foreground">Check No.</span>
+                        <span className="text-right font-mono text-xs">
+                          {expense.checkNumber ?? "-"}
+                        </span>
+                      </div>
+                    ) : null}
+                    {expense.paymentMethod === "BANK_TRANSFER" ? (
+                      <div className="flex items-start justify-between gap-4">
+                        <span className="text-muted-foreground">
+                          Bank Account
+                        </span>
+                        <span className="text-right text-xs">
+                          {expense.bankAccount
+                            ? `${expense.bankAccount.bankName} — ${expense.bankAccount.accountHolderName} — ${expense.bankAccount.accountNumber}`
+                            : (expense.bankAccountId ?? "-")}
+                        </span>
+                      </div>
+                    ) : null}
+                    <div className="flex items-start justify-between gap-4">
+                      <span className="text-muted-foreground">Created by</span>
+                      <span className="text-right font-mono text-xs">
+                        {expense.createdByUser?.email ?? "-"}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="rounded-lg border">
+                <Table className="table-fixed">
+                  <TableHeader>
+                    <TableRow className="bg-muted/70">
+                      <TableHead className="w-14">No</TableHead>
+                      <TableHead className="w-[40%]">Description</TableHead>
+                      <TableHead className="w-[12%] text-right">
+                        Quantity
+                      </TableHead>
+                      <TableHead className="w-[16%] text-right">
+                        Unit Price
+                      </TableHead>
+                      <TableHead className="w-[16%] text-right">
+                        Total Price
+                      </TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {expense.items.map((it, index) => (
+                      <TableRow key={it.id} className="bg-muted/10">
+                        <TableCell className="text-muted-foreground">
+                          {index + 1}
+                        </TableCell>
+                        <TableCell className="overflow-hidden">
+                          <div className="font-medium truncate">
+                            {it.itemName}
+                          </div>
+                          <div className="text-xs text-muted-foreground truncate">
+                            {it.category?.name ?? "-"}
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-right tabular-nums whitespace-nowrap">
+                          {formatMoney(it.quantity)}
+                        </TableCell>
+                        <TableCell className="text-right tabular-nums whitespace-nowrap">
+                          {formatMoney(it.unitPrice)}
+                        </TableCell>
+                        <TableCell className="text-right tabular-nums whitespace-nowrap">
+                          {formatMoney(it.lineTotal)}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+
+              <div className="flex justify-end">
+                <div className="w-full max-w-sm rounded-lg border bg-background">
+                  <Table>
+                    <TableBody>
+                      <TableRow className="bg-muted/70">
+                        <TableCell className="text-sm font-medium">
+                          Total Amount
+                        </TableCell>
+                        <TableCell className="text-right tabular-nums font-medium">
+                          {formatMoney(expense.totalAmount)}
+                        </TableCell>
+                      </TableRow>
+                    </TableBody>
+                  </Table>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        ) : (
+          <Card>
+            <CardHeader className="space-y-1">
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <CardTitle className="text-center md:text-left">
+                    General Expense
+                  </CardTitle>
+                  <div className="text-sm text-muted-foreground">
+                    Expense #{expense.id.slice(0, 8)}
+                  </div>
+                </div>
+                <Badge
+                  variant={
+                    expense.status === "WARNING"
+                      ? "outline"
+                      : expense.status === "APPROVED"
+                        ? "default"
+                        : expense.status === "REJECTED"
+                          ? "destructive"
+                          : "secondary"
+                  }
+                >
+                  {expense.status}
+                </Badge>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="rounded-lg border bg-background p-4">
+                  <div className="text-sm font-medium">Payee</div>
+                  <Separator className="my-3" />
+                  <div className="grid gap-2 text-sm">
+                    <div className="flex items-start justify-between gap-4">
+                      <span className="text-muted-foreground">Paid to</span>
+                      <span className="text-right font-medium">
+                        {expense.paidTo}
+                      </span>
+                    </div>
+                    <div className="flex items-start justify-between gap-4">
+                      <span className="text-muted-foreground">Category</span>
+                      <span className="text-right">
+                        {expense.category?.name ?? "-"}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="rounded-lg border bg-background p-4">
+                  <div className="text-sm font-medium">Details</div>
+                  <Separator className="my-3" />
+                  <div className="grid gap-2 text-sm">
+                    <div className="flex items-start justify-between gap-4">
+                      <span className="text-muted-foreground">Date</span>
+                      <span className="text-right">
+                        {new Date(expense.paymentDate).toLocaleDateString()}
+                      </span>
+                    </div>
+                    <div className="flex items-start justify-between gap-4">
+                      <span className="text-muted-foreground">Payment</span>
+                      <span className="text-right">
+                        {String(expense.paymentMethod).replace(/_/g, " ")}
+                      </span>
+                    </div>
+                    {expense.paymentMethod === "CHECK" ? (
+                      <div className="flex items-start justify-between gap-4">
+                        <span className="text-muted-foreground">Check No.</span>
+                        <span className="text-right font-mono text-xs">
+                          {expense.checkNumber ?? "-"}
+                        </span>
+                      </div>
+                    ) : null}
+                    {expense.paymentMethod === "BANK_TRANSFER" ? (
+                      <div className="flex items-start justify-between gap-4">
+                        <span className="text-muted-foreground">
+                          Bank Account
+                        </span>
+                        <span className="text-right text-xs">
+                          {expense.bankAccount
+                            ? `${expense.bankAccount.bankName} — ${expense.bankAccount.accountHolderName} — ${expense.bankAccount.accountNumber}`
+                            : (expense.bankAccountId ?? "-")}
+                        </span>
+                      </div>
+                    ) : null}
+                    <div className="flex items-start justify-between gap-4">
+                      <span className="text-muted-foreground">Created by</span>
+                      <span className="text-right font-mono text-xs">
+                        {expense.createdByUser?.email ?? "-"}
+                      </span>
+                    </div>
+                  </div>
                 </div>
               </div>
 
               <div className="rounded-lg border bg-background p-4">
-                <div className="text-sm font-medium">Details</div>
+                <div className="text-sm font-medium">Description</div>
                 <Separator className="my-3" />
-                <div className="grid gap-2 text-sm">
-                  <div className="flex items-start justify-between gap-4">
-                    <span className="text-muted-foreground">Date</span>
-                    <span className="text-right">
-                      {new Date(expense.purchasedDate).toLocaleDateString()}
-                    </span>
-                  </div>
-                  <div className="flex items-start justify-between gap-4">
-                    <span className="text-muted-foreground">Payment</span>
-                    <span className="text-right">
-                      {String(expense.paymentMethod).replace(/_/g, " ")}
-                    </span>
-                  </div>
-                  {expense.paymentMethod === "CHECK" && expense.checkNumber ? (
-                    <div className="flex items-start justify-between gap-4">
-                      <span className="text-muted-foreground">Check No.</span>
-                      <span className="text-right font-mono text-xs">
-                        {expense.checkNumber}
-                      </span>
-                    </div>
-                  ) : null}
-                  {expense.paymentMethod === "BANK_TRANSFER" &&
-                  expense.bankAccountId ? (
-                    <div className="flex items-start justify-between gap-4">
-                      <span className="text-muted-foreground">
-                        Bank Account
-                      </span>
-                      <span className="text-right text-xs">
-                        {expense.bankAccount
-                          ? `${expense.bankAccount.bankName} — ${expense.bankAccount.accountHolderName} — ${expense.bankAccount.accountNumber}`
-                          : expense.bankAccountId}
-                      </span>
-                    </div>
-                  ) : null}
-                  <div className="flex items-start justify-between gap-4">
-                    <span className="text-muted-foreground">Created by</span>
-                    <span className="text-right font-mono text-xs">
-                      {expense.createdByUser?.email ?? "-"}
-                    </span>
-                  </div>
+                <p className="text-sm text-muted-foreground">
+                  {expense.description}
+                </p>
+              </div>
+
+              <div className="flex justify-end">
+                <div className="w-full max-w-sm rounded-lg border bg-background">
+                  <Table>
+                    <TableBody>
+                      <TableRow className="bg-muted/70">
+                        <TableCell className="text-sm font-medium">
+                          Total Amount
+                        </TableCell>
+                        <TableCell className="text-right tabular-nums font-medium">
+                          {formatMoney(expense.amount)}
+                        </TableCell>
+                      </TableRow>
+                    </TableBody>
+                  </Table>
                 </div>
               </div>
-            </div>
-
-            <div className="rounded-lg border">
-              <Table className="table-fixed">
-                <TableHeader>
-                  <TableRow className="bg-muted/70">
-                    <TableHead className="w-14">No</TableHead>
-                    <TableHead className="w-[40%]">Description</TableHead>
-                    <TableHead className="w-[12%] text-right">
-                      Quantity
-                    </TableHead>
-                    <TableHead className="w-[16%] text-right">
-                      Unit Price
-                    </TableHead>
-                    <TableHead className="w-[16%] text-right">
-                      Total Price
-                    </TableHead>
-                    <TableHead className="w-[16%]">Policy</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {expense.items.map((it, index) => (
-                    <TableRow key={it.id} className="bg-muted/10">
-                      <TableCell className="text-muted-foreground">
-                        {index + 1}
-                      </TableCell>
-                      <TableCell className="overflow-hidden">
-                        <div className="font-medium truncate">
-                          {it.itemName}
-                        </div>
-                        <div className="text-xs text-muted-foreground truncate">
-                          {it.subcategory?.name ?? "-"}
-                        </div>
-                      </TableCell>
-                      <TableCell className="text-right tabular-nums whitespace-nowrap">
-                        {formatMoney(it.quantity)}
-                      </TableCell>
-                      <TableCell className="text-right tabular-nums whitespace-nowrap">
-                        {formatMoney(it.unitPrice)}
-                      </TableCell>
-                      <TableCell className="text-right tabular-nums whitespace-nowrap">
-                        {formatMoney(it.lineTotal)}
-                      </TableCell>
-                      <TableCell>
-                        {it.hasPolicyViolation ? (
-                          <Badge variant="outline">Warning</Badge>
-                        ) : (
-                          <span className="text-muted-foreground">OK</span>
-                        )}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-
-            <div className="flex justify-end">
-              <div className="w-full max-w-sm rounded-lg border bg-background">
-                <Table>
-                  <TableBody>
-                    <TableRow>
-                      <TableCell className="text-sm text-muted-foreground">
-                        SubTotal
-                      </TableCell>
-                      <TableCell className="text-right tabular-nums">
-                        {formatMoney(expense.subtotal)}
-                      </TableCell>
-                    </TableRow>
-                    <TableRow>
-                      <TableCell className="text-sm text-muted-foreground">
-                        VAT
-                      </TableCell>
-                      <TableCell className="text-right tabular-nums">
-                        {formatMoney(expense.vat)}
-                      </TableCell>
-                    </TableRow>
-                    <TableRow className="bg-muted/70">
-                      <TableCell className="text-sm font-medium">
-                        Grand Total
-                      </TableCell>
-                      <TableCell className="text-right tabular-nums font-medium">
-                        {formatMoney(expense.total)}
-                      </TableCell>
-                    </TableRow>
-                  </TableBody>
-                </Table>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+        )}
 
         <Card className="lg:sticky lg:top-6 lg:self-start">
           <CardHeader>

@@ -62,7 +62,7 @@ export async function GET() {
 
     return NextResponse.json({ refunds });
   } catch (error) {
-    console.error("[v0] List refunds error:", error);
+    console.error("List refunds error:", error);
     return NextResponse.json(
       {
         error: error instanceof Error ? error.message : "Internal server error",
@@ -139,7 +139,7 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ refund });
   } catch (error) {
-    console.error("[v0] Org-admin create refund error:", error);
+    console.error("Org-admin create refund error:", error);
 
     if (error instanceof z.ZodError) {
       return NextResponse.json(

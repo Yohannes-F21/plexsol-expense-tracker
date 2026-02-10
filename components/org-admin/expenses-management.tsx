@@ -120,7 +120,7 @@ export function ExpensesManagement() {
       queryClient.invalidateQueries({ queryKey: ["org-admin-expenses"] });
       queryClient.invalidateQueries({ queryKey: ["org-admin-stats"] });
     } catch (error) {
-      console.error("[v0] Delete expense error:", error);
+      console.error("Delete expense error:", error);
       toast.error("An error occurred while deleting");
     }
   }, [deleteExpenseId, queryClient]);

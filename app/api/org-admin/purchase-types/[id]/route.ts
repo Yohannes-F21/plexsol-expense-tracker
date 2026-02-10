@@ -24,7 +24,7 @@ export async function PUT(request: Request, context: any) {
     if (!orgId) {
       return NextResponse.json(
         { error: "Organization ID missing" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -39,14 +39,14 @@ export async function PUT(request: Request, context: any) {
     if (!existing || existing.organizationId !== orgId) {
       return NextResponse.json(
         { error: "Purchase type not found" },
-        { status: 404 }
+        { status: 404 },
       );
     }
 
     if (!existing.isActive) {
       return NextResponse.json(
         { error: "Cannot update an inactive purchase type" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -62,7 +62,7 @@ export async function PUT(request: Request, context: any) {
     if (labelDuplicate) {
       return NextResponse.json(
         { error: "A purchase type with this label already exists." },
-        { status: 409 }
+        { status: 409 },
       );
     }
 
@@ -78,7 +78,7 @@ export async function PUT(request: Request, context: any) {
     if (codeDuplicate) {
       return NextResponse.json(
         { error: "A purchase type with this code already exists." },
-        { status: 409 }
+        { status: 409 },
       );
     }
 
@@ -113,12 +113,12 @@ export async function PUT(request: Request, context: any) {
 
     return NextResponse.json({ success: true, purchaseType });
   } catch (error) {
-    console.error("[v0] Update purchase type error:", error);
+    console.error("Update purchase type error:", error);
 
     if (error instanceof z.ZodError) {
       return NextResponse.json(
         { error: "Invalid input", details: error.errors },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -130,7 +130,7 @@ export async function PUT(request: Request, context: any) {
     ) {
       return NextResponse.json(
         { error: "A purchase type with this code already exists." },
-        { status: 409 }
+        { status: 409 },
       );
     }
 
@@ -138,7 +138,7 @@ export async function PUT(request: Request, context: any) {
       {
         error: error instanceof Error ? error.message : "Internal server error",
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
@@ -154,7 +154,7 @@ export async function DELETE(request: Request, context: any) {
     if (!orgId) {
       return NextResponse.json(
         { error: "Organization ID missing" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -166,7 +166,7 @@ export async function DELETE(request: Request, context: any) {
     if (!existing || existing.organizationId !== orgId) {
       return NextResponse.json(
         { error: "Purchase type not found" },
-        { status: 404 }
+        { status: 404 },
       );
     }
 
@@ -195,12 +195,12 @@ export async function DELETE(request: Request, context: any) {
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error("[v0] Delete purchase type error:", error);
+    console.error("Delete purchase type error:", error);
     return NextResponse.json(
       {
         error: error instanceof Error ? error.message : "Internal server error",
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
@@ -216,7 +216,7 @@ export async function PATCH(request: Request, context: any) {
     if (!orgId) {
       return NextResponse.json(
         { error: "Organization ID missing" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -231,7 +231,7 @@ export async function PATCH(request: Request, context: any) {
     if (!existing || existing.organizationId !== orgId) {
       return NextResponse.json(
         { error: "Purchase type not found" },
-        { status: 404 }
+        { status: 404 },
       );
     }
 
@@ -262,12 +262,12 @@ export async function PATCH(request: Request, context: any) {
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error("[v0] Set purchase type active error:", error);
+    console.error("Set purchase type active error:", error);
 
     if (error instanceof z.ZodError) {
       return NextResponse.json(
         { error: "Invalid input", details: error.errors },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -275,7 +275,7 @@ export async function PATCH(request: Request, context: any) {
       {
         error: error instanceof Error ? error.message : "Internal server error",
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

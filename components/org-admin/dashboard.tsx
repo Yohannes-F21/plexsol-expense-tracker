@@ -9,7 +9,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { DollarSign, Clock, Receipt, Users } from "lucide-react";
+import { DollarSign, Clock, Receipt, Users, TrendingUp } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ExpensesChart } from "./expenses-chart";
 import { ExpensesByCategoryChart } from "./expenses-by-category-chart";
@@ -18,6 +18,7 @@ import { RecentTransactionsTable } from "./recent-transactions-table";
 interface Stats {
   totalExpenses: number;
   totalExpenseAmount: number;
+  monthlyApprovedExpenseAmount: number;
   pendingApprovals: number;
   totalStaffs: number;
 }
@@ -33,11 +34,23 @@ export function OrgAdminDashboard() {
       title: "Total Expense Amount",
       value: `${(stats?.totalExpenseAmount ?? 0).toLocaleString()} ETB`,
       icon: DollarSign,
+      titleColor: "text-primary",
+      cardBg: "bg-primary",
+      iconBg: "bg-primary",
+      iconColor: "text-white",
+      helperText: "Approved expenses total",
+      helperTextColor: "text-primary",
+      interactive: true,
+    },
+    {
+      title: "Monthly Approved Expenses",
+      value: `${(stats?.monthlyApprovedExpenseAmount ?? 0).toLocaleString()} ETB`,
+      icon: TrendingUp,
       titleColor: "text-violet-600",
       cardBg: "bg-violet-50",
       iconBg: "bg-violet-500",
       iconColor: "text-white",
-      helperText: "Approved expenses total",
+      helperText: "This month (approved)",
       helperTextColor: "text-violet-600",
       interactive: true,
     },
@@ -91,7 +104,7 @@ export function OrgAdminDashboard() {
       </div>
 
       {/* KPI Cards */}
-      <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-5">
         {kpis.map((kpi) => (
           <Card
             key={kpi.title}
@@ -106,7 +119,7 @@ export function OrgAdminDashboard() {
               </CardTitle>
               <div
                 className={
-                  "h-11 w-11 rounded-full shadow-md flex items-center justify-center " +
+                  "h-11 w-11 rounded-xl shadow-md flex items-center justify-center " +
                   kpi.iconBg
                 }
               >

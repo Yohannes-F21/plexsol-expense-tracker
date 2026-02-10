@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -50,6 +50,11 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { DataTablePagination } from "@/components/data-table-pagination";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 
 const refundSchema = z
   .object({
@@ -99,6 +104,8 @@ type RefundRow = {
   };
 };
 
+const ALL_FILTER = "__ALL__";
+
 const BANK_ACCOUNTS_QUERY_KEY = ["staff-bank-accounts"] as const;
 const REFUNDS_QUERY_KEY = ["staff-refunds"] as const;
 
@@ -121,6 +128,39 @@ function StatusBadge({ status }: { status: RefundStatus }) {
   return <Badge variant={variant as never}>{status}</Badge>;
 }
 
+function RejectionReasonPopover({ reason }: { reason: string }) {
+  const [open, setOpen] = useState(false);
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <button
+          type="button"
+          className="text-xs text-destructive underline underline-offset-2"
+          onMouseEnter={() => setOpen(true)}
+          onMouseLeave={() => setOpen(false)}
+        >
+          View reason
+        </button>
+      </PopoverTrigger>
+      <PopoverContent
+        align="start"
+        side="right"
+        className="w-80"
+        onMouseEnter={() => setOpen(true)}
+        onMouseLeave={() => setOpen(false)}
+      >
+        <div className="space-y-1">
+          <div className="text-sm font-medium">Rejection reason</div>
+          <div className="text-sm text-muted-foreground whitespace-pre-wrap">
+            {reason}
+          </div>
+        </div>
+      </PopoverContent>
+    </Popover>
+  );
+}
+
 export function StaffRefundsPage() {
   const queryClient = useQueryClient();
   const [sorting, setSorting] = useState<SortingState>([]);
@@ -128,6 +168,10 @@ export function StaffRefundsPage() {
     pageIndex: 0,
     pageSize: 20,
   });
+  const [accountFilterId, setAccountFilterId] = useState<string>(ALL_FILTER);
+  const [statusFilter, setStatusFilter] = useState<
+    RefundStatus | typeof ALL_FILTER
+  >(ALL_FILTER);
   const [dialogOpen, setDialogOpen] = useState(false);
 
   const form = useForm<RefundFormValues>({
@@ -171,6 +215,19 @@ export function StaffRefundsPage() {
     () => refundsQuery.data?.refunds ?? [],
     [refundsQuery.data],
   );
+
+  const filteredRefunds = useMemo(() => {
+    return refunds.filter((r) => {
+      const matchesAccount =
+        accountFilterId !== ALL_FILTER
+          ? r.fromAccount.id === accountFilterId ||
+            r.toAccount.id === accountFilterId
+          : true;
+      const matchesStatus =
+        statusFilter !== ALL_FILTER ? r.status === statusFilter : true;
+      return matchesAccount && matchesStatus;
+    });
+  }, [refunds, accountFilterId, statusFilter]);
 
   const createMutation = useMutation({
     mutationFn: async (values: RefundFormValues) => {
@@ -282,17 +339,19 @@ export function StaffRefundsPage() {
       {
         accessorKey: "rejectionReason",
         header: "Rejection Reason",
-        cell: ({ row }) =>
-          row.original.status === "REJECTED"
-            ? row.original.rejectionReason
-            : "-",
+        cell: ({ row }) => {
+          if (row.original.status !== "REJECTED") return "-";
+          const reason = String(row.original.rejectionReason ?? "").trim();
+          if (!reason) return "-";
+          return <RejectionReasonPopover reason={reason} />;
+        },
       },
     ],
     [],
   );
 
   const table = useReactTable({
-    data: refunds,
+    data: filteredRefunds,
     columns,
     state: { sorting, pagination: { pageIndex, pageSize } },
     onSortingChange: setSorting,
@@ -301,6 +360,11 @@ export function StaffRefundsPage() {
     getPaginationRowModel: getPaginationRowModel(),
     getSortedRowModel: getSortedRowModel(),
   });
+
+  // Reset to first page when filters change.
+  useEffect(() => {
+    setPagination((p) => ({ ...p, pageIndex: 0 }));
+  }, [accountFilterId, statusFilter]);
 
   const isLoading = bankAccountsQuery.isLoading || refundsQuery.isLoading;
 
@@ -334,6 +398,48 @@ export function StaffRefundsPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
+          <div className="mb-4 grid gap-4 md:grid-cols-2">
+            <div className="space-y-2">
+              <Label>Account</Label>
+              <Select
+                value={accountFilterId}
+                onValueChange={setAccountFilterId}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="All accounts" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={ALL_FILTER}>All accounts</SelectItem>
+                  {bankAccounts.map((a) => (
+                    <SelectItem key={a.id} value={a.id}>
+                      {a.bankName} - {a.accountNumber}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Status</Label>
+              <Select
+                value={statusFilter}
+                onValueChange={(v) =>
+                  setStatusFilter(v as RefundStatus | typeof ALL_FILTER)
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="All statuses" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={ALL_FILTER}>All statuses</SelectItem>
+                  <SelectItem value="PENDING">PENDING</SelectItem>
+                  <SelectItem value="APPROVED">APPROVED</SelectItem>
+                  <SelectItem value="REJECTED">REJECTED</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
           <div className="rounded-md border">
             <Table>
               <TableHeader>

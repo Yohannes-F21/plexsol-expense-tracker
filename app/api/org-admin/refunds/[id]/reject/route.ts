@@ -63,7 +63,7 @@ export async function POST(
 
     return NextResponse.json({ refund: updatedRefund });
   } catch (error) {
-    console.error("[v0] Reject refund error:", error);
+    console.error("Reject refund error:", error);
 
     if (error instanceof z.ZodError) {
       return NextResponse.json(

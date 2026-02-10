@@ -10,7 +10,7 @@ export async function GET() {
     if (!orgId) {
       return NextResponse.json(
         { error: "Organization ID missing" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -27,39 +27,145 @@ export async function GET() {
       prisma.user.count({
         where: { organizationId: orgId, role: "STAFF", isActive: true },
       }),
-      prisma.expense.count({
-        where: { organizationId: orgId, isActive: true },
+      prisma.expenseBase.count({
+        where: {
+          organizationId: orgId,
+          isActive: true,
+        },
       }),
-      prisma.expense.count({
-        where: { organizationId: orgId, isActive: true, status: "PENDING" },
+      prisma.expenseBase.count({
+        where: {
+          organizationId: orgId,
+          isActive: true,
+          status: "PENDING",
+        },
       }),
-      prisma.expense.count({
-        where: { organizationId: orgId, isActive: true, status: "APPROVED" },
+      prisma.expenseBase.count({
+        where: {
+          organizationId: orgId,
+          isActive: true,
+          status: "APPROVED",
+        },
       }),
-      prisma.expense.count({
-        where: { organizationId: orgId, isActive: true, status: "REJECTED" },
+      prisma.expenseBase.count({
+        where: {
+          organizationId: orgId,
+          isActive: true,
+          status: "REJECTED",
+        },
       }),
-      prisma.expense.count({
-        where: { organizationId: orgId, isActive: true, status: "WARNING" },
+      prisma.expenseBase.count({
+        where: {
+          organizationId: orgId,
+          isActive: true,
+          status: "WARNING",
+        },
       }),
     ]);
 
     const pendingApprovals = pendingExpenses + warningExpenses;
 
-    const totalExpenseAmount = await prisma.expense.aggregate({
-      where: {
-        organizationId: orgId,
-        isActive: true,
-        status: "APPROVED",
-      },
-      _sum: {
-        total: true,
-      },
-    });
+    const now = new Date();
+    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+    const nextMonthStart = new Date(now.getFullYear(), now.getMonth() + 1, 1);
 
-    const totalExpenseAmountValue = totalExpenseAmount._sum.total
-      ? Number(totalExpenseAmount._sum.total)
+    const [
+      receiptSum,
+      voucherSum,
+      generalSum,
+      receiptMonthSum,
+      voucherMonthSum,
+      generalMonthSum,
+    ] = await Promise.all([
+      prisma.receiptExpense.aggregate({
+        where: {
+          expenseBase: {
+            organizationId: orgId,
+            isActive: true,
+            status: "APPROVED",
+          },
+        },
+        _sum: { total: true },
+      }),
+      prisma.paymentVoucherExpense.aggregate({
+        where: {
+          expenseBase: {
+            organizationId: orgId,
+            isActive: true,
+            status: "APPROVED",
+          },
+        },
+        _sum: { totalAmount: true },
+      }),
+      prisma.generalExpense.aggregate({
+        where: {
+          expenseBase: {
+            organizationId: orgId,
+            isActive: true,
+            status: "APPROVED",
+          },
+        },
+        _sum: { amount: true },
+      }),
+
+      prisma.receiptExpense.aggregate({
+        where: {
+          purchasedDate: { gte: monthStart, lt: nextMonthStart },
+          expenseBase: {
+            organizationId: orgId,
+            isActive: true,
+            status: "APPROVED",
+          },
+        },
+        _sum: { total: true },
+      }),
+      prisma.paymentVoucherExpense.aggregate({
+        where: {
+          purchasedDate: { gte: monthStart, lt: nextMonthStart },
+          expenseBase: {
+            organizationId: orgId,
+            isActive: true,
+            status: "APPROVED",
+          },
+        },
+        _sum: { totalAmount: true },
+      }),
+      prisma.generalExpense.aggregate({
+        where: {
+          paymentDate: { gte: monthStart, lt: nextMonthStart },
+          expenseBase: {
+            organizationId: orgId,
+            isActive: true,
+            status: "APPROVED",
+          },
+        },
+        _sum: { amount: true },
+      }),
+    ]);
+
+    const receiptTotal = receiptSum._sum.total
+      ? Number(receiptSum._sum.total)
       : 0;
+    const voucherTotal = voucherSum._sum.totalAmount
+      ? Number(voucherSum._sum.totalAmount)
+      : 0;
+    const generalTotal = generalSum._sum.amount
+      ? Number(generalSum._sum.amount)
+      : 0;
+    const totalExpenseAmountValue = receiptTotal + voucherTotal + generalTotal;
+
+    const receiptMonthTotal = receiptMonthSum._sum.total
+      ? Number(receiptMonthSum._sum.total)
+      : 0;
+    const voucherMonthTotal = voucherMonthSum._sum.totalAmount
+      ? Number(voucherMonthSum._sum.totalAmount)
+      : 0;
+    const generalMonthTotal = generalMonthSum._sum.amount
+      ? Number(generalMonthSum._sum.amount)
+      : 0;
+
+    const monthlyApprovedExpenseAmount =
+      receiptMonthTotal + voucherMonthTotal + generalMonthTotal;
 
     return NextResponse.json({
       totalUsers,
@@ -71,14 +177,15 @@ export async function GET() {
       warningExpenses,
       pendingApprovals,
       totalExpenseAmount: totalExpenseAmountValue,
+      monthlyApprovedExpenseAmount,
     });
   } catch (error) {
-    console.error("[v0] Get stats error:", error);
+    console.error("Get stats error:", error);
     return NextResponse.json(
       {
         error: error instanceof Error ? error.message : "Internal server error",
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

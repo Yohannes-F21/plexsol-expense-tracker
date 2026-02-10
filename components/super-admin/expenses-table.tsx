@@ -27,14 +27,25 @@ import { ServerDataTablePagination } from "@/components/data-table-pagination";
 
 type Expense = {
   id: string;
+  expenseType: "RECEIPT" | "PAYMENT_VOUCHER" | "GENERAL";
   status: string;
   createdAt: string;
-  purchasedDate: string;
+  date: string;
   organization: { id: string; name: string } | null;
   createdByUser: { id: string; name: string | null; email: string };
-  companyName: string;
+  vendor: string;
+  reference?: string | null;
+  paymentMethod?: string | null;
   total: any;
 };
+
+function typeLabel(t: Expense["expenseType"]) {
+  return t === "RECEIPT"
+    ? "Receipt"
+    : t === "PAYMENT_VOUCHER"
+      ? "Payment Voucher"
+      : "General";
+}
 
 function renderStatusBadge(status: string) {
   switch (status) {
@@ -87,7 +98,10 @@ function renderStatusBadge(status: string) {
 
 function asNumber(x: any): number {
   if (typeof x === "number") return x;
-  if (typeof x === "string") return Number(x);
+  if (typeof x === "string") {
+    const normalized = x.replace(/,/g, "").replace(/\s+/g, "");
+    return Number(normalized);
+  }
   if (x && typeof x === "object" && typeof x.toNumber === "function")
     return x.toNumber();
   return Number(x);
@@ -96,13 +110,17 @@ function asNumber(x: any): number {
 function formatMoney(x: any) {
   const n = asNumber(x);
   if (!Number.isFinite(n)) return "-";
-  return n.toFixed(2);
+  return n.toLocaleString("en-US", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
 }
 
 export function ExpensesTable() {
-  const [organizationId, setOrganizationId] = useState<string | undefined>(
-    undefined,
-  );
+  const [searchTerm, setSearchTerm] = useState<string>("");
+  const [expenseType, setExpenseType] = useState<
+    Expense["expenseType"] | undefined
+  >(undefined);
   const [status, setStatus] = useState<string | undefined>(undefined);
   const [start, setStart] = useState<string | undefined>(undefined);
   const [end, setEnd] = useState<string | undefined>(undefined);
@@ -116,7 +134,8 @@ export function ExpensesTable() {
   >({
     queryKey: [
       "super-admin-expenses",
-      organizationId,
+      searchTerm,
+      expenseType,
       status,
       start,
       end,
@@ -125,7 +144,9 @@ export function ExpensesTable() {
     ],
     queryFn: async () => {
       const params = new URLSearchParams();
-      if (organizationId) params.set("organizationId", organizationId);
+      const q = searchTerm.trim();
+      if (q) params.set("q", q);
+      if (expenseType) params.set("expenseType", expenseType);
       if (status) params.set("status", status);
       if (start) params.set("start", start);
       if (end) params.set("end", end);
@@ -147,10 +168,27 @@ export function ExpensesTable() {
       <CardContent className="space-y-4">
         <div className="flex flex-col lg:flex-row gap-2">
           <Input
-            placeholder="Organization ID"
-            value={organizationId || ""}
-            onChange={(e) => setOrganizationId(e.target.value || undefined)}
+            placeholder="Search org name, reference, created by..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
           />
+          <Select
+            onValueChange={(v) =>
+              setExpenseType(
+                v === "ALL" ? undefined : (v as Expense["expenseType"]),
+              )
+            }
+          >
+            <SelectTrigger className="w-full lg:w-48">
+              <SelectValue placeholder="Type" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="ALL">All</SelectItem>
+              <SelectItem value="RECEIPT">Receipt</SelectItem>
+              <SelectItem value="PAYMENT_VOUCHER">Payment Voucher</SelectItem>
+              <SelectItem value="GENERAL">General</SelectItem>
+            </SelectContent>
+          </Select>
           <Select onValueChange={(v) => setStatus(v === "ALL" ? undefined : v)}>
             <SelectTrigger className="w-full lg:w-40">
               <SelectValue placeholder="Status" />
@@ -188,8 +226,11 @@ export function ExpensesTable() {
               <TableRow>
                 <TableHead>Organization</TableHead>
                 <TableHead>Created By</TableHead>
-                <TableHead>Company</TableHead>
-                <TableHead>Purchased Date</TableHead>
+                <TableHead>Type</TableHead>
+                <TableHead>Vendor/Payee</TableHead>
+                <TableHead>Reference</TableHead>
+                <TableHead>Date</TableHead>
+                <TableHead>Payment</TableHead>
                 <TableHead className="text-right">Total</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Created At</TableHead>
@@ -198,7 +239,7 @@ export function ExpensesTable() {
             <TableBody>
               {isLoading ? (
                 <TableRow>
-                  <TableCell colSpan={7}>
+                  <TableCell colSpan={10}>
                     <div className="flex items-center justify-center py-8">
                       <Loader
                         size="md"
@@ -210,7 +251,7 @@ export function ExpensesTable() {
                 </TableRow>
               ) : expenses.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={7} className="h-24 text-center">
+                  <TableCell colSpan={10} className="h-24 text-center">
                     No expenses found
                   </TableCell>
                 </TableRow>
@@ -221,9 +262,22 @@ export function ExpensesTable() {
                     <TableCell>
                       {e.createdByUser?.name || e.createdByUser?.email || "-"}
                     </TableCell>
-                    <TableCell>{e.companyName}</TableCell>
                     <TableCell>
-                      {new Date(e.purchasedDate).toLocaleDateString()}
+                      <Badge variant="outline">
+                        {typeLabel(e.expenseType)}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>{e.vendor || "-"}</TableCell>
+                    <TableCell className="font-mono text-xs">
+                      {e.expenseType === "GENERAL" ? "-" : e.reference || "-"}
+                    </TableCell>
+                    <TableCell>
+                      {new Date(e.date).toLocaleDateString()}
+                    </TableCell>
+                    <TableCell className="capitalize">
+                      {String(e.paymentMethod || "-")
+                        .toLowerCase()
+                        .replace(/_/g, " ")}
                     </TableCell>
                     <TableCell className="text-right  font-mono text-sm font-semibold ">
                       {formatMoney(e.total)}

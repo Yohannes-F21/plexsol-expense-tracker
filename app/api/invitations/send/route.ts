@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireRole } from "@/lib/auth";
 import { createInvitation } from "@/lib/invitation";
-import { sendInviteEmail } from "@/lib/email";
+import { getEmailErrorSummary, sendInviteEmail } from "@/lib/email";
 import { prisma } from "@/lib/prisma";
 import { Prisma } from "@prisma/client";
 import { z } from "zod";
@@ -26,13 +26,13 @@ export async function POST(request: Request) {
       if (!validatedData.organizationId) {
         return NextResponse.json(
           { error: "Organization ID required for Super Admin" },
-          { status: 400 }
+          { status: 400 },
         );
       }
       if (validatedData.role !== "ORG_ADMIN") {
         return NextResponse.json(
           { error: "Super Admin can only invite Org Admins" },
-          { status: 400 }
+          { status: 400 },
         );
       }
       organizationId = validatedData.organizationId;
@@ -44,7 +44,7 @@ export async function POST(request: Request) {
       if (!org) {
         return NextResponse.json(
           { error: "Organization not found" },
-          { status: 404 }
+          { status: 404 },
         );
       }
 
@@ -54,13 +54,13 @@ export async function POST(request: Request) {
       if (!session.organizationId) {
         return NextResponse.json(
           { error: "Organization ID missing" },
-          { status: 400 }
+          { status: 400 },
         );
       }
       if (validatedData.role !== "STAFF") {
         return NextResponse.json(
           { error: "Org Admin can only invite Staff members" },
-          { status: 400 }
+          { status: 400 },
         );
       }
       organizationId = session.organizationId;
@@ -73,7 +73,7 @@ export async function POST(request: Request) {
       if (!org) {
         return NextResponse.json(
           { error: "Organization not found" },
-          { status: 404 }
+          { status: 404 },
         );
       }
 
@@ -88,7 +88,7 @@ export async function POST(request: Request) {
     if (existingUser) {
       return NextResponse.json(
         { error: "User already exists" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -104,7 +104,7 @@ export async function POST(request: Request) {
     if (existingInvitation) {
       return NextResponse.json(
         { error: "Invitation already sent to this email" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -113,13 +113,13 @@ export async function POST(request: Request) {
       validatedData.email,
       organizationId,
       session.id,
-      validatedData.role
+      validatedData.role,
     );
 
     const appUrlFromEnv = process.env.NEXT_PUBLIC_APP_URL;
     const baseUrl = (appUrlFromEnv ?? new URL(request.url).origin).replace(
       /\/$/,
-      ""
+      "",
     );
     const inviteUrl = `${baseUrl}/accept-invite?token=${invitation.token}`;
 
@@ -138,16 +138,15 @@ export async function POST(request: Request) {
       } catch (cleanupError) {
         console.warn(
           "Failed to cleanup invitation after email failure",
-          cleanupError
+          cleanupError,
         );
       }
 
       return NextResponse.json(
         {
-          error:
-            e instanceof Error ? e.message : "Failed to send invitation email",
+          error: getEmailErrorSummary(e),
         },
-        { status: 500 }
+        { status: 500 },
       );
     }
 
@@ -173,14 +172,14 @@ export async function POST(request: Request) {
     if (error instanceof z.ZodError) {
       return NextResponse.json(
         { error: "Invalid input", details: error.errors },
-        { status: 400 }
+        { status: 400 },
       );
     }
     return NextResponse.json(
       {
         error: error instanceof Error ? error.message : "Internal server error",
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

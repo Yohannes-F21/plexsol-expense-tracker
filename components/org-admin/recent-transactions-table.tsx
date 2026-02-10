@@ -15,6 +15,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 
 interface Expense {
   id: string;
+  expenseType: "RECEIPT" | "PAYMENT_VOUCHER" | "GENERAL";
   amount: number;
   description: string;
   status: string;
@@ -25,6 +26,27 @@ interface Expense {
   category?: {
     name: string;
   };
+}
+
+function formatExpenseType(expenseType: Expense["expenseType"]): string {
+  switch (expenseType) {
+    case "RECEIPT":
+      return "Receipt";
+    case "PAYMENT_VOUCHER":
+      return "Voucher";
+    case "GENERAL":
+      return "General";
+    default:
+      return expenseType;
+  }
+}
+
+function formatMoney(amount: number): string {
+  if (!Number.isFinite(amount)) return "-";
+  return amount.toLocaleString("en-US", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
 }
 
 export function RecentTransactionsTable() {
@@ -62,6 +84,7 @@ export function RecentTransactionsTable() {
           <TableRow>
             <TableHead className="whitespace-nowrap">Date</TableHead>
             <TableHead className="whitespace-nowrap">Staff</TableHead>
+            <TableHead className="whitespace-nowrap">Type</TableHead>
             <TableHead className="whitespace-nowrap">Category</TableHead>
             <TableHead className="whitespace-nowrap">Amount</TableHead>
             <TableHead className="whitespace-nowrap">Status</TableHead>
@@ -77,10 +100,13 @@ export function RecentTransactionsTable() {
                 {expense.user.name}
               </TableCell>
               <TableCell className="whitespace-nowrap">
+                {formatExpenseType(expense.expenseType)}
+              </TableCell>
+              <TableCell className="whitespace-nowrap">
                 {expense.category?.name || "N/A"}
               </TableCell>
               <TableCell className="whitespace-nowrap font-mono font-semibold">
-                {expense.amount.toFixed(2)}
+                {formatMoney(expense.amount)}
                 <span className="ml-1 ">ETB</span>
               </TableCell>
               <TableCell className="whitespace-nowrap">

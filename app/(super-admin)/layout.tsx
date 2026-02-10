@@ -49,9 +49,9 @@ export default async function SuperAdminLayout({
     <QueryProvider>
       <div className="flex h-screen overflow-hidden bg-background">
         <AppSidebar navItems={navItems} role="SUPER_ADMIN" />
-        <div className="flex flex-1 flex-col overflow-hidden">
+        <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
           <AppHeader user={session} />
-          <main className="flex-1 overflow-y-auto p-6">{children}</main>
+          <main className="min-h-0 flex-1 overflow-y-auto p-6">{children}</main>
         </div>
       </div>
     </QueryProvider>

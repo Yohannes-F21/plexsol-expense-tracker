@@ -28,7 +28,7 @@ export async function GET() {
 
     return NextResponse.json({ bankAccounts });
   } catch (error) {
-    console.error("[v0] Staff bank accounts error:", error);
+    console.error("Staff bank accounts error:", error);
     return NextResponse.json(
       {
         error: error instanceof Error ? error.message : "Internal server error",

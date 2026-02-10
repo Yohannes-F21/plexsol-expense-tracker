@@ -15,7 +15,7 @@ export async function GET() {
     if (!session.organizationId) {
       return NextResponse.json(
         { error: "Organization ID missing" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -39,12 +39,12 @@ export async function GET() {
       })),
     });
   } catch (error) {
-    console.error("[v0] Get categories error:", error);
+    console.error(" Get categories error:", error);
     return NextResponse.json(
       {
         error: error instanceof Error ? error.message : "Internal server error",
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

@@ -45,7 +45,7 @@ export async function GET(request: Request) {
         },
         _count: {
           select: {
-            expenses: true,
+            expenseBases: true,
           },
         },
       },
@@ -56,7 +56,7 @@ export async function GET(request: Request) {
 
     return NextResponse.json(users);
   } catch (error) {
-    console.error("[v0] Get users error:", error);
+    console.error("Get users error:", error);
     return NextResponse.json(
       {
         error: error instanceof Error ? error.message : "Internal server error",

@@ -12,7 +12,7 @@ const rejectSchema = z
 
 export async function POST(
   request: Request,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: Promise<{ id: string }> },
 ) {
   try {
     const session = await requireRole(["ORG_ADMIN"]);
@@ -30,12 +30,19 @@ export async function POST(
     if (!session.organizationId) {
       return NextResponse.json(
         { error: "Organization ID missing" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
-    const expense = await prisma.expense.findUnique({
+    const expense = await prisma.expenseBase.findUnique({
       where: { id },
+      select: {
+        id: true,
+        organizationId: true,
+        isActive: true,
+        status: true,
+        expenseType: true,
+      },
     });
 
     if (
@@ -46,22 +53,26 @@ export async function POST(
       return NextResponse.json({ error: "Expense not found" }, { status: 404 });
     }
 
+    if (expense.expenseType !== "RECEIPT") {
+      return NextResponse.json({ error: "Expense not found" }, { status: 404 });
+    }
+
     if (expense.status === "APPROVED" || expense.status === "REJECTED") {
       return NextResponse.json(
         { error: "Expense already finalized" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
     const [updatedExpense] = await prisma.$transaction([
-      prisma.expense.update({
+      prisma.expenseBase.update({
         where: { id },
-        data: { status: "REJECTED" },
+        data: { status: "REJECTED", rejectedAt: new Date() },
         select: { id: true, status: true },
       }),
       prisma.approvalHistory.create({
         data: {
-          expenseId: id,
+          expenseBaseId: id,
           action: "REJECTED",
           comment,
           performedById: session.id,
@@ -82,12 +93,12 @@ export async function POST(
 
     return NextResponse.json({ expense: updatedExpense });
   } catch (error) {
-    console.error("[v0] Reject expense error:", error);
+    console.error(" Reject expense error:", error);
     return NextResponse.json(
       {
         error: error instanceof Error ? error.message : "Internal server error",
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

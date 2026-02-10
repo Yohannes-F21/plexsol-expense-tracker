@@ -56,9 +56,10 @@ interface Organization {
   industry?: string;
   isActive: boolean;
   createdAt: string;
+  activeExpenseBasesCount?: number;
   _count: {
     users: number;
-    expenses: number;
+    expenseBases: number;
   };
 }
 
@@ -172,9 +173,9 @@ export function OrganizationsTable() {
       cell: ({ row }) => <div>{row.original._count.users}</div>,
     },
     {
-      accessorKey: "_count.expenses",
+      accessorKey: "activeExpenseBasesCount",
       header: "Expenses",
-      cell: ({ row }) => <div>{row.original._count.expenses}</div>,
+      cell: ({ row }) => <div>{row.original.activeExpenseBasesCount ?? 0}</div>,
     },
     {
       accessorKey: "createdAt",

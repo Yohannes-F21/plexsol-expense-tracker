@@ -59,23 +59,75 @@ export default async function DashboardPage() {
     );
   }
 
+  const organizationId = session.organizationId;
+  const userId = session.id;
+
   let grouped: any[] | null = null;
+  let approvedTotal = 0;
 
   try {
-    grouped = await (prisma.expense.groupBy as any)({
-      by: ["status"],
-      where: {
-        organizationId: session.organizationId,
-        createdByUserId: session.id,
-        isActive: true,
-      },
-      _count: { _all: true },
-      _sum: { total: true },
-    });
+    const [counts, receiptApproved, voucherApproved, generalApproved] =
+      await prisma.$transaction([
+        prisma.expenseBase.groupBy({
+          by: ["status"],
+          orderBy: { status: "asc" },
+          where: {
+            organizationId,
+            createdByUserId: userId,
+            isActive: true,
+          },
+          _count: { _all: true },
+        }),
+        prisma.receiptExpense.aggregate({
+          where: {
+            expenseBase: {
+              is: {
+                organizationId,
+                createdByUserId: userId,
+                isActive: true,
+                status: "APPROVED",
+              },
+            },
+          },
+          _sum: { total: true },
+        }),
+        prisma.paymentVoucherExpense.aggregate({
+          where: {
+            expenseBase: {
+              is: {
+                organizationId,
+                createdByUserId: userId,
+                isActive: true,
+                status: "APPROVED",
+              },
+            },
+          },
+          _sum: { totalAmount: true },
+        }),
+        prisma.generalExpense.aggregate({
+          where: {
+            expenseBase: {
+              is: {
+                organizationId,
+                createdByUserId: userId,
+                isActive: true,
+                status: "APPROVED",
+              },
+            },
+          },
+          _sum: { amount: true },
+        }),
+      ]);
+
+    grouped = counts;
+    approvedTotal =
+      asNumber(receiptApproved._sum.total) +
+      asNumber(voucherApproved._sum.totalAmount) +
+      asNumber(generalApproved._sum.amount);
   } catch (e) {
     console.warn(
       "[staff-dashboard] Failed to load dashboard stats:",
-      formatError(e)
+      formatError(e),
     );
     grouped = null;
   }
@@ -89,15 +141,9 @@ export default async function DashboardPage() {
   }
 
   const countByStatus = new Map<string, number>();
-  const sumTotalByStatus = new Map<string, number>();
 
   for (const row of grouped) {
     countByStatus.set(row.status, row._count._all);
-    const sumValue = row._sum.total;
-    sumTotalByStatus.set(
-      row.status,
-      typeof sumValue === "number" ? sumValue : sumValue ? Number(sumValue) : 0
-    );
   }
 
   const pending =
@@ -105,7 +151,6 @@ export default async function DashboardPage() {
   const approved = countByStatus.get("APPROVED") ?? 0;
   const rejected = countByStatus.get("REJECTED") ?? 0;
   const total = pending + approved + rejected;
-  const approvedTotal = sumTotalByStatus.get("APPROVED") ?? 0;
 
   const kpis = [
     {
@@ -150,27 +195,100 @@ export default async function DashboardPage() {
     },
   ];
 
-  const recent = await prisma.expense.findMany({
+  const recentBases = await prisma.expenseBase.findMany({
     where: {
-      organizationId: session.organizationId,
-      createdByUserId: session.id,
+      organizationId,
+      createdByUserId: userId,
       isActive: true,
     },
     orderBy: { createdAt: "desc" },
     take: 10,
     select: {
       id: true,
-      companyName: true,
-      total: true,
+      expenseType: true,
       status: true,
       createdAt: true,
-      items: {
-        take: 1,
-        orderBy: { id: "asc" },
-        select: { subcategory: { select: { name: true } } },
+      receiptExpense: {
+        select: {
+          companyName: true,
+          total: true,
+          items: {
+            take: 1,
+            orderBy: { id: "asc" },
+            select: { category: { select: { name: true } } },
+          },
+        },
+      },
+      paymentVoucherExpense: {
+        select: {
+          paidTo: true,
+          totalAmount: true,
+          items: {
+            take: 1,
+            orderBy: { id: "asc" },
+            select: { category: { select: { name: true } } },
+          },
+        },
+      },
+      generalExpense: {
+        select: {
+          description: true,
+          amount: true,
+          category: { select: { name: true } },
+        },
       },
     },
   });
+
+  type RecentRow = {
+    id: string;
+    createdAt: Date;
+    status: string;
+    description: string;
+    category: string;
+    amount: unknown;
+  };
+
+  const recentWithNulls: Array<RecentRow | null> = recentBases.map((e) => {
+    if (e.expenseType === "RECEIPT" && e.receiptExpense) {
+      return {
+        id: e.id,
+        createdAt: e.createdAt,
+        status: e.status,
+        description: e.receiptExpense.companyName || "-",
+        category: e.receiptExpense.items[0]?.category?.name ?? "N/A",
+        amount: e.receiptExpense.total,
+      };
+    }
+
+    if (e.expenseType === "PAYMENT_VOUCHER" && e.paymentVoucherExpense) {
+      return {
+        id: e.id,
+        createdAt: e.createdAt,
+        status: e.status,
+        description: e.paymentVoucherExpense.paidTo || "-",
+        category: e.paymentVoucherExpense.items[0]?.category?.name ?? "N/A",
+        amount: e.paymentVoucherExpense.totalAmount,
+      };
+    }
+
+    if (e.expenseType === "GENERAL" && e.generalExpense) {
+      return {
+        id: e.id,
+        createdAt: e.createdAt,
+        status: e.status,
+        description: e.generalExpense.description || "-",
+        category: e.generalExpense.category?.name ?? "N/A",
+        amount: e.generalExpense.amount,
+      };
+    }
+
+    return null;
+  });
+
+  const recent: RecentRow[] = recentWithNulls.filter(
+    (x): x is RecentRow => x !== null,
+  );
 
   const statusColors: Record<
     string,
@@ -208,7 +326,7 @@ export default async function DashboardPage() {
               </CardTitle>
               <div
                 className={
-                  "h-11 w-11 rounded-full shadow-md flex items-center justify-center " +
+                  "h-11 w-11 rounded-xl shadow-md flex items-center justify-center " +
                   kpi.iconBg
                 }
               >
@@ -259,21 +377,19 @@ export default async function DashboardPage() {
                 </TableHeader>
                 <TableBody>
                   {recent.map((expense) => {
-                    const categoryName =
-                      expense.items[0]?.subcategory?.name ?? "N/A";
                     return (
                       <TableRow key={expense.id}>
                         <TableCell className="whitespace-nowrap">
                           {new Date(expense.createdAt).toLocaleDateString()}
                         </TableCell>
                         <TableCell className="whitespace-nowrap">
-                          {expense.companyName || "-"}
+                          {expense.description}
                         </TableCell>
                         <TableCell className="whitespace-nowrap">
-                          {categoryName}
+                          {expense.category}
                         </TableCell>
                         <TableCell className="whitespace-nowrap font-mono font-semibold">
-                          {asNumber(expense.total).toFixed(2)}
+                          {asNumber(expense.amount).toFixed(2)}
                           <span className="ml-1">ETB</span>
                         </TableCell>
                         <TableCell className="whitespace-nowrap">

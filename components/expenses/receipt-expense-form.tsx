@@ -67,7 +67,9 @@ const receiptSchema = z
   .object({
     purchasedDate: z.string().min(1, "Purchased date is required"),
     companyName: z.string().min(1, "Company name is required"),
-    tinNumber: z.string().min(1, "TIN is required"),
+    tinNumber: z
+      .string()
+      .min(10, "TIN is required and must be at least 10 characters"),
     fsNumber: z.string().min(1, "FS number is required"),
     mrcNumber: z.string().trim().min(1, "MRC number is required"),
     invoiceNumber: z.string().optional(),
@@ -136,7 +138,7 @@ function normalizeCapturedImageFile(file: File): File {
 
 async function downscaleToJpeg(
   file: File,
-  opts?: { maxSide?: number; quality?: number }
+  opts?: { maxSide?: number; quality?: number },
 ) {
   // Camera captures can be very large; keep output small so OCR doesn't time out.
   const initialMaxSide = opts?.maxSide ?? 1024;
@@ -188,7 +190,7 @@ async function downscaleToJpeg(
       ctx.drawImage(img, 0, 0, dstW, dstH);
 
       const blob = await new Promise<Blob | null>((resolve) =>
-        canvas.toBlob(resolve, "image/jpeg", attempt.quality)
+        canvas.toBlob(resolve, "image/jpeg", attempt.quality),
       );
 
       if (!blob) continue;
@@ -214,7 +216,7 @@ async function downscaleToJpeg(
         ctx.imageSmoothingQuality = "high";
         ctx.drawImage(img, 0, 0, dstW, dstH);
         const blob = await new Promise<Blob | null>((resolve) =>
-          canvas.toBlob(resolve, "image/jpeg", 0.42)
+          canvas.toBlob(resolve, "image/jpeg", 0.42),
         );
         if (blob && blob.size < best.size) best = blob;
       }
@@ -250,6 +252,7 @@ function normalizeCategoryType(value: unknown): CategoryTypeUi {
 
 export type ReceiptExpenseDetail = {
   id: string;
+  expenseType: "RECEIPT";
   purchasedDate: string;
   companyName: string;
   tinNumber: string;
@@ -320,7 +323,7 @@ export function ReceiptExpenseForm(props: {
   const [captureOpen, setCaptureOpen] = useState(false);
   const [capturedFile, setCapturedFile] = useState<File | null>(null);
   const [capturedPreviewUrl, setCapturedPreviewUrl] = useState<string | null>(
-    null
+    null,
   );
   const [isSubmittingCapture, setIsSubmittingCapture] = useState(false);
 
@@ -478,7 +481,7 @@ export function ReceiptExpenseForm(props: {
   const bankAccounts = bankAccountsPayload?.bankAccounts ?? [];
   const activeBankAccounts = useMemo(
     () => bankAccounts.filter((b) => b.isActive),
-    [bankAccounts]
+    [bankAccounts],
   );
 
   const unitById = useMemo(() => {
@@ -525,7 +528,7 @@ export function ReceiptExpenseForm(props: {
         }),
       ]);
       toast.success(
-        props.mode === "edit" ? "Expense updated" : "Expense created"
+        props.mode === "edit" ? "Expense updated" : "Expense created",
       );
       const destination = props.onSuccessNavigateTo
         ? props.onSuccessNavigateTo(data.expense.id)
@@ -535,7 +538,7 @@ export function ReceiptExpenseForm(props: {
     },
     onError: (err) => {
       toast.error(
-        err instanceof Error ? err.message : "Failed to save expense"
+        err instanceof Error ? err.message : "Failed to save expense",
       );
     },
   });
@@ -568,7 +571,7 @@ export function ReceiptExpenseForm(props: {
     onSuccess: (data) => {
       const setIfEmpty = (
         key: keyof ReceiptExpenseHeaderInput,
-        value: string | undefined
+        value: string | undefined,
       ) => {
         const v = String(value ?? "").trim();
         if (!v) return;
@@ -584,7 +587,7 @@ export function ReceiptExpenseForm(props: {
       // Convert dd/MM/yyyy -> yyyy-mm-dd for <input type="date">
       if (data.purchasedDate) {
         const m = String(data.purchasedDate).match(
-          /^\s*(\d{2})\/(\d{2})\/(\d{4})\s*$/
+          /^\s*(\d{2})\/(\d{2})\/(\d{4})\s*$/,
         );
         if (m) {
           const dd = m[1];
@@ -641,7 +644,7 @@ export function ReceiptExpenseForm(props: {
 
       if (filledHeader <= 1 && parsedItems.length === 0) {
         toast.warning(
-          "OCR couldn't extract fields. Try a clearer photo; you can still fill manually."
+          "OCR couldn't extract fields. Try a clearer photo; you can still fill manually.",
         );
       } else {
         toast.success("Receipt scanned. Please review before submitting.");
@@ -655,7 +658,7 @@ export function ReceiptExpenseForm(props: {
       toast.warning(
         err instanceof Error
           ? `OCR failed: ${err.message}`
-          : "OCR failed. You can still enter details manually."
+          : "OCR failed. You can still enter details manually.",
       );
     },
   });
@@ -673,6 +676,7 @@ export function ReceiptExpenseForm(props: {
     const bankAccountId = header.bankAccountId?.trim();
 
     const payload = {
+      ...(props.mode === "create" ? { expenseType: "RECEIPT" } : {}),
       purchasedDate: new Date(header.purchasedDate),
       companyName: header.companyName,
       tinNumber: header.tinNumber,
@@ -813,9 +817,8 @@ export function ReceiptExpenseForm(props: {
                               // Downscale + convert to JPEG to reduce OCR timeouts.
                               const normalized =
                                 normalizeCapturedImageFile(capturedFile);
-                              const prepared = await downscaleToJpeg(
-                                normalized
-                              );
+                              const prepared =
+                                await downscaleToJpeg(normalized);
                               await ocrMutation.mutateAsync(prepared);
                             } finally {
                               setIsSubmittingCapture(false);
@@ -1068,7 +1071,7 @@ export function ReceiptExpenseForm(props: {
                 {items.map((it, idx) => {
                   const lineTotal = computed.lines[idx] ?? 0;
                   const filteredCategories = categories.filter(
-                    (c) => normalizeCategoryType(c.type) === it.categoryType
+                    (c) => normalizeCategoryType(c.type) === it.categoryType,
                   );
 
                   return (
@@ -1081,8 +1084,8 @@ export function ReceiptExpenseForm(props: {
                               prev.map((p, i) =>
                                 i === idx
                                   ? { ...p, itemName: e.target.value }
-                                  : p
-                              )
+                                  : p,
+                              ),
                             )
                           }
                           placeholder="Item name"
@@ -1101,8 +1104,8 @@ export function ReceiptExpenseForm(props: {
                                       categoryType: v as CategoryTypeUi,
                                       subcategoryId: "",
                                     }
-                                  : p
-                              )
+                                  : p,
+                              ),
                             )
                           }
                         >
@@ -1126,8 +1129,8 @@ export function ReceiptExpenseForm(props: {
                           onValueChange={(v) =>
                             setItems((prev) =>
                               prev.map((p, i) =>
-                                i === idx ? { ...p, subcategoryId: v } : p
-                              )
+                                i === idx ? { ...p, subcategoryId: v } : p,
+                              ),
                             )
                           }
                           disabled={isLoadingCategories}
@@ -1155,8 +1158,8 @@ export function ReceiptExpenseForm(props: {
                           onValueChange={(v) =>
                             setItems((prev) =>
                               prev.map((p, i) =>
-                                i === idx ? { ...p, vatCategory: v as any } : p
-                              )
+                                i === idx ? { ...p, vatCategory: v as any } : p,
+                              ),
                             )
                           }
                         >
@@ -1181,8 +1184,8 @@ export function ReceiptExpenseForm(props: {
                                       ...p,
                                       unitOfMeasureId: v,
                                     }
-                                  : p
-                              )
+                                  : p,
+                              ),
                             )
                           }
                           disabled={isLoadingUnits}
@@ -1226,8 +1229,8 @@ export function ReceiptExpenseForm(props: {
                                       ...p,
                                       purchaseTypeId: v,
                                     }
-                                  : p
-                              )
+                                  : p,
+                              ),
                             )
                           }
                           disabled={isLoadingPurchaseTypes}
@@ -1291,8 +1294,8 @@ export function ReceiptExpenseForm(props: {
                                         ? Number(e.target.value)
                                         : ("" as any),
                                     }
-                                  : p
-                              )
+                                  : p,
+                              ),
                             )
                           }
                         />
@@ -1315,8 +1318,8 @@ export function ReceiptExpenseForm(props: {
                                         ? Number(e.target.value)
                                         : ("" as any),
                                     }
-                                  : p
-                              )
+                                  : p,
+                              ),
                             )
                           }
                         />
@@ -1389,8 +1392,8 @@ export function ReceiptExpenseForm(props: {
                 {mutation.isPending
                   ? "Saving..."
                   : props.mode === "edit"
-                  ? "Save Changes"
-                  : "Submit Receipt"}
+                    ? "Save Changes"
+                    : "Submit Receipt"}
               </Button>
             </div>
           </CardContent>

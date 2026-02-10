@@ -134,7 +134,7 @@ export const prisma =
       if (process.env.NODE_ENV === "development") {
         console.warn(
           "[prisma] Falling back to non-adapter PrismaClient",
-          error
+          error,
         );
       }
       return new PrismaClient({ log });

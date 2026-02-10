@@ -18,7 +18,7 @@ export async function PATCH(request: Request, context: any) {
     if (!orgId) {
       return NextResponse.json(
         { error: "Organization ID missing" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -37,7 +37,7 @@ export async function PATCH(request: Request, context: any) {
     if (existing.role !== "STAFF") {
       return NextResponse.json(
         { error: "Only staff members can be activated/deactivated" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -59,12 +59,12 @@ export async function PATCH(request: Request, context: any) {
 
     return NextResponse.json({ success: true, user: updated });
   } catch (error) {
-    console.error("[v0] Update org-admin user active error:", error);
+    console.error("Update org-admin user active error:", error);
 
     if (error instanceof z.ZodError) {
       return NextResponse.json(
         { error: "Invalid input", details: error.errors },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -72,7 +72,7 @@ export async function PATCH(request: Request, context: any) {
       {
         error: error instanceof Error ? error.message : "Internal server error",
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

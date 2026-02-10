@@ -28,7 +28,7 @@ export async function PUT(request: Request, context: any) {
     if (!session.organizationId) {
       return NextResponse.json(
         { error: "Organization ID missing" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -43,14 +43,14 @@ export async function PUT(request: Request, context: any) {
     if (!existing || existing.organizationId !== session.organizationId) {
       return NextResponse.json(
         { error: "Category not found" },
-        { status: 404 }
+        { status: 404 },
       );
     }
 
     if (!existing.isActive) {
       return NextResponse.json(
         { error: "Cannot update an inactive category" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -72,7 +72,7 @@ export async function PUT(request: Request, context: any) {
           error:
             "A category with this name already exists for the selected type.",
         },
-        { status: 409 }
+        { status: 409 },
       );
     }
 
@@ -116,11 +116,11 @@ export async function PUT(request: Request, context: any) {
       },
     });
   } catch (error) {
-    console.error("[v0] Update category error:", error);
+    console.error(" Update category error:", error);
     if (error instanceof z.ZodError) {
       return NextResponse.json(
         { error: "Invalid input", details: error.errors },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -135,7 +135,7 @@ export async function PUT(request: Request, context: any) {
           error:
             "A category with this name already exists for the selected type.",
         },
-        { status: 409 }
+        { status: 409 },
       );
     }
 
@@ -143,7 +143,7 @@ export async function PUT(request: Request, context: any) {
       {
         error: error instanceof Error ? error.message : "Internal server error",
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
@@ -158,7 +158,7 @@ export async function DELETE(request: Request, context: any) {
     if (!session.organizationId) {
       return NextResponse.json(
         { error: "Organization ID missing" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -170,7 +170,7 @@ export async function DELETE(request: Request, context: any) {
     if (!existing || existing.organizationId !== session.organizationId) {
       return NextResponse.json(
         { error: "Category not found" },
-        { status: 404 }
+        { status: 404 },
       );
     }
 
@@ -199,12 +199,12 @@ export async function DELETE(request: Request, context: any) {
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error("[v0] Delete category error:", error);
+    console.error(" Delete category error:", error);
     return NextResponse.json(
       {
         error: error instanceof Error ? error.message : "Internal server error",
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

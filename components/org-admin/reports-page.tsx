@@ -51,6 +51,38 @@ const REPORT_HEADERS = [
 type ReportHeader = (typeof REPORT_HEADERS)[number];
 export type ReportRow = Record<ReportHeader, string | number>;
 
+const REPORT_MONEY_HEADERS: ReadonlySet<ReportHeader> = new Set<ReportHeader>([
+  "Unit Price",
+  "Total Value",
+  "VAT",
+  "Value After VAT",
+]);
+
+function formatMoneyCellValue(value: unknown): string {
+  const n =
+    typeof value === "number"
+      ? value
+      : typeof value === "string"
+        ? Number(value.trim().replace(/,/g, "").replace(/\s+/g, ""))
+        : Number(
+            String(value ?? "")
+              .trim()
+              .replace(/,/g, "")
+              .replace(/\s+/g, ""),
+          );
+
+  if (!Number.isFinite(n)) return String(value ?? "");
+  return n.toLocaleString("en-US", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
+}
+
+function stripThousandsSeparators(value: string | number): string | number {
+  if (typeof value !== "string") return value;
+  return value.replace(/,/g, "");
+}
+
 function toCsv(rows: ReportRow[]): string {
   const escape = (value: string | number | null | undefined) => {
     const s = String(value ?? "");
@@ -61,7 +93,15 @@ function toCsv(rows: ReportRow[]): string {
   const lines: string[] = [];
   lines.push(REPORT_HEADERS.map((h) => escape(h)).join(","));
   for (const row of rows) {
-    lines.push(REPORT_HEADERS.map((h) => escape(row[h])).join(","));
+    lines.push(
+      REPORT_HEADERS.map((h) => {
+        const v = row[h];
+        const sanitized = REPORT_MONEY_HEADERS.has(h)
+          ? stripThousandsSeparators(v)
+          : v;
+        return escape(sanitized);
+      }).join(","),
+    );
   }
   return lines.join("\r\n");
 }
@@ -98,18 +138,19 @@ export function ReportsPage() {
     const hasBoth = Boolean(from && to);
 
     if (!hasBoth) {
-      if (appliedRange !== null) setAppliedRange(null);
+      setAppliedRange((prev) => (prev !== null ? null : prev));
       return;
     }
 
-    if (appliedRange?.from === from && appliedRange?.to === to) return;
-
     const t = setTimeout(() => {
-      setAppliedRange({ from, to });
+      setAppliedRange((prev) => {
+        if (prev?.from === from && prev?.to === to) return prev;
+        return { from, to };
+      });
     }, 250);
 
     return () => clearTimeout(t);
-  }, [from, to, appliedRange]);
+  }, [from, to]);
 
   const rangeKey = useMemo(() => {
     return appliedRange ? `${appliedRange.from}__${appliedRange.to}` : "all";
@@ -140,7 +181,10 @@ export function ReportsPage() {
         accessorFn: (row) => row[h],
         cell: ({ getValue }) => {
           const v = getValue();
-          return <span className="whitespace-nowrap">{String(v ?? "")}</span>;
+          const display = REPORT_MONEY_HEADERS.has(h)
+            ? formatMoneyCellValue(v)
+            : String(v ?? "");
+          return <span className="whitespace-nowrap">{display}</span>;
         },
       })),
     [],
@@ -185,7 +229,7 @@ export function ReportsPage() {
         "text/csv;charset=utf-8;",
       );
     } catch (e) {
-      console.error("[v0] Download CSV error:", e);
+      console.error("Download CSV error:", e);
       toast.error("Failed to download CSV");
     }
   };

@@ -25,7 +25,7 @@ export async function PUT(request: Request, context: any) {
     if (!orgId) {
       return NextResponse.json(
         { error: "Organization ID missing" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -40,14 +40,14 @@ export async function PUT(request: Request, context: any) {
     if (!existing || existing.organizationId !== orgId) {
       return NextResponse.json(
         { error: "Bank account not found" },
-        { status: 404 }
+        { status: 404 },
       );
     }
 
     if (!existing.isActive) {
       return NextResponse.json(
         { error: "Cannot update an inactive bank account" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -63,7 +63,7 @@ export async function PUT(request: Request, context: any) {
     if (accountNumberDuplicate) {
       return NextResponse.json(
         { error: "A bank account with this account number already exists." },
-        { status: 409 }
+        { status: 409 },
       );
     }
 
@@ -103,12 +103,12 @@ export async function PUT(request: Request, context: any) {
 
     return NextResponse.json({ success: true, bankAccount });
   } catch (error) {
-    console.error("[v0] Update bank account error:", error);
+    console.error(" Update bank account error:", error);
 
     if (error instanceof z.ZodError) {
       return NextResponse.json(
         { error: "Invalid input", details: error.errors },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -120,7 +120,7 @@ export async function PUT(request: Request, context: any) {
     ) {
       return NextResponse.json(
         { error: "A bank account with this account number already exists." },
-        { status: 409 }
+        { status: 409 },
       );
     }
 
@@ -128,7 +128,7 @@ export async function PUT(request: Request, context: any) {
       {
         error: error instanceof Error ? error.message : "Internal server error",
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
@@ -144,7 +144,7 @@ export async function DELETE(request: Request, context: any) {
     if (!orgId) {
       return NextResponse.json(
         { error: "Organization ID missing" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -156,7 +156,7 @@ export async function DELETE(request: Request, context: any) {
     if (!existing || existing.organizationId !== orgId) {
       return NextResponse.json(
         { error: "Bank account not found" },
-        { status: 404 }
+        { status: 404 },
       );
     }
 
@@ -182,12 +182,12 @@ export async function DELETE(request: Request, context: any) {
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error("[v0] Delete bank account error:", error);
+    console.error(" Delete bank account error:", error);
     return NextResponse.json(
       {
         error: error instanceof Error ? error.message : "Internal server error",
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
@@ -203,7 +203,7 @@ export async function PATCH(request: Request, context: any) {
     if (!orgId) {
       return NextResponse.json(
         { error: "Organization ID missing" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -218,7 +218,7 @@ export async function PATCH(request: Request, context: any) {
     if (!existing || existing.organizationId !== orgId) {
       return NextResponse.json(
         { error: "Bank account not found" },
-        { status: 404 }
+        { status: 404 },
       );
     }
 
@@ -249,12 +249,12 @@ export async function PATCH(request: Request, context: any) {
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error("[v0] Set bank account active error:", error);
+    console.error(" Set bank account active error:", error);
 
     if (error instanceof z.ZodError) {
       return NextResponse.json(
         { error: "Invalid input", details: error.errors },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -262,7 +262,7 @@ export async function PATCH(request: Request, context: any) {
       {
         error: error instanceof Error ? error.message : "Internal server error",
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

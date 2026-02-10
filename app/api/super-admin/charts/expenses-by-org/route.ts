@@ -3,11 +3,18 @@ import { requireRole } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 
 function asNumber(x: any): number {
-  if (typeof x === "number") return x;
-  if (typeof x === "string") return Number(x);
-  if (x && typeof x === "object" && typeof x.toNumber === "function")
-    return x.toNumber();
-  return Number(x);
+  if (x === null || x === undefined) return 0;
+  if (typeof x === "number") return Number.isFinite(x) ? x : 0;
+  if (typeof x === "string") {
+    const n = Number(x);
+    return Number.isFinite(n) ? n : 0;
+  }
+  if (x && typeof x === "object" && typeof x.toNumber === "function") {
+    const n = x.toNumber();
+    return Number.isFinite(n) ? n : 0;
+  }
+  const n = Number(x);
+  return Number.isFinite(n) ? n : 0;
 }
 
 export async function GET() {
@@ -21,10 +28,13 @@ export async function GET() {
       select: {
         id: true,
         name: true,
-        expenses: {
-          where: { isActive: true },
+        expenseBases: {
+          where: { isActive: true, status: "APPROVED" },
           select: {
-            total: true,
+            expenseType: true,
+            receiptExpense: { select: { total: true } },
+            paymentVoucherExpense: { select: { totalAmount: true } },
+            generalExpense: { select: { amount: true } },
           },
         },
       },
@@ -33,11 +43,16 @@ export async function GET() {
     const chartData = organizations
       .map((org) => ({
         name: org.name,
-        total: org.expenses.reduce(
-          (sum, expense) => sum + asNumber(expense.total),
-          0
-        ),
-        count: org.expenses.length,
+        total: org.expenseBases.reduce((sum, e) => {
+          const amount =
+            e.expenseType === "RECEIPT"
+              ? asNumber(e.receiptExpense?.total ?? 0)
+              : e.expenseType === "PAYMENT_VOUCHER"
+                ? asNumber(e.paymentVoucherExpense?.totalAmount ?? 0)
+                : asNumber(e.generalExpense?.amount ?? 0);
+          return sum + amount;
+        }, 0),
+        count: org.expenseBases.length,
       }))
       .filter((org) => org.total > 0)
       .sort((a, b) => b.total - a.total)
@@ -45,12 +60,12 @@ export async function GET() {
 
     return NextResponse.json(chartData);
   } catch (error) {
-    console.error("[v0] Get expenses by org chart error:", error);
+    console.error("Get expenses by org chart error:", error);
     return NextResponse.json(
       {
         error: error instanceof Error ? error.message : "Internal server error",
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
