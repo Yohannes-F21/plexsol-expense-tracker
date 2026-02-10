@@ -3,11 +3,18 @@ import { requireRole } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 
 function asNumber(x: any): number {
-  if (typeof x === "number") return x;
-  if (typeof x === "string") return Number(x);
-  if (x && typeof x === "object" && typeof x.toNumber === "function")
-    return x.toNumber();
-  return Number(x);
+  if (x === null || x === undefined) return 0;
+  if (typeof x === "number") return Number.isFinite(x) ? x : 0;
+  if (typeof x === "string") {
+    const n = Number(x);
+    return Number.isFinite(n) ? n : 0;
+  }
+  if (x && typeof x === "object" && typeof x.toNumber === "function") {
+    const n = x.toNumber();
+    return Number.isFinite(n) ? n : 0;
+  }
+  const n = Number(x);
+  return Number.isFinite(n) ? n : 0;
 }
 
 export async function GET() {
@@ -39,10 +46,10 @@ export async function GET() {
         total: org.expenseBases.reduce((sum, e) => {
           const amount =
             e.expenseType === "RECEIPT"
-              ? asNumber(e.receiptExpense?.total)
+              ? asNumber(e.receiptExpense?.total ?? 0)
               : e.expenseType === "PAYMENT_VOUCHER"
-                ? asNumber(e.paymentVoucherExpense?.totalAmount)
-                : asNumber(e.generalExpense?.amount);
+                ? asNumber(e.paymentVoucherExpense?.totalAmount ?? 0)
+                : asNumber(e.generalExpense?.amount ?? 0);
           return sum + amount;
         }, 0),
         count: org.expenseBases.length,
