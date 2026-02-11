@@ -39,7 +39,7 @@ export default async function StaffLayout({
   const session = await getSession();
 
   if (!session || session.role !== "STAFF") {
-    redirect("/signin");
+    redirect(`/unauthorized?code=${session ? 403 : 401}`);
   }
 
   let organization: { name: string } | null = null;

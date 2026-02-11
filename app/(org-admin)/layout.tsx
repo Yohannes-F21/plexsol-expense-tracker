@@ -72,7 +72,7 @@ export default async function OrgAdminLayout({
   const session = await getSession();
 
   if (!session || session.role !== "ORG_ADMIN") {
-    redirect("/signin");
+    redirect(`/unauthorized?code=${session ? 403 : 401}`);
   }
 
   let organization: { name: string } | null = null;

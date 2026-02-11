@@ -33,7 +33,7 @@ export default async function StaffPoliciesPage() {
   const session = await getSession();
 
   if (!session || session.role !== "STAFF") {
-    redirect("/signin");
+    redirect(`/unauthorized?code=${session ? 403 : 401}`);
   }
 
   if (!session.organizationId) {
@@ -74,7 +74,7 @@ export default async function StaffPoliciesPage() {
   }
 
   const categoryIds = Array.from(
-    new Set(policies.flatMap((p) => asStringArray(p.allowedCategories)))
+    new Set(policies.flatMap((p) => asStringArray(p.allowedCategories))),
   );
 
   let categories: Array<{ id: string; name: string; type: string }> = [];
@@ -91,7 +91,7 @@ export default async function StaffPoliciesPage() {
     } catch (e) {
       console.warn(
         "[staff-policies] Failed to load categories:",
-        formatError(e)
+        formatError(e),
       );
       categories = [];
     }

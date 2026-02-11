@@ -5,7 +5,7 @@ export default async function HomePage() {
   const session = await getSession();
 
   if (!session) {
-    redirect("/signin");
+    redirect("/unauthorized?code=401");
   }
 
   if (session.role === "SUPER_ADMIN") {

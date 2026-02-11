@@ -36,7 +36,7 @@ export default async function DashboardPage() {
   const session = await getSession();
 
   if (!session) {
-    redirect("/signin");
+    redirect("/unauthorized?code=401");
   }
 
   if (session.role === "SUPER_ADMIN") {
@@ -48,7 +48,7 @@ export default async function DashboardPage() {
   }
 
   if (session.role !== "STAFF") {
-    redirect("/signin");
+    redirect("/unauthorized?code=403");
   }
 
   if (!session.organizationId) {

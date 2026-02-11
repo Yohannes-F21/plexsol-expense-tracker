@@ -6,7 +6,7 @@ export default async function UsersPage() {
   const session = await getSession();
 
   if (!session || session.role !== "SUPER_ADMIN") {
-    redirect("/signin");
+    redirect(`/unauthorized?code=${session ? 403 : 401}`);
   }
 
   return (

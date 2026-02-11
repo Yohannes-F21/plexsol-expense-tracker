@@ -10,7 +10,7 @@ export default async function EditExpensePage({
   const session = await getSession();
 
   if (!session || (session.role !== "STAFF" && session.role !== "ORG_ADMIN")) {
-    redirect("/signin");
+    redirect(`/unauthorized?code=${session ? 403 : 401}`);
   }
 
   const role = session.role;
