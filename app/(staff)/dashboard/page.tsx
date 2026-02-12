@@ -36,7 +36,9 @@ export default async function DashboardPage() {
   const session = await getSession();
 
   if (!session) {
-    redirect("/unauthorized?code=401");
+    redirect(
+      `/api/auth/signout?next=${encodeURIComponent("/unauthorized?code=401")}`,
+    );
   }
 
   if (session.role === "SUPER_ADMIN") {

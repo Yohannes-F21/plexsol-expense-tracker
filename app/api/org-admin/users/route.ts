@@ -19,7 +19,7 @@ export async function GET() {
         createdAt: true,
         _count: {
           select: {
-            expenses: true,
+            expenseBases: true,
           },
         },
       },

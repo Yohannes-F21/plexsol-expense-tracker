@@ -65,6 +65,16 @@ export async function PATCH(
       // ignore
     }
 
+    if (isActive === false) {
+      await prisma.session.updateMany({
+        where: {
+          isRevoked: false,
+          user: { organizationId: organization.id },
+        },
+        data: { isRevoked: true },
+      });
+    }
+
     return NextResponse.json({
       ...organization,
       activeExpenseBasesCount,

@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
@@ -73,9 +74,18 @@ function SidebarContent({
   return (
     <>
       <div className="flex h-16 items-center border-b border-sidebar-border px-6">
-        <h2 className="text-lg font-semibold text-sidebar-foreground">
-          Expense Tracker
-        </h2>
+        <div className="flex  items-center gap-3 my-2">
+          <Image
+            src="/Plexsol%20Icon-dark%202.png"
+            alt="Plexsol"
+            width={36}
+            height={36}
+            priority
+          />
+          <h2 className="text-md font-semibold text-sidebar-foreground">
+            Plexsol Expense Tracker
+          </h2>
+        </div>
       </div>
 
       <div className="flex-1 overflow-y-auto p-4">

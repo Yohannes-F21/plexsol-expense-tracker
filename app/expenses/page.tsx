@@ -8,8 +8,14 @@ import { ExpensesTable } from "@/components/expenses/expenses-table";
 export default async function ExpensesPage() {
   const session = await getSession();
 
-  if (!session || (session.role !== "STAFF" && session.role !== "ORG_ADMIN")) {
-    redirect(`/unauthorized?code=${session ? 403 : 401}`);
+  if (!session) {
+    redirect(
+      `/api/auth/signout?next=${encodeURIComponent("/unauthorized?code=401")}`,
+    );
+  }
+
+  if (session.role !== "STAFF" && session.role !== "ORG_ADMIN") {
+    redirect("/unauthorized?code=403");
   }
 
   const role = session.role;

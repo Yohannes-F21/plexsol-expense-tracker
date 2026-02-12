@@ -32,8 +32,14 @@ function asStringArray(value: unknown): string[] {
 export default async function StaffPoliciesPage() {
   const session = await getSession();
 
-  if (!session || session.role !== "STAFF") {
-    redirect(`/unauthorized?code=${session ? 403 : 401}`);
+  if (!session) {
+    redirect(
+      `/api/auth/signout?next=${encodeURIComponent("/unauthorized?code=401")}`,
+    );
+  }
+
+  if (session.role !== "STAFF") {
+    redirect("/unauthorized?code=403");
   }
 
   if (!session.organizationId) {

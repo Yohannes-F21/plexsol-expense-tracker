@@ -17,6 +17,12 @@ export async function GET(request: Request) {
     const isActiveParam = searchParams.get("isActive");
     const q = searchParams.get("q")?.trim();
 
+    const page = Math.max(1, Number(searchParams.get("page") || "1"));
+    const pageSize = Math.min(
+      100,
+      Number(searchParams.get("pageSize") || "20"),
+    );
+
     // UUID v4 validation regex
     // const uuidV4Regex =
     //   /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -52,9 +58,18 @@ export async function GET(request: Request) {
       orderBy: {
         createdAt: "desc",
       },
+      skip: (page - 1) * pageSize,
+      take: pageSize,
     });
 
-    return NextResponse.json(users);
+    const total = await prisma.user.count({ where: whereClause });
+
+    return NextResponse.json({
+      total,
+      users,
+      page,
+      pageSize,
+    });
   } catch (error) {
     console.error("Get users error:", error);
     return NextResponse.json(

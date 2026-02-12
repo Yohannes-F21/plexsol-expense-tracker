@@ -23,7 +23,7 @@ export async function POST(request: Request) {
     if (!verification.valid) {
       return NextResponse.json(
         { error: verification.message },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -68,13 +68,16 @@ export async function POST(request: Request) {
     }
 
     // Create session for the new user
-    await createSession({
-      id: user.id,
-      email: user.email,
-      name: user.name,
-      role: user.role,
-      organizationId: user.organizationId,
-    });
+    await createSession(
+      {
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        role: user.role,
+        organizationId: user.organizationId,
+      },
+      request,
+    );
 
     return NextResponse.json({
       success: true,
@@ -90,12 +93,12 @@ export async function POST(request: Request) {
     if (error instanceof z.ZodError) {
       return NextResponse.json(
         { error: "Invalid input", details: error.errors },
-        { status: 400 }
+        { status: 400 },
       );
     }
     return NextResponse.json(
       { error: "Internal server error" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

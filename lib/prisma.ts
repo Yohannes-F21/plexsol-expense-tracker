@@ -47,11 +47,11 @@ function shouldUseNeonAdapter(url: string) {
   if (mode === "neon") return true;
   if (mode === "pg") return false;
 
-  // AUTO mode: prefer TCP (pg) unless explicitly opted into Neon.
-  // Some networks/proxies block WebSocket upgrades, which causes
-  // "Received network error or non-101 status code".
-  void url;
-  return false;
+  // AUTO mode: pick based on the database host.
+  // - For Neon (neon.tech), default to the WebSocket adapter (usually works over 443).
+  // - For non-Neon hosts, default to TCP (pg).
+  // If WebSockets are blocked on a given network, set PRISMA_ADAPTER="pg".
+  return isNeonUrl(url);
 }
 
 const useNeonAdapter = shouldUseNeonAdapter(connectionString);

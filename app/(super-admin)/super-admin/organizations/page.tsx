@@ -5,8 +5,14 @@ import { OrganizationsTable } from "@/components/super-admin/organizations-table
 export default async function OrganizationsPage() {
   const session = await getSession();
 
-  if (!session || session.role !== "SUPER_ADMIN") {
-    redirect(`/unauthorized?code=${session ? 403 : 401}`);
+  if (!session) {
+    redirect(
+      `/api/auth/signout?next=${encodeURIComponent("/unauthorized?code=401")}`,
+    );
+  }
+
+  if (session.role !== "SUPER_ADMIN") {
+    redirect("/unauthorized?code=403");
   }
 
   return (

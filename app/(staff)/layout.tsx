@@ -38,8 +38,14 @@ export default async function StaffLayout({
 }) {
   const session = await getSession();
 
-  if (!session || session.role !== "STAFF") {
-    redirect(`/unauthorized?code=${session ? 403 : 401}`);
+  if (!session) {
+    redirect(
+      `/api/auth/signout?next=${encodeURIComponent("/unauthorized?code=401")}`,
+    );
+  }
+
+  if (session.role !== "STAFF") {
+    redirect("/unauthorized?code=403");
   }
 
   let organization: { name: string } | null = null;

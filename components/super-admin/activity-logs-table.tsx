@@ -144,10 +144,16 @@ function DetailsDialog({ log }: { log: Log }) {
 }
 
 export function ActivityLogsTable() {
-  const [organizationId, setOrganizationId] = useState<string | undefined>(
-    undefined
+  const [organizationNameInput, setOrganizationNameInput] = useState("");
+  const [userNameInput, setUserNameInput] = useState("");
+  const [actionTypeInput, setActionTypeInput] = useState("");
+  const [startInput, setStartInput] = useState<string>("");
+  const [endInput, setEndInput] = useState<string>("");
+
+  const [organizationName, setOrganizationName] = useState<string | undefined>(
+    undefined,
   );
-  const [userId, setUserId] = useState<string | undefined>(undefined);
+  const [userName, setUserName] = useState<string | undefined>(undefined);
   const [actionType, setActionType] = useState<string | undefined>(undefined);
   const [start, setStart] = useState<string | undefined>(undefined);
   const [end, setEnd] = useState<string | undefined>(undefined);
@@ -161,8 +167,8 @@ export function ActivityLogsTable() {
   >({
     queryKey: [
       "super-admin-activity",
-      organizationId,
-      userId,
+      organizationName,
+      userName,
       actionType,
       start,
       end,
@@ -171,8 +177,8 @@ export function ActivityLogsTable() {
     ],
     queryFn: async () => {
       const params = new URLSearchParams();
-      if (organizationId) params.set("organizationId", organizationId);
-      if (userId) params.set("userId", userId);
+      if (organizationName) params.set("organizationName", organizationName);
+      if (userName) params.set("userName", userName);
       if (actionType) params.set("actionType", actionType);
       if (start) params.set("start", start);
       if (end) params.set("end", end);
@@ -180,7 +186,7 @@ export function ActivityLogsTable() {
       params.set("pageSize", String(pageSize));
 
       const res = await apiClient<{ total: number; logs: Log[] }>(
-        `/api/super-admin/activity-logs?${params.toString()}`
+        `/api/super-admin/activity-logs?${params.toString()}`,
       );
       return res;
     },
@@ -195,31 +201,45 @@ export function ActivityLogsTable() {
       <CardContent className="space-y-4">
         <div className="flex flex-col lg:flex-row gap-2">
           <Input
-            placeholder="Organization ID"
-            value={organizationId || ""}
-            onChange={(e) => setOrganizationId(e.target.value || undefined)}
+            placeholder="Organization name"
+            value={organizationNameInput}
+            onChange={(e) => setOrganizationNameInput(e.target.value)}
           />
           <Input
-            placeholder="User ID"
-            value={userId || ""}
-            onChange={(e) => setUserId(e.target.value || undefined)}
+            placeholder="User name"
+            value={userNameInput}
+            onChange={(e) => setUserNameInput(e.target.value)}
           />
           <Input
             placeholder="Action Type"
-            value={actionType || ""}
-            onChange={(e) => setActionType(e.target.value || undefined)}
+            value={actionTypeInput}
+            onChange={(e) => setActionTypeInput(e.target.value)}
           />
           <Input
             type="date"
-            value={start || ""}
-            onChange={(e) => setStart(e.target.value || undefined)}
+            value={startInput}
+            onChange={(e) => setStartInput(e.target.value)}
           />
           <Input
             type="date"
-            value={end || ""}
-            onChange={(e) => setEnd(e.target.value || undefined)}
+            value={endInput}
+            onChange={(e) => setEndInput(e.target.value)}
           />
-          <Button onClick={() => setPageIndex(0)}>Apply</Button>
+          <Button
+            onClick={() => {
+              const org = organizationNameInput.trim();
+              const user = userNameInput.trim();
+              const action = actionTypeInput.trim();
+              setOrganizationName(org ? org : undefined);
+              setUserName(user ? user : undefined);
+              setActionType(action ? action : undefined);
+              setStart(startInput ? startInput : undefined);
+              setEnd(endInput ? endInput : undefined);
+              setPageIndex(0);
+            }}
+          >
+            Apply
+          </Button>
         </div>
 
         {isLoading ? (
