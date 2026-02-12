@@ -71,8 +71,14 @@ export default async function OrgAdminLayout({
 }) {
   const session = await getSession();
 
-  if (!session || session.role !== "ORG_ADMIN") {
-    redirect(`/unauthorized?code=${session ? 403 : 401}`);
+  if (!session) {
+    redirect(
+      `/api/auth/signout?next=${encodeURIComponent("/unauthorized?code=401")}`,
+    );
+  }
+
+  if (session.role !== "ORG_ADMIN") {
+    redirect("/unauthorized?code=403");
   }
 
   let organization: { name: string } | null = null;

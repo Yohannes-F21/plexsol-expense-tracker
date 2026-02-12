@@ -5,8 +5,14 @@ import { UsersTable } from "@/components/super-admin/users-table";
 export default async function UsersPage() {
   const session = await getSession();
 
-  if (!session || session.role !== "SUPER_ADMIN") {
-    redirect(`/unauthorized?code=${session ? 403 : 401}`);
+  if (!session) {
+    redirect(
+      `/api/auth/signout?next=${encodeURIComponent("/unauthorized?code=401")}`,
+    );
+  }
+
+  if (session.role !== "SUPER_ADMIN") {
+    redirect("/unauthorized?code=403");
   }
 
   return (

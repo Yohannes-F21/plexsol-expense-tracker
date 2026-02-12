@@ -5,7 +5,7 @@
   "scripts": {
     "build": "next build",
     "dev": "node --no-enable-source-maps ./node_modules/next/dist/bin/next dev",
-    "postinstall": "prisma generate",
+    "postinstall": "prisma generate && node scripts/ensure-prisma-dot-prisma.cjs",
     "lint": "eslint .",
     "start": "next start"
   },

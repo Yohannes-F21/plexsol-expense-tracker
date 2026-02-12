@@ -42,13 +42,16 @@ export async function POST(request: Request) {
     });
 
     // Create session
-    await createSession({
-      id: user.id,
-      email: user.email,
-      name: user.name,
-      role: user.role,
-      organizationId: user.organizationId,
-    });
+    await createSession(
+      {
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        role: user.role,
+        organizationId: user.organizationId,
+      },
+      request,
+    );
 
     return NextResponse.json({
       success: true,

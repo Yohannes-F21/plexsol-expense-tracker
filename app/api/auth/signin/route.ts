@@ -28,7 +28,7 @@ export async function POST(request: Request) {
           error:
             "Database connection failed. Please ensure Prisma is properly configured.",
         },
-        { status: 500 }
+        { status: 500 },
       );
     }
 
@@ -49,7 +49,7 @@ export async function POST(request: Request) {
       console.log("User not found");
       return NextResponse.json(
         { error: "Invalid credentials" },
-        { status: 401 }
+        { status: 401 },
       );
     }
 
@@ -62,14 +62,14 @@ export async function POST(request: Request) {
     // Verify password
     const isValidPassword = await verifyPassword(
       validatedData.password,
-      user.passwordHash
+      user.passwordHash,
     );
 
     if (!isValidPassword) {
       console.log("Invalid password");
       return NextResponse.json(
         { error: "Invalid credentials" },
-        { status: 401 }
+        { status: 401 },
       );
     }
 
@@ -77,7 +77,7 @@ export async function POST(request: Request) {
     if (!user.isActive) {
       return NextResponse.json(
         { error: "Your account is blocked" },
-        { status: 403 }
+        { status: 403 },
       );
     }
     if (
@@ -87,20 +87,23 @@ export async function POST(request: Request) {
     ) {
       return NextResponse.json(
         { error: "Your organization is blocked" },
-        { status: 403 }
+        { status: 403 },
       );
     }
 
     console.log("Password verified, creating session");
 
     // Create session
-    await createSession({
-      id: user.id,
-      email: user.email,
-      name: user.name,
-      role: user.role,
-      organizationId: user.organizationId,
-    });
+    await createSession(
+      {
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        role: user.role,
+        organizationId: user.organizationId,
+      },
+      request,
+    );
 
     console.log("Session created successfully");
 
@@ -119,7 +122,7 @@ export async function POST(request: Request) {
     if (error instanceof z.ZodError) {
       return NextResponse.json(
         { error: "Invalid input", details: error.errors },
-        { status: 400 }
+        { status: 400 },
       );
     }
     return NextResponse.json(
@@ -127,7 +130,7 @@ export async function POST(request: Request) {
         error: "Internal server error",
         details: error instanceof Error ? error.message : "Unknown error",
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

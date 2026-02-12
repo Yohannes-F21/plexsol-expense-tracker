@@ -1,13 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   flexRender,
   getCoreRowModel,
   useReactTable,
   getSortedRowModel,
-  getPaginationRowModel,
   type ColumnDef,
   type SortingState,
 } from "@tanstack/react-table";
@@ -34,7 +33,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Card, CardContent } from "@/components/ui/card";
-import { DataTablePagination } from "@/components/data-table-pagination";
+import { ServerDataTablePagination } from "@/components/data-table-pagination";
 import { Switch } from "@/components/ui/switch";
 
 interface User {
@@ -53,24 +52,44 @@ interface User {
   createdAt: string;
 }
 
+function useDebouncedValue<T>(value: T, delayMs: number): T {
+  const [debounced, setDebounced] = useState(value);
+
+  useEffect(() => {
+    const t = setTimeout(() => setDebounced(value), delayMs);
+    return () => clearTimeout(t);
+  }, [value, delayMs]);
+
+  return debounced;
+}
+
+type UsersResponse = {
+  total: number;
+  users: User[];
+  page: number;
+  pageSize: number;
+};
+
 export function UsersTable() {
   const [sorting, setSorting] = useState<SortingState>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [organizationFilter, setOrganizationFilter] = useState<string>("all");
   const [statusFilter, setStatusFilter] = useState<string>("all");
-  const [{ pageIndex, pageSize }, setPagination] = useState({
-    pageIndex: 0,
-    pageSize: 20,
-  });
+  const [pageIndex, setPageIndex] = useState(0);
+  const [pageSize, setPageSize] = useState(20);
+
+  const debouncedSearch = useDebouncedValue(searchTerm, 250);
 
   const queryClient = useQueryClient();
 
-  const { data: users = [], isLoading } = useQuery<User[]>({
+  const { data, isLoading, isFetching } = useQuery<UsersResponse>({
     queryKey: [
       "super-admin-users",
       organizationFilter,
       statusFilter,
-      searchTerm,
+      debouncedSearch,
+      pageIndex,
+      pageSize,
     ],
     queryFn: () => {
       const params = new URLSearchParams();
@@ -79,20 +98,33 @@ export function UsersTable() {
       }
       if (statusFilter === "active") params.set("isActive", "true");
       if (statusFilter === "banned") params.set("isActive", "false");
-      const q = searchTerm.trim();
+      const q = debouncedSearch.trim();
       if (q) params.set("q", q);
+
+      params.set("page", String(pageIndex + 1));
+      params.set("pageSize", String(pageSize));
 
       const qs = params.toString();
       const url = qs
         ? `/api/super-admin/users?${qs}`
         : "/api/super-admin/users";
-      return apiClient<User[]>(url);
+      return apiClient<UsersResponse>(url);
     },
+    placeholderData: (previous) => previous,
   });
 
-  const { data: organizations = [] } = useQuery({
-    queryKey: ["organizations"],
-    queryFn: () => apiClient<any[]>("/api/super-admin/organizations"),
+  const users = data?.users ?? [];
+  const total = data?.total ?? 0;
+
+  const { data: organizations = [] } = useQuery<
+    Array<{ id: string; name: string }>
+  >({
+    queryKey: ["organizations-options"],
+    queryFn: () =>
+      apiClient<Array<{ id: string; name: string }>>(
+        "/api/super-admin/organizations/options",
+      ),
+    staleTime: 60_000,
   });
 
   const toggleActiveMutation = useMutation({
@@ -131,86 +163,86 @@ export function UsersTable() {
     );
   };
 
-  const columns: ColumnDef<User>[] = [
-    {
-      accessorKey: "name",
-      header: ({ column }) => (
-        <Button
-          variant="ghost"
-          onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-          className="-ml-4"
-        >
-          Name
-          <ArrowUpDown className="ml-2 h-4 w-4" />
-        </Button>
-      ),
-      cell: ({ row }) => (
-        <div className="font-medium">{row.getValue("name")}</div>
-      ),
-    },
-    {
-      accessorKey: "email",
-      header: "Email",
-      cell: ({ row }) => <div>{row.getValue("email")}</div>,
-    },
-    {
-      accessorKey: "role",
-      header: "Role",
-      cell: ({ row }) => {
-        const role = row.getValue("role") as string;
-        return <Badge variant="outline">{role.replace("_", " ")}</Badge>;
+  const columns: ColumnDef<User>[] = useMemo(
+    () => [
+      {
+        accessorKey: "name",
+        header: ({ column }) => (
+          <Button
+            variant="ghost"
+            onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+            className="-ml-4"
+          >
+            Name
+            <ArrowUpDown className="ml-2 h-4 w-4" />
+          </Button>
+        ),
+        cell: ({ row }) => (
+          <div className="font-medium">{row.getValue("name")}</div>
+        ),
       },
-    },
-    {
-      accessorKey: "organization",
-      header: "Organization",
-      cell: ({ row }) => {
-        const org = row.original.organization;
-        return <div>{org?.name || "N/A"}</div>;
+      {
+        accessorKey: "email",
+        header: "Email",
+        cell: ({ row }) => <div>{row.getValue("email")}</div>,
       },
-    },
-    {
-      accessorKey: "_count.expenseBases",
-      header: "Expenses",
-      cell: ({ row }) => <div>{row.original._count.expenseBases}</div>,
-    },
-    {
-      accessorKey: "isActive",
-      header: "Status",
-      cell: ({ row }) => {
-        const user = row.original;
-        const isActive = row.getValue("isActive") as boolean;
-        return (
-          <UserActiveSwitch
-            checked={isActive}
-            disabled={toggleActiveMutation.isPending}
-            onCheckedChange={(next) =>
-              toggleActiveMutation.mutate({ id: user.id, isActive: next })
-            }
-          />
-        );
+      {
+        accessorKey: "role",
+        header: "Role",
+        cell: ({ row }) => {
+          const role = row.getValue("role") as string;
+          return <Badge variant="outline">{role.replace("_", " ")}</Badge>;
+        },
       },
-    },
-  ];
+      {
+        accessorKey: "organization",
+        header: "Organization",
+        cell: ({ row }) => {
+          const org = row.original.organization;
+          return <div>{org?.name || "N/A"}</div>;
+        },
+      },
+      {
+        accessorKey: "_count.expenseBases",
+        header: "Expenses",
+        cell: ({ row }) => <div>{row.original._count.expenseBases}</div>,
+      },
+      {
+        accessorKey: "isActive",
+        header: "Status",
+        cell: ({ row }) => {
+          const user = row.original;
+          const isActive = row.getValue("isActive") as boolean;
+          return (
+            <UserActiveSwitch
+              checked={isActive}
+              disabled={toggleActiveMutation.isPending}
+              onCheckedChange={(next) =>
+                toggleActiveMutation.mutate({ id: user.id, isActive: next })
+              }
+            />
+          );
+        },
+      },
+    ],
+    [toggleActiveMutation.isPending],
+  );
 
   const table = useReactTable({
     data: users,
     columns,
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
-    getPaginationRowModel: getPaginationRowModel(),
     onSortingChange: setSorting,
-    onPaginationChange: setPagination,
     state: {
       sorting,
-      pagination: { pageIndex, pageSize },
     },
   });
 
   useEffect(() => {
-    table.setPageIndex(0);
+    setPageIndex(0);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sorting, organizationFilter, statusFilter, searchTerm]);
+  }, [sorting, organizationFilter, statusFilter, debouncedSearch]);
 
   return (
     <Card>
@@ -306,10 +338,21 @@ export function UsersTable() {
           </Table>
         </div>
 
-        <DataTablePagination
-          table={table}
+        <ServerDataTablePagination
+          totalCount={total}
+          pageIndex={pageIndex}
+          pageSize={pageSize}
+          onPageIndexChange={setPageIndex}
+          onPageSizeChange={(size) => {
+            setPageSize(size);
+            setPageIndex(0);
+          }}
           storageKey="super-admin-users-page-size"
         />
+
+        {isFetching ? (
+          <div className="text-xs text-muted-foreground">Refreshing…</div>
+        ) : null}
       </CardContent>
     </Card>
   );

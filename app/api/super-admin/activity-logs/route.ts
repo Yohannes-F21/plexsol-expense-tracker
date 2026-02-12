@@ -16,8 +16,9 @@ export async function GET(request: Request) {
     const url = new URL(request.url);
     const search = url.searchParams;
 
-    const organizationId = search.get("organizationId") || undefined;
-    const userId = search.get("userId") || undefined;
+    const organizationName =
+      search.get("organizationName")?.trim() || undefined;
+    const userName = search.get("userName")?.trim() || undefined;
     const actionType = search.get("actionType") || undefined;
     const start = search.get("start");
     const end = search.get("end");
@@ -25,8 +26,20 @@ export async function GET(request: Request) {
     const pageSize = Math.min(100, Number(search.get("pageSize") || "20"));
 
     const where: any = {};
-    if (organizationId) where.organizationId = organizationId;
-    if (userId) where.userId = userId;
+    if (organizationName) {
+      where.organization = {
+        is: {
+          name: { contains: organizationName, mode: "insensitive" },
+        },
+      };
+    }
+    if (userName) {
+      where.user = {
+        is: {
+          name: { contains: userName, mode: "insensitive" },
+        },
+      };
+    }
     if (actionType) where.actionType = actionType;
     if (start || end) where.createdAt = {};
     if (start) where.createdAt.gte = new Date(start);
@@ -63,7 +76,7 @@ export async function GET(request: Request) {
       {
         error: error instanceof Error ? error.message : "Internal server error",
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { requireRole } from "@/lib/auth";
+import { requireRole, revokeAllSessionsForUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { Prisma } from "@prisma/client";
 
@@ -48,6 +48,10 @@ export async function PATCH(request: Request, context: any) {
         },
       }),
     ]);
+
+    if (isActive === false) {
+      await revokeAllSessionsForUser(id);
+    }
 
     return NextResponse.json(user);
   } catch (error) {

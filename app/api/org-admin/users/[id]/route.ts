@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { requireRole } from "@/lib/auth";
+import { requireRole, revokeAllSessionsForUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 
 const patchSchema = z.object({
@@ -56,6 +56,10 @@ export async function PATCH(request: Request, context: any) {
         isActive: true,
       },
     });
+
+    if (data.isActive === false) {
+      await revokeAllSessionsForUser(id);
+    }
 
     return NextResponse.json({ success: true, user: updated });
   } catch (error) {
